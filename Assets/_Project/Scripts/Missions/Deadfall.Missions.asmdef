@@ -1,0 +1,21 @@
+{
+    "name": "Deadfall.Missions",
+    "rootNamespace": "Deadfall.Missions",
+    "references": [
+        "Deadfall.World",
+        "Deadfall.Encounters",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

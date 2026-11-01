@@ -1,0 +1,22 @@
+{
+    "name": "Deadfall.Engineering",
+    "rootNamespace": "Deadfall.Engineering",
+    "references": [
+        "Deadfall.Combat",
+        "Deadfall.World",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Unity.Netcode.Runtime",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

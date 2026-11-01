@@ -1,0 +1,22 @@
+{
+    "name": "Deadfall.Enemies",
+    "rootNamespace": "Deadfall.Enemies",
+    "references": [
+        "Deadfall.Combat",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat",
+        "Unity.Netcode.Runtime",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

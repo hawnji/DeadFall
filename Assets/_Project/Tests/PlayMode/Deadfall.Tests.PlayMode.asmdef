@@ -1,0 +1,44 @@
+{
+    "name": "Deadfall.Tests.PlayMode",
+    "rootNamespace": "Deadfall.Tests.PlayMode",
+    "references": [
+        "Deadfall.Core",
+        "Deadfall.Net",
+        "Deadfall.Combat",
+        "Deadfall.Player",
+        "Deadfall.Classes",
+        "Deadfall.Enemies",
+        "Deadfall.World",
+        "Deadfall.Encounters",
+        "Deadfall.Engineering",
+        "Deadfall.Missions",
+        "Deadfall.RunSystems",
+        "Deadfall.Progression",
+        "Deadfall.Base",
+        "Deadfall.UI",
+        "Deadfall.Audio",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat",
+        "Deadfall.Rules.Encounters",
+        "Deadfall.Rules.World",
+        "Deadfall.Rules.Progression",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem",
+        "Unity.AI.Navigation",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

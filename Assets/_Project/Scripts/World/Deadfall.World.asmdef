@@ -1,0 +1,21 @@
+{
+    "name": "Deadfall.World",
+    "rootNamespace": "Deadfall.World",
+    "references": [
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.World",
+        "Unity.Netcode.Runtime",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

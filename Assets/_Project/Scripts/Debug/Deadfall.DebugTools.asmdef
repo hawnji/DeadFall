@@ -1,0 +1,34 @@
+{
+    "name": "Deadfall.DebugTools",
+    "rootNamespace": "Deadfall.DebugTools",
+    "references": [
+        "Deadfall.Core",
+        "Deadfall.Net",
+        "Deadfall.Combat",
+        "Deadfall.Player",
+        "Deadfall.Classes",
+        "Deadfall.Enemies",
+        "Deadfall.World",
+        "Deadfall.Encounters",
+        "Deadfall.Engineering",
+        "Deadfall.Missions",
+        "Deadfall.RunSystems",
+        "Deadfall.Progression",
+        "Deadfall.Base",
+        "Deadfall.UI",
+        "Deadfall.Audio",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_EDITOR || DEVELOPMENT_BUILD"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
