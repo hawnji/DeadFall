@@ -33,3 +33,6 @@ crashlytics-build.properties
 *.unitypackage
 .DS_Store
 Thumbs.db
+
+# Compile-check tool cache
+Tools/CompileCheck/.cache/

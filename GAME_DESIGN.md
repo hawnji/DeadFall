@@ -1,6 +1,6 @@
 # Game Design
 
-Working design for Project Deadfall. Numbers here are **starting values for playtesting**, not final balance. Anything marked *(open)* is an unresolved decision tracked in `DECISIONS.md`.
+Working design for Project Deadfall. Numbers here are **starting values for playtesting**, not final balance. Anything marked *(decided, D-xx)* points to the confirmed decision in `DECISIONS.md`.
 
 ## 1. Fiction and tone
 
@@ -66,8 +66,8 @@ Inside a deployment: **Lull** (buy, build, repair, explore, choose Field Mods) �
 | Ground acceleration | Reaches 90% speed in ~0.12 s |
 | Ground deceleration | Stops in ~0.10 s |
 | Sprint-to-fire delay | 0.15–0.25 s by weapon weight |
-| Jump | Included, low (≈0.9 m) for vaulting small obstacles (open: D-21) |
-| Crouch | Included as a hold for accuracy and low cover (open: D-21) |
+| Jump | Included, low (≈0.9 m) for vaulting small obstacles (decided: D-21) |
+| Crouch | Included as a hold for accuracy and low cover (decided: D-21) |
 | Stamina | None in prototype; sprint is unlimited. Revisit if kiting dominates |
 
 Camera: no head-bob by default (accessibility toggle for subtle bob), FOV slider 70–110, raw mouse input, independent ADS sensitivity multiplier.
@@ -75,11 +75,11 @@ Camera: no head-bob by default (accessibility toggle for subtle bob), FOV slider
 ### 4.2 Health and downed state
 - Health 100 base (class modifies). Short regen delay (5 s) then slow regen to the nearest 25% segment, so healing items and support still matter.
 - At 0 HP a player is **downed**: can crawl slowly and fire a sidearm. Bleed-out 30 s. A teammate revives by holding interact for 4 s.
-- Revive limits and elimination rules: *(open, D-01, D-02)*.
+- Revive limits and elimination rules: *(decided, D-01, D-02)*.
 
 ## 5. Classes
 
-All classes can use every weapon. Each class has preferred categories that get a handling bonus (faster reload/swap, lower recoil). Three specialization paths each. Initial prototype: one active ability and two passives per class. The framework supports up to three actives (*open, D-11*).
+All classes can use every weapon. Each class has preferred categories that get a handling bonus (faster reload/swap, lower recoil). Three specialization paths each. Initial prototype: one active ability and two passives per class. The framework supports up to three actives (*decided, D-11*).
 
 | Class | Role | Preferred | Prototype ability | Passives |
 |---|---|---|---|---|
@@ -89,7 +89,7 @@ All classes can use every weapon. Each class has preferred categories that get a
 | **Engineer** | Construction, automation | SMG, Pistol | **Deploy Sentry**: places a light turret (60 s duration, scrap upgrades it). 35 s | Earns +50% Scrap; repairs structures faster |
 | **Demolitionist** | Explosives, area control | Launchers, Shotgun | **Cluster Charge**: thrown charge that splits into 5 bomblets. 25 s | +2 grenade capacity; 50% self-damage reduction from own explosives |
 
-Specialization paths (from the brief): Gunner – Suppression / Heavy Weapons / Efficiency. Tank – Armor / Aggression / Guardian. Warrior – Berserker / Weapon Mastery / Mobility. Engineer – Turrets / Drones / Fortification. Demolitionist – Explosives / Heavy Ordnance / Crowd Control. Tree size is *(open, D-12)*.
+Specialization paths (from the brief): Gunner – Suppression / Heavy Weapons / Efficiency. Tank – Armor / Aggression / Guardian. Warrior – Berserker / Weapon Mastery / Mobility. Engineer – Turrets / Drones / Fortification. Demolitionist – Explosives / Heavy Ordnance / Crowd Control. Tree size is *(decided, D-12)*.
 
 ### 5.1 Squad Doctrine (synergy)
 Pairs of different classes enable a named doctrine. Each player benefits from at most two doctrines so duplicates still play normally; a full five-class team is impossible at 4 players, so the "diverse" reward is **four distinct classes**.
@@ -102,13 +102,13 @@ Pairs of different classes enable a named doctrine. Each player benefits from at
 | Overwatch | Gunner + Engineer | Turrets mark targets for bonus Gunner damage |
 | Combined Arms | 4 distinct classes | Small squad-wide cooldown reduction |
 
-Effects and magnitudes stay data-driven and unbalanced until playtested *(open, D-17)*.
+Effects and magnitudes stay data-driven and unbalanced until playtested *(decided, D-17)*.
 
 ## 6. Weapons
 
 Every weapon is a `WeaponDefinition` with: category, damage, fire rate, fire mode, magazine, reserve, reload (tactical/empty), effective range and falloff, recoil pattern, spread (hip/ADS/moving), ammo type, weight (sprint-to-fire, swap time), attachment slots, and crit/weak-point multiplier.
 
-**Prototype roster (8)** *(names original; final roster open, D-18)*
+**Prototype roster (8)** *(names original; final roster after M6, D-18)*
 
 | Name | Category | Feel |
 |---|---|---|
@@ -123,7 +123,7 @@ Every weapon is a `WeaponDefinition` with: category, damage, fire rate, fire mod
 
 Experimental category arrives post-prototype (e.g. an arc projector that chains between targets).
 
-**Acquisition**: loadout from FOB, Supply Caches using Field Credits, rare drops. **Quality tiers**: Standard / Refined / Prototype (affects attachment slots and stat rolls on drops). **Weapon slots** *(open, D-07)*.
+**Acquisition**: loadout from FOB, Supply Caches using Field Credits, rare drops. **Quality tiers**: Standard / Refined / Prototype (affects attachment slots and stat rolls on drops). **Weapon slots** *(decided, D-07)*.
 
 **Attachments**: Optic, Barrel, Underbarrel, Magazine, Stock, Special. Attachments are `StatModifier` sets plus optional behaviour hooks.
 
@@ -154,8 +154,8 @@ Common framework: `EnemyDefinition` (health, armor, speed, hurtbox zones, attack
 - **Pressure, not just HP**: difficulty raises budget, mix, spawn concurrency, spawn-direction count, elite/variant chance, and event chance. Enemy HP scaling is capped (initial cap ×2.5 by surge 30 in Survival).
 - **Surge types**: Standard, Swarm (many weak), Elite, Siege (3+ spawn directions), Hunt (one pursuer + light support), Supply (resource crates spawn during the surge), Specimen, Objective.
 - **Lull**: 30 s default, skippable when all players ready. Occasional **ambush** (a short surprise spawn during a lull, max once per 5 surges, announced 3 s ahead by audio).
-- **Concurrency cap**: max active enemies, e.g. 24 solo / 48 at four players (*open, D-19*). The director queues the rest.
-- **Adaptive difficulty** *(open, D-14)*: proposed factors are player count and current squad health/downs only, visible in the end-of-run breakdown.
+- **Concurrency cap**: max active enemies, e.g. 24 solo / 48 at four players (*decided, D-19*). The director queues the rest.
+- **Adaptive difficulty** *(decided, D-14)*: proposed factors are player count and current squad health/downs only, visible in the end-of-run breakdown.
 
 ## 9. Progression and economy
 
@@ -169,11 +169,11 @@ Field Credits (kills, objectives) buy weapons/ammo/gear at Supply Caches and ope
 - **Research** (Intel + REQ) unlocks technologies: new structures, ammo types, enemy dossiers.
 - **Challenges and achievements**, displayed in the Trophy Room.
 
-### 9.3 Currencies *(open, D-04)*
+### 9.3 Currencies *(decided, D-04)*
 Proposed: **two temporary** (Field Credits, Scrap) and **two permanent** (Requisition, Intel). The economy uses a generic `CurrencyDefinition` so more can be added.
 
 ### 9.4 Failure
-Temporary upgrades and resources are always lost. Permanent rewards earned so far are kept at a configurable retention rate *(open, D-03)*.
+Temporary upgrades and resources are always lost. Permanent rewards earned so far are kept at a configurable retention rate *(decided, D-03)*.
 
 ## 10. Maps
 
