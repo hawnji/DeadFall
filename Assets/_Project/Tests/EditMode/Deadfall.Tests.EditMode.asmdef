@@ -1,0 +1,29 @@
+{
+    "name": "Deadfall.Tests.EditMode",
+    "rootNamespace": "Deadfall.Tests.EditMode",
+    "references": [
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat",
+        "Deadfall.Rules.Encounters",
+        "Deadfall.Rules.World",
+        "Deadfall.Rules.Progression",
+        "Deadfall.Core",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

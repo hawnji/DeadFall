@@ -1,0 +1,23 @@
+{
+    "name": "Deadfall.RunSystems",
+    "rootNamespace": "Deadfall.RunSystems",
+    "references": [
+        "Deadfall.Classes",
+        "Deadfall.Combat",
+        "Deadfall.Player",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Progression",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

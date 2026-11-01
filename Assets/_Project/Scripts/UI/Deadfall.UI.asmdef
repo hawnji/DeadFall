@@ -1,0 +1,27 @@
+{
+    "name": "Deadfall.UI",
+    "rootNamespace": "Deadfall.UI",
+    "references": [
+        "Deadfall.Player",
+        "Deadfall.Classes",
+        "Deadfall.Combat",
+        "Deadfall.Encounters",
+        "Deadfall.Missions",
+        "Deadfall.RunSystems",
+        "Deadfall.Progression",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

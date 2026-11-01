@@ -1,0 +1,24 @@
+{
+    "name": "Deadfall.Encounters",
+    "rootNamespace": "Deadfall.Encounters",
+    "references": [
+        "Deadfall.Enemies",
+        "Deadfall.World",
+        "Deadfall.Combat",
+        "Deadfall.Net",
+        "Deadfall.Core",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Encounters",
+        "Unity.Netcode.Runtime",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
