@@ -1,7 +1,7 @@
 using Deadfall.Core;
 using UnityEngine;
 
-namespace Deadfall.Classes
+namespace Deadfall.Combat
 {
     /// <summary>Placeholder explosion flash: an orange sphere that swells and fades.</summary>
     public sealed class ExplosionFx : MonoBehaviour

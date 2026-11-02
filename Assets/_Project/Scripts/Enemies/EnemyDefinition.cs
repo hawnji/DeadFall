@@ -12,6 +12,16 @@ namespace Deadfall.Enemies
         Lean,
         /// <summary>Wide brute with a front armor plate and a weak-point pack on its back.</summary>
         Plated,
+        /// <summary>Low crawler on all fours (Creeper): small head close to the floor.</summary>
+        Crawler,
+        /// <summary>Swollen exploder (Pyre): glowing sacs on the belly.</summary>
+        Bloated,
+        /// <summary>Hunched spitter (Retcher) with a distended throat sac (weak point).</summary>
+        Spitter,
+        /// <summary>Tall elite (Alpha) with a glowing growth on the shoulders (x3 weak point).</summary>
+        Alpha,
+        /// <summary>The Specimen: huge, plated, with growths and a chest core that open by phase.</summary>
+        Specimen,
     }
 
     /// <summary>
@@ -34,6 +44,11 @@ namespace Deadfall.Enemies
         [Tooltip("At most this fraction of a surge's threat budget goes to this enemy (keeps heavies rare).")]
         [Range(0f, 1f)] [SerializeField] private float _maxBudgetShare = 1f;
 
+        [Tooltip("How the planner treats it: bought with budget (Regular, Elite) or placed by special surges (Hunter, Boss).")]
+        [SerializeField] private EnemyRole _role = EnemyRole.Regular;
+        [Tooltip("False for types that Splitting variants break into.")]
+        [SerializeField] private bool _canSplit = true;
+
         [Header("Body")]
         [SerializeField] private EnemyBodyType _bodyType = EnemyBodyType.Standard;
         [SerializeField] private float _height = 1.8f;
@@ -51,6 +66,9 @@ namespace Deadfall.Enemies
         public int UnlockSurge => _unlockSurge;
         public float SpawnWeight => _spawnWeight;
         public float MaxBudgetShare => _maxBudgetShare;
+        public EnemyRole Role => _role;
+        public bool CanSplit => _canSplit;
+        public bool IsBoss => _role == EnemyRole.Boss;
         public EnemyBodyType BodyType => _bodyType;
         public float Height => _height;
         public float Radius => _radius;
@@ -60,7 +78,8 @@ namespace Deadfall.Enemies
 
         /// <summary>Builds an in-memory definition (prototype content and tests) without an asset file.</summary>
         public static EnemyDefinition CreateRuntime(string contentId, string displayName, EnemyStats stats, EnemyBodyType body,
-            float height, float radius, Color color, float threatCost = 1f, int unlockSurge = 1, float spawnWeight = 1f, float maxBudgetShare = 1f)
+            float height, float radius, Color color, float threatCost = 1f, int unlockSurge = 1, float spawnWeight = 1f, float maxBudgetShare = 1f,
+            EnemyRole role = EnemyRole.Regular, bool canSplit = true, float weakPointMultiplier = 2.5f)
         {
             var def = CreateInstance<EnemyDefinition>();
             def.name = displayName;
@@ -75,6 +94,9 @@ namespace Deadfall.Enemies
             def._unlockSurge = unlockSurge;
             def._spawnWeight = spawnWeight;
             def._maxBudgetShare = maxBudgetShare;
+            def._role = role;
+            def._canSplit = canSplit;
+            def._weakPointMultiplier = weakPointMultiplier;
             return def;
         }
     }

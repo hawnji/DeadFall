@@ -2,7 +2,8 @@
     "name": "Deadfall.Rules.Encounters",
     "rootNamespace": "Deadfall.Rules.Encounters",
     "references": [
-        "Deadfall.Rules.Common"
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Deadfall.Combat;
+using Deadfall.Rules.Combat;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -100,7 +101,8 @@ namespace Deadfall.Enemies
         /// Returns null at the cap or when there is no NavMesh nearby. <paramref name="healthScale"/> multiplies max
         /// health (surge scaling).
         /// </summary>
-        public Enemy Spawn(EnemyDefinition definition, Vector3 position, float yaw, float healthScale = 1f)
+        public Enemy Spawn(EnemyDefinition definition, Vector3 position, float yaw, float healthScale = 1f,
+            EnemyTraits traits = EnemyTraits.None, SpecimenModifiers bossMods = SpecimenModifiers.None)
         {
             if (definition == null || _mirrorMode || AliveCount >= MaxAlive) return null;
             if (!NavMesh.SamplePosition(position, out NavMeshHit hit, 3f, NavMesh.AllAreas)) return null;
@@ -117,7 +119,7 @@ namespace Deadfall.Enemies
             double now = Time.timeAsDouble;
             enemy.SlotId = _nextSlot++;
             if (_nextSlot == 0) _nextSlot = 1; // 0 means "none" on the wire
-            enemy.Activate(hit.position, yaw, now, healthScale);
+            enemy.Activate(hit.position, yaw, now, healthScale, traits, bossMods);
             _bySlot[enemy.SlotId] = enemy;
             // Spread perception ticks evenly across the interval instead of all enemies thinking on one frame.
             enemy.NextPerception = now + (_perceptionSpread++ % 8) / (8f * PerceptionHz);
@@ -188,6 +190,7 @@ namespace Deadfall.Enemies
             float dt = Time.deltaTime;
             float interval = 1f / PerceptionHz;
             int alive = 0;
+            ApplyAuras();
 
             for (int i = _active.Count - 1; i >= 0; i--)
             {
@@ -216,6 +219,36 @@ namespace Deadfall.Enemies
 
             _timer.Stop();
             _avgMs = Mathf.Lerp(_avgMs, (float)_timer.Elapsed.TotalMilliseconds, 0.1f);
+        }
+
+        private readonly List<Enemy> _auraSources = new List<Enemy>(4);
+
+        /// <summary>Alphas buff the infected around them (not themselves, and buffs from several Alphas don't stack).</summary>
+        private void ApplyAuras()
+        {
+            _auraSources.Clear();
+            for (int i = 0; i < _active.Count; i++)
+            {
+                Enemy e = _active[i];
+                if (e != null && e.IsAlive && e.Stats.AuraRadius > 0f) _auraSources.Add(e);
+            }
+            for (int i = 0; i < _active.Count; i++)
+            {
+                Enemy e = _active[i];
+                if (e == null) continue;
+                float speed = 0f, reduction = 0f;
+                for (int k = 0; k < _auraSources.Count; k++)
+                {
+                    Enemy a = _auraSources[k];
+                    if (a == e) continue;
+                    float r = a.Stats.AuraRadius;
+                    if ((a.transform.position - e.transform.position).sqrMagnitude > r * r) continue;
+                    speed = Mathf.Max(speed, a.Stats.AuraSpeedBonus);
+                    reduction = Mathf.Max(reduction, a.Stats.AuraDamageReduction);
+                }
+                e.AuraSpeedBonus = speed;
+                e.AuraReduction = reduction;
+            }
         }
 
         private void TickMirrors()

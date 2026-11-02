@@ -141,7 +141,7 @@ namespace Deadfall.Tests.EditMode.Rules
             CollectionAssert.AreEqual(new[]
             {
                 SurgeType.Standard, SurgeType.Standard, SurgeType.Standard, SurgeType.Swarm, SurgeType.Siege,
-                SurgeType.Standard, SurgeType.Standard, SurgeType.Swarm, SurgeType.Standard, SurgeType.Siege,
+                SurgeType.Hunt, SurgeType.Elite, SurgeType.Swarm, SurgeType.Supply, SurgeType.Specimen,
             }, types);
         }
     }

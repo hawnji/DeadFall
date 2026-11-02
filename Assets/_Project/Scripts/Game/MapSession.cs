@@ -167,6 +167,7 @@ namespace Deadfall.Game
             Map = null;
             _navMesh.Clear();
             LootNetwork.ClearAll();
+            Deadfall.Enemies.EnemyAttacks.ClearAll();
             OpenSectors = 1;
             if (had)
             {

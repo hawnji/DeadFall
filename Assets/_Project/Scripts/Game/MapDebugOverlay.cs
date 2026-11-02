@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Deadfall.Game
 {
     /// <summary>
-    /// F9: map debug overlay (GAME_DESIGN §10.1). A minimap of the generated layout with rooms in sector colours
+    /// M: map debug overlay (GAME_DESIGN §10.1). A minimap of the generated layout with rooms in sector colours
     /// (faded while locked), the room graph, doors, enemy spawn points, loot, players and enemies, plus the seed,
     /// attempt count, build and bake times and any validation errors.
     /// </summary>
@@ -23,7 +23,7 @@ namespace Deadfall.Game
 
         private void OnEnable()
         {
-            _toggle = new InputAction("MapOverlay", InputActionType.Button, "<Keyboard>/f9");
+            _toggle = new InputAction("MapOverlay", InputActionType.Button, "<Keyboard>/m");
             _toggle.Enable();
         }
 

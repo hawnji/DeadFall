@@ -86,7 +86,7 @@ namespace Deadfall.Game
                 if (_mods != null)
                 {
                     _mods.OnSurgeCleared();
-                    if (FieldModOffers.OfferAfterSurge(_waves.Surge, specimen: false))
+                    if (FieldModOffers.OfferAfterSurge(_waves.Surge, specimen: _waves.SurgeType == SurgeType.Specimen))
                     {
                         _mods.QueueOffer(_waves.Surge);
                         RunToasts.Show("Field Mod available: press T", new Color(1f, 0.85f, 0.4f));

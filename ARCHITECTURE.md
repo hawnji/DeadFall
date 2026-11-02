@@ -85,7 +85,7 @@ Assets/_Project/
 | **Player** | Kinematic controller, camera, look, health, status effects, interaction, downed/revive/spectate | `PlayerMotor`, `PlayerLook`, `Health`, `Interactor`, `DownedState` |
 | **Combat** | Equipped weapons, firing, hitscan, projectiles, melee sweeps, hit zones, damage pipeline, feedback events | `WeaponRuntime`, `HitscanFirer`, `ProjectilePool`, `MeleeSweep`, `Hurtbox`, `DamagePipeline` |
 | **Classes** | Class runtime, abilities, passives, skill trees, synergy | `ClassDefinition`, `AbilityDefinition`, `AbilityRunner`, `SynergyResolver` |
-| **Enemies** | Enemy definitions, pooled agents, time-sliced AI, targeting, attacks, bosses | `EnemyDefinition`, `EnemyManager`, `EnemyBrain`, `BossDefinition`, `BossPhaseRunner` |
+| **Enemies** | Enemy definitions, pooled agents, time-sliced AI, targeting, attacks, bosses | `EnemyDefinition`, `EnemyManager`, `EnemyBrain`, `EnemyAttacks`, `EnemyFxRelay`; Specimen phases via `SpecimenRules` (M7) |
 | **Encounters** | Wave manager, spawn director, spawn points, random events, adaptive difficulty | `WaveManager`, `SpawnDirector`, `EventDirector`, `DifficultyService` |
 | **World** | Room prefabs, socket matching, runtime assembly, NavMesh bake, doors, locks, power grid, interactables, expansion | `RoomDefinition`, `MapBuilder`, `Door`, `PowerNode`, `SectionUnlocker` |
 | **Engineering** | Scrap, placement validation, structure lifecycle | `PlacementValidator`, `StructureDefinition`, `StructureRuntime` |

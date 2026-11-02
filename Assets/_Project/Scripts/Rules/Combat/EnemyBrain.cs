@@ -15,6 +15,11 @@ namespace Deadfall.Rules.Combat
         /// <summary>Running in a straight line at charge speed; hits whatever it reaches.</summary>
         Charge,
         Stagger,
+        /// <summary>Ranged wind-up: stands still facing the target; the shot fires when it ends.</summary>
+        RangedWindup,
+        RangedRecover,
+        /// <summary>Exploder wind-up: swells and hisses; detonates when it ends unless killed first.</summary>
+        ExplodeWindup,
         Dead,
     }
 
@@ -59,6 +64,47 @@ namespace Deadfall.Rules.Combat
         public float ChargeDamage = 35f;
         /// <summary>Whether damage can stagger it out of a charge wind-up or charge.</summary>
         public bool ChargeCanBeStaggered = true;
+
+        // --- Ranged (spitters) ---
+        public bool CanShoot;
+        /// <summary>Holds position (with line of sight) once within this fraction-adjusted range and shoots.</summary>
+        public float PreferredRange = 14f;
+        public float RangedMaxRange = 22f;
+        public float RangedWindupSeconds = 0.7f;
+        public float RangedRecoverSeconds = 0.5f;
+        public float RangedCooldownSeconds = 2.4f;
+        public float RangedDamage = 10f;
+        public float ProjectileSpeed = 18f;
+        /// <summary>Acid pool left where the glob lands (0 = none).</summary>
+        public float PoolDamagePerSecond;
+        public float PoolRadius = 1.6f;
+        public float PoolSeconds = 5f;
+
+        // --- Exploders ---
+        public bool CanExplode;
+        public float ExplodeRange = 2.2f;
+        public float ExplodeRadius = 4f;
+        public float ExplodeDamage = 45f;
+        public float ExplodeWindupSeconds = 0.8f;
+        /// <summary>Also detonates when killed (shooting it from range is the counterplay).</summary>
+        public bool ExplodesOnDeath;
+
+        // --- Aura (Alpha) ---
+        /// <summary>Allies within this radius move faster and take less damage (0 = no aura).</summary>
+        public float AuraRadius;
+        public float AuraSpeedBonus;
+        public float AuraDamageReduction;
+
+        /// <summary>Health regenerated per second while not damaged for 3 s (Regenerating variant).</summary>
+        public float RegenPerSecond;
+
+        public EnemyStats Clone() => (EnemyStats)MemberwiseClone();
+
+        public void CopyFrom(EnemyStats other)
+        {
+            if (other == null) return;
+            foreach (var f in typeof(EnemyStats).GetFields()) f.SetValue(this, f.GetValue(other));
+        }
     }
 
     /// <summary>What the brain needs to know about the world this tick.</summary>
@@ -67,6 +113,8 @@ namespace Deadfall.Rules.Combat
         public double Now;
         public bool HasTarget;
         public float TargetDistance;
+        /// <summary>Clear line of fire to the target (ranged enemies only shoot with it).</summary>
+        public bool HasLineOfSight;
     }
 
     /// <summary>What the brain wants the body to do this tick.</summary>
@@ -84,6 +132,10 @@ namespace Deadfall.Rules.Combat
         public bool ChargeStarted;
         /// <summary>True while charging: check for contact every tick.</summary>
         public bool Charging;
+        /// <summary>True on the single tick a ranged shot fires.</summary>
+        public bool Shoot;
+        /// <summary>True on the single tick an exploder detonates. The brain is dead afterwards.</summary>
+        public bool Explode;
     }
 
     /// <summary>
@@ -135,6 +187,7 @@ namespace Deadfall.Rules.Combat
         private readonly StaggerMeter _stagger;
         private double _stateStart;
         private double _chargeReadyAt;
+        private double _shotReadyAt;
         private bool _alerted;
         private bool _staggerPending;
 
@@ -164,6 +217,7 @@ namespace Deadfall.Rules.Combat
             _staggerPending = false;
             // A short delay before the first charge, so freshly spawned chargers don't all leap at once.
             _chargeReadyAt = now + _stats.ChargeCooldownSeconds * 0.5;
+            _shotReadyAt = now + _stats.RangedCooldownSeconds * 0.5;
             Enter(EnemyState.Idle, now);
         }
 
@@ -178,7 +232,16 @@ namespace Deadfall.Rules.Combat
         {
             if (IsDead) return;
             _alerted = true;
+            if (_stats.StaggerThreshold <= 0f) return; // unstaggerable (Specimens): only Roar interrupts them
             if (CanBeStaggered()) _staggerPending = true;
+        }
+
+        /// <summary>Scripted interrupt (a Specimen's phase-change roar): enters Stagger next tick whatever the meter says.</summary>
+        public void Roar(double now)
+        {
+            if (IsDead) return;
+            _alerted = true;
+            _staggerPending = true;
         }
 
         /// <summary>Call when the enemy takes damage. Alerts it and may queue a stagger for the next tick.</summary>
@@ -243,7 +306,13 @@ namespace Deadfall.Rules.Combat
                         Enter(EnemyState.Idle, now);
                         break;
                     }
-                    if (input.TargetDistance <= _stats.AttackRange)
+                    if (_stats.CanExplode && input.TargetDistance <= _stats.ExplodeRange)
+                    {
+                        Enter(EnemyState.ExplodeWindup, now);
+                        o.FaceTarget = true;
+                        break;
+                    }
+                    if (!_stats.CanExplode && input.TargetDistance <= _stats.AttackRange)
                     {
                         Enter(EnemyState.AttackWindup, now);
                         o.FaceTarget = true;
@@ -256,9 +325,47 @@ namespace Deadfall.Rules.Combat
                         o.FaceTarget = true;
                         break;
                     }
+                    if (_stats.CanShoot && input.HasLineOfSight && input.TargetDistance <= _stats.RangedMaxRange)
+                    {
+                        if (now >= _shotReadyAt)
+                        {
+                            Enter(EnemyState.RangedWindup, now);
+                            o.FaceTarget = true;
+                            break;
+                        }
+                        if (input.TargetDistance <= _stats.PreferredRange)
+                        {
+                            // In range with a clear shot but reloading: hold ground instead of closing in.
+                            o.FaceTarget = true;
+                            break;
+                        }
+                    }
                     o.Speed = _stats.ChaseSpeed;
                     o.PathToTarget = true;
                     o.FaceTarget = true;
+                    break;
+
+                case EnemyState.RangedWindup:
+                    o.FaceTarget = true;
+                    if (elapsed >= _stats.RangedWindupSeconds)
+                    {
+                        o.Shoot = true;
+                        _shotReadyAt = now + _stats.RangedCooldownSeconds;
+                        Enter(EnemyState.RangedRecover, now);
+                    }
+                    break;
+
+                case EnemyState.RangedRecover:
+                    if (elapsed >= _stats.RangedRecoverSeconds) Enter(EnemyState.Chase, now);
+                    break;
+
+                case EnemyState.ExplodeWindup:
+                    o.FaceTarget = true;
+                    if (elapsed >= _stats.ExplodeWindupSeconds)
+                    {
+                        o.Explode = true;
+                        Enter(EnemyState.Dead, now);
+                    }
                     break;
 
                 case EnemyState.AttackWindup:
@@ -309,6 +416,7 @@ namespace Deadfall.Rules.Combat
         {
             if (State == EnemyState.Dead) return false;
             if ((State == EnemyState.Charge || State == EnemyState.ChargeWindup) && !_stats.ChargeCanBeStaggered) return false;
+            if (State == EnemyState.ExplodeWindup) return false;
             return true;
         }
 
@@ -321,6 +429,9 @@ namespace Deadfall.Rules.Combat
                 case EnemyState.ChargeWindup: return _stats.ChargeWindupSeconds;
                 case EnemyState.Charge: return _stats.ChargeSeconds;
                 case EnemyState.Stagger: return _stats.StaggerSeconds;
+                case EnemyState.RangedWindup: return _stats.RangedWindupSeconds;
+                case EnemyState.RangedRecover: return _stats.RangedRecoverSeconds;
+                case EnemyState.ExplodeWindup: return _stats.ExplodeWindupSeconds;
                 default: return 0f;
             }
         }

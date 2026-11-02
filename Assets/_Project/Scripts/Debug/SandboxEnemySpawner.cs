@@ -1,6 +1,7 @@
 using Deadfall.Encounters;
 using Deadfall.Enemies;
 using Deadfall.Net;
+using Deadfall.Rules.Combat;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
@@ -12,6 +13,8 @@ namespace Deadfall.DebugTools
     /// [ and ] lower/raise the alive cap in steps of 24 for stress tests. Enemies appear on the NavMesh
     /// 18-35 m from the player in a random direction.
     /// M3: N starts (or stops) a survival run on the host, G toggles ready during a lull.
+    /// M7: F12 spawns the next advanced enemy (Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, Specimen Zero);
+    /// hold Ctrl for a random mutation variant.
     /// </summary>
     public sealed class SandboxEnemySpawner : MonoBehaviour
     {
@@ -22,7 +25,10 @@ namespace Deadfall.DebugTools
 
         private Transform _player;
         private InputActionMap _map;
-        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _run, _ready;
+        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _run, _ready, _advanced, _ctrl;
+        private int _advancedIndex;
+        private static readonly EnemyTraits[] DebugTraits =
+            { EnemyTraits.Regenerating, EnemyTraits.Splitting, EnemyTraits.Hardened, EnemyTraits.Swift };
 
         public string LastMessage { get; private set; } = string.Empty;
         private float _messageUntil;
@@ -36,6 +42,8 @@ namespace Deadfall.DebugTools
             _bolter = _map.AddAction("SpawnBolter", InputActionType.Button, "<Keyboard>/f6");
             _bulwark = _map.AddAction("SpawnBulwark", InputActionType.Button, "<Keyboard>/f7");
             _horde = _map.AddAction("SpawnHorde", InputActionType.Button, "<Keyboard>/f8");
+            _advanced = _map.AddAction("SpawnAdvanced", InputActionType.Button, "<Keyboard>/f12");
+            _ctrl = _map.AddAction("VariantModifier", InputActionType.Button, "<Keyboard>/ctrl");
             _clear = _map.AddAction("KillAll", InputActionType.Button, "<Keyboard>/f11");
             _capDown = _map.AddAction("CapDown", InputActionType.Button, "<Keyboard>/leftBracket");
             _capUp = _map.AddAction("CapUp", InputActionType.Button, "<Keyboard>/rightBracket");
@@ -54,7 +62,7 @@ namespace Deadfall.DebugTools
             UpdateWaveKeys();
 
             bool any = _husk.WasPressedThisFrame() || _bolter.WasPressedThisFrame() || _bulwark.WasPressedThisFrame()
-                       || _horde.WasPressedThisFrame() || _clear.WasPressedThisFrame();
+                       || _horde.WasPressedThisFrame() || _clear.WasPressedThisFrame() || _advanced.WasPressedThisFrame();
             if (any && SessionService.Instance.Role == SessionRole.Client)
             {
                 Say("Enemies are controlled by the host.");
@@ -72,6 +80,7 @@ namespace Deadfall.DebugTools
                 SpawnMany(PrototypeEnemies.Bulwark, 1);
             }
             if (_clear.WasPressedThisFrame()) m.KillAll();
+            if (_advanced.WasPressedThisFrame()) SpawnAdvanced();
 
             if (_capUp.WasPressedThisFrame()) SetCap(m, Mathf.Min(240, m.MaxAlive + 24));
             if (_capDown.WasPressedThisFrame()) SetCap(m, Mathf.Max(24, m.MaxAlive - 24));
@@ -100,6 +109,27 @@ namespace Deadfall.DebugTools
         {
             m.CapOverride = cap;
             Say($"Enemy cap {cap}");
+        }
+
+        private void SpawnAdvanced()
+        {
+            var all = PrototypeEnemies.All;
+            const int first = 3; // after Husk, Bolter, Bulwark
+            EnemyDefinition def = all[first + _advancedIndex % (all.Count - first)];
+            _advancedIndex++;
+            bool ctrl = _ctrl.IsPressed();
+            EnemyTraits traits = ctrl && (def.Role == EnemyRole.Regular || def.Role == EnemyRole.Elite)
+                ? DebugTraits[Random.Range(0, DebugTraits.Length)] : EnemyTraits.None;
+            if (!def.CanSplit && traits == EnemyTraits.Splitting) traits = EnemyTraits.Hardened;
+            if (!TrySpawnPoint(out Vector3 point))
+            {
+                Say("No room to spawn (is the NavMesh built?)");
+                return;
+            }
+            float yaw = Quaternion.LookRotation(_player.position - point).eulerAngles.y;
+            Enemy e = EnemyManager.Instance.Spawn(def, point, yaw, 1f, traits);
+            if (e != null) e.Alert();
+            Say(e == null ? "Enemy cap reached." : $"Spawned {def.DisplayName}{(traits != EnemyTraits.None ? " (" + VariantRules.Describe(traits) + ")" : string.Empty)}");
         }
 
         private void SpawnMany(EnemyDefinition def, int count)

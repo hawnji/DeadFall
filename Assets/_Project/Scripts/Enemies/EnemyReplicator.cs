@@ -9,17 +9,17 @@ namespace Deadfall.Enemies
 {
     /// <summary>
     /// The compact enemy snapshot channel (ARCHITECTURE §7, DECISIONS T-08). The host runs all AI and sends
-    /// every enemy 12 times a second as 12 bytes: slot id, type, position in 2 cm steps, yaw in 256 steps,
-    /// state, health %. Clients keep pooled copies (EnemyManager mirror mode) and smooth toward each snapshot.
+    /// every enemy 12 times a second as 13 bytes: slot id, type, position in 2 cm steps, yaw in 256 steps,
+    /// state, health %, and one extra byte (mutation traits, or a Specimen's phase and modifiers). Clients keep pooled copies (EnemyManager mirror mode) and smooth toward each snapshot.
     /// Snapshots are unreliable (a lost one is replaced 83 ms later); despawns are reliable.
-    /// 48 enemies cost about 7 KB/s per client.
+    /// 48 enemies cost about 7.5 KB/s per client.
     /// </summary>
     public sealed class EnemyReplicator : MonoBehaviour
     {
         private const string MsgSnapshot = "df.en";
         private const string MsgDespawn = "df.engone";
         private const float SendInterval = 1f / 12f;
-        private const int BytesPerEnemy = 12;
+        private const int BytesPerEnemy = 13;
         /// <summary>Keeps each unreliable message under one packet (about 1.1 KB).</summary>
         private const int MaxPerMessage = 90;
         private const float PositionStep = 0.02f;
@@ -111,6 +111,7 @@ namespace Deadfall.Enemies
             w.WriteValueSafe((byte)Mathf.RoundToInt(Mathf.Repeat(e.transform.eulerAngles.y, 360f) / 360f * 256f));
             w.WriteValueSafe((byte)e.State);
             w.WriteValueSafe((byte)Mathf.CeilToInt(e.Health01 * 255f)); // ceil: a living enemy never reads as 0
+            w.WriteValueSafe(e.ExtraByte);
         }
 
         private void SendDespawns()
@@ -142,6 +143,7 @@ namespace Deadfall.Enemies
                 r.ReadValueSafe(out byte yawByte);
                 r.ReadValueSafe(out byte stateByte);
                 r.ReadValueSafe(out byte hp);
+                r.ReadValueSafe(out byte extra);
                 if (slot == 0 || stateByte > (byte)EnemyState.Dead) continue;
 
                 var pos = new Vector3(x * PositionStep, y * PositionStep, z * PositionStep);
@@ -156,7 +158,7 @@ namespace Deadfall.Enemies
                     e = _manager.SpawnMirror(def, slot, pos, yaw);
                     if (e == null) continue;
                 }
-                e.ApplySnapshot(pos, yaw, (EnemyState)stateByte, hp / 255f, now);
+                e.ApplySnapshot(pos, yaw, (EnemyState)stateByte, hp / 255f, extra, now);
             }
         }
 
