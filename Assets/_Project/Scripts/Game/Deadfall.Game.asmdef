@@ -1,0 +1,30 @@
+{
+    "name": "Deadfall.Game",
+    "rootNamespace": "Deadfall.Game",
+    "references": [
+        "Deadfall.Core",
+        "Deadfall.Net",
+        "Deadfall.Combat",
+        "Deadfall.Player",
+        "Deadfall.Classes",
+        "Deadfall.Enemies",
+        "Deadfall.World",
+        "Deadfall.Encounters",
+        "Deadfall.RunSystems",
+        "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat",
+        "Deadfall.Rules.World",
+        "Deadfall.Rules.Encounters",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -50,6 +50,7 @@ namespace Deadfall.Player
             var weapons = root.AddComponent<PlayerWeapons>();
             weapons.SetLoadout(loadout);
             root.AddComponent<PlayerCursorLock>();
+            root.AddComponent<PlayerInteractor>();
 
             root.SetActive(true);
             return root;

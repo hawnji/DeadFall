@@ -78,6 +78,8 @@ namespace Deadfall.UI
             _center.normal.textColor = Color.white;
         }
 
+        private PlayerInteractor _interactor;
+
         private void OnGUI()
         {
             if (_player == null) return;
@@ -97,6 +99,16 @@ namespace Deadfall.UI
                     Vector2 c = new Vector2(w * 0.5f, h * 0.5f) + new Vector2(Mathf.Sin(angle), -Mathf.Cos(angle)) * (h * 0.22f);
                     DrawRect(new Rect(c.x - 14, c.y - 14, 28, 28), new Color(1f, 0.15f, 0.1f, a * 2f));
                 }
+            }
+
+            // Interact prompt.
+            if (_interactor == null) _interactor = _player.GetComponent<PlayerInteractor>();
+            if (_interactor != null && !string.IsNullOrEmpty(_interactor.Prompt))
+            {
+                GUI.color = _interactor.CanUse ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                GUI.Label(new Rect(0, h * 0.5f + 70, w, 24), _interactor.CanUse ? $"[F] {_interactor.Prompt}" : _interactor.Prompt,
+                    new GUIStyle(_small) { alignment = TextAnchor.UpperCenter });
+                GUI.color = Color.white;
             }
 
             // Health bar.

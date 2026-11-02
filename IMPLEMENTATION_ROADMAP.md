@@ -75,7 +75,7 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 
 Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
-## M4 – Class framework 🔄 in review
+## M4 – Class framework ✅
 **Part 1 (framework, Gunner, Tank, Warrior)** ✅ merged as #19
 1. ✅ Rules (`Deadfall.Rules.Classes`): `AbilityTimer` (ready → active → cooldown, cooldown starts when the effect ends per T-26, early end, cooldown rate and refunds), `ClassRules` (Guard reduction, sustained-fire recoil, combining reductions), `MeleeCombo`, `DoctrineResolver` (pairs on different players, 4 distinct classes, at most 2 per player in list order).
 2. ✅ `WeaponStateMachine` handling modifiers: fire rate, reload speed, equip speed, free reloads, reserve capacity.
@@ -87,17 +87,26 @@ Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during 
 8. ✅ 17 new EditMode tests (`ClassRulesTests.cs`).
 9. ✅ Approved by the user after their check, 2026-11-02 (`TESTING.md` §3.5).
 
-**Part 2 (Engineer, Demolitionist, co-op), in review**
+**Part 2 (Engineer, Demolitionist, co-op)** ✅ merged as #20
 1. ✅ `Explosions.Detonate` in Combat: shared area damage (full at the centre to 30% at the edge), knockback, never hurts other players, the thrower takes a share (T-30).
 2. ✅ **Cluster Charge** (Demolitionist): thrown, bursts on impact (90 damage, 4.5 m), scatters 5 bomblets (45 damage, 3 m each). **Blast Padding** halves self damage.
 3. ✅ **Deploy Sentry** (Engineer): turret for 60 s, 22 m range, 6 shots/s at 9 damage, line of fire required, 300 HP, enemies can attack it. New `Hostiles` registry so turrets never search the scene.
 4. ✅ **Shove** (Tank): melee pushes enemies back about 2.5 m (heavier enemies less), also for clients (claims carry knockback, capped at 4 m).
 5. ✅ `ClassNetwork` (T-29): class roster shared through the host (remote players' labels show their class); shields, sentries and charges are created by the host, which deals the damage and holds the aggro, and clients get look-alike copies that vanish with the host's. Losing a shield or sentry starts its cooldown.
 6. ✅ Squad Doctrines resolved from the roster and shown on the HUD. Effects with placeholder numbers (D-17): **Vanguard** +25% Lunge distance, **Combined Arms** cooldowns 15% faster. Covering Fire, Overwatch and Demolition Crew are listed until the systems they modify exist.
-7. ⬜ Feel check in the editor and in co-op (`TESTING.md` §3.6).
+7. ⏸ Feel check in the editor and in co-op (`TESTING.md` §3.6): the user is holding all testing until M10.
 
-## M5 – Procedural map generation ⬜
-Room kit for Cinder Ridge (greybox), sockets, `LayoutGenerator` + `LayoutValidator` (Rules, tested on thousands of seeds), runtime builder, NavMesh baking per sector, locked doors, sector unlocks, loot and secret placement, debug overlay, seed reproduction.
+## M5 – Procedural map generation ✅ (editor check held until M10)
+1. ✅ Rules (`Deadfall.Rules.World`): grid, typed sockets, room templates with roles and tags, `GraphTemplate`, `LayoutGenerator` (spawn → main route with corridor pieces → objective → boss arena → side branches → secret vent rooms; retries with sub-seeds, then a known-good fallback seed), `LayoutValidator` (overlap, socket compatibility, reachability, required rooms, sectors open in order, spawn and loot counts, Supply Cache in the spawn sector, bounded size), `SectorSchedule`.
+2. ✅ Cinder Ridge greybox kit (`CinderRidgeKit`): decon airlock, lab bay, server hall, cold storage, cafeteria, security checkpoint, reactor control (objective), specimen containment (boss), vent crawl (secret), four corridor pieces and maintenance tunnels. One floor for now.
+3. ✅ `MapBuilder`: floors, ceilings, walls with doorways only where sockets connect, a light per room, cover props, player, enemy and loot points. One NavMesh bake for the whole map with doorways open; locked doors carve it while closed (T-32).
+4. ✅ Sectors: locked `SectorDoor`s open after surges 3, 7 and 12 (T-33); only open sectors feed spawn points to the wave director. Run start closes them again and returns everyone to the airlock.
+5. ✅ Loot: ammo crates, medkits and secret stashes (full refill plus 250 credits) on randomised slots (D-05), taken through the host so only one player gets each (T-35). Supply Cache slots are placed and filled in M6.
+6. ✅ Secret vents: breakable panels, resolved by the host through the new `INetTarget` id path (T-34).
+7. ✅ Co-op: only the seed travels (T-09). `df.map` on join and regenerate, `df.sector`, `df.secret`, `df.loot*`.
+8. ✅ Debug: seed field, Random, Back to sandbox and Open next sector on the pause screen; F9 minimap overlay with validation result; scene-view gizmos.
+9. ✅ Also: Interact key (F) with `IInteractable` and HUD prompts, explosions blocked by walls (T-30 follow-up), wave spawns accept points 7 m away when nothing is 15 m away.
+10. ✅ 10 new EditMode tests (`LayoutTests.cs`), including 3000 seeds validated.
 
 ## M6 – Weapons and run progression ⬜
 Full prototype roster (8), Supply Caches, starting loadouts, drops, attachments, weapon XP foundation, Field Mod offers (3 choices, rarities, class pools, stacking/evolution), run state reset.

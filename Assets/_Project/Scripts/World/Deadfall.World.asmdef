@@ -4,10 +4,11 @@
     "references": [
         "Deadfall.Net",
         "Deadfall.Core",
+        "Deadfall.Combat",
         "Deadfall.Rules.Common",
+        "Deadfall.Rules.Combat",
         "Deadfall.Rules.World",
-        "Unity.Netcode.Runtime",
-        "Unity.AI.Navigation"
+        "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
