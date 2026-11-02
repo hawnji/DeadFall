@@ -15,6 +15,8 @@ namespace Deadfall.Combat
         public string WeaponId;
         /// <summary>Staggers the target if it can be staggered at all (Warrior Lunge strike).</summary>
         public bool ForceStagger;
+        /// <summary>Metres to push the target away along <see cref="Direction"/> (Tank Shove, explosions).</summary>
+        public float Knockback;
     }
 
     /// <summary>Anything that can take damage: players, enemies, structures, training dummies.</summary>

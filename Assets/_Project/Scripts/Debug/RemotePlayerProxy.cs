@@ -158,8 +158,9 @@ namespace Deadfall.DebugTools
             if (cam == null || _renderers == null) return;
             Vector3 sp = cam.WorldToScreenPoint(transform.position + Vector3.up * (_eyeHeight + 0.45f));
             if (sp.z <= 0f || sp.z > 60f) return;
-            string label = $"Player {ClientId}  {Mathf.RoundToInt(Health01 * 100f)}%{(_dead ? "  DOWN" : "")}";
-            GUI.Label(new Rect(sp.x - 70f, Screen.height - sp.y - 10f, 140f, 20f), label);
+            Deadfall.Classes.ClassDefinition cls = Deadfall.Classes.PrototypeClasses.ById(Deadfall.Classes.ClassRoster.ClassOf(ClientId));
+            string label = $"Player {ClientId}{(cls != null ? " · " + cls.DisplayName : "")}  {Mathf.RoundToInt(Health01 * 100f)}%{(_dead ? "  DOWN" : "")}";
+            GUI.Label(new Rect(sp.x - 100f, Screen.height - sp.y - 10f, 200f, 20f), label);
         }
     }
 }

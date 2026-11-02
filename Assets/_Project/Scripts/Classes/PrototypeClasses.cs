@@ -7,9 +7,8 @@ namespace Deadfall.Classes
 {
     /// <summary>
     /// The five launch classes (C-03) with their prototype kits from GAME_DESIGN §5, created in memory so they work
-    /// with no asset setup. They become ClassDefinition assets in Data/Classes once tuning settles. Engineer and
-    /// Demolitionist abilities, and the passives that need Scrap, grenades or structures, arrive later (their
-    /// behaviour id has no code yet, so the HUD marks them as coming soon).
+    /// with no asset setup. They become ClassDefinition assets in Data/Classes once tuning settles. Passives that need
+    /// Scrap, grenades or structures arrive later (their behaviour id has no code yet, so the HUD marks them "soon").
     /// </summary>
     public static class PrototypeClasses
     {
@@ -35,14 +34,34 @@ namespace Deadfall.Classes
             return null;
         }
 
+        public const string CoveringFire = "doctrine.covering_fire";
+        public const string DemolitionCrew = "doctrine.demolition_crew";
+        public const string Vanguard = "doctrine.vanguard";
+        public const string Overwatch = "doctrine.overwatch";
+        public const string CombinedArms = "doctrine.combined_arms";
+
+        /// <summary>Display name of a doctrine id.</summary>
+        public static string DoctrineName(string id)
+        {
+            switch (id)
+            {
+                case CoveringFire: return "Covering Fire";
+                case DemolitionCrew: return "Demolition Crew";
+                case Vanguard: return "Vanguard";
+                case Overwatch: return "Overwatch";
+                case CombinedArms: return "Combined Arms";
+                default: return id;
+            }
+        }
+
         /// <summary>Squad Doctrines from GAME_DESIGN §5.1 (effects come after M4 playtests, D-17).</summary>
         public static readonly DoctrineRule[] Doctrines =
         {
-            DoctrineRule.Pair("doctrine.covering_fire", "class.gunner", "class.tank"),
-            DoctrineRule.Pair("doctrine.demolition_crew", "class.engineer", "class.demolitionist"),
-            DoctrineRule.Pair("doctrine.vanguard", "class.warrior", "class.tank"),
-            DoctrineRule.Pair("doctrine.overwatch", "class.gunner", "class.engineer"),
-            DoctrineRule.Distinct("doctrine.combined_arms", 4),
+            DoctrineRule.Pair(CoveringFire, "class.gunner", "class.tank"),
+            DoctrineRule.Pair(DemolitionCrew, "class.engineer", "class.demolitionist"),
+            DoctrineRule.Pair(Vanguard, "class.warrior", "class.tank"),
+            DoctrineRule.Pair(Overwatch, "class.gunner", "class.engineer"),
+            DoctrineRule.Distinct(CombinedArms, 4),
         };
 
         private static ClassDefinition[] Build()
@@ -60,7 +79,7 @@ namespace Deadfall.Classes
                 AbilityDefinition.CreateRuntime("ability.bulwark_shield", "Bulwark Shield", "bulwark_shield",
                     "Plant a 600 HP shield for 8 s. Enemies within 12 m attack it instead of the squad.", 40f, 8f, 600f, 3f, 12f),
                 PassiveDefinition.CreateRuntime("passive.guard", "Guard", "guard", "30% damage reduction while above 50% health.", 0.3f, 0.5f),
-                PassiveDefinition.CreateRuntime("passive.shove", "Shove", "melee_knockback", "Melee knocks enemies back (coming soon).", 2.5f));
+                PassiveDefinition.CreateRuntime("passive.shove", "Shove", "melee_knockback", "Melee knocks enemies back about 2.5 m.", 2.5f));
 
             var warrior = ClassDefinition.CreateRuntime("class.warrior", "Warrior", "Melee, mobility, executions", new Color(0.85f, 0.3f, 0.3f),
                 new[] { WeaponCategory.Melee },
@@ -73,17 +92,17 @@ namespace Deadfall.Classes
             var engineer = ClassDefinition.CreateRuntime("class.engineer", "Engineer", "Construction, automation", new Color(0.4f, 0.8f, 0.5f),
                 new[] { WeaponCategory.SubmachineGun, WeaponCategory.Pistol },
                 AbilityDefinition.CreateRuntime("ability.deploy_sentry", "Deploy Sentry", "deploy_sentry",
-                    "Place a light turret for 60 s (coming in M4 part 2).", 35f, 60f, 1f),
+                    "Place a light turret for 60 s that shoots the nearest enemy in range (scrap upgrades come with Engineering).", 35f, 60f, 9f, 6f, 22f),
                 PassiveDefinition.CreateRuntime("passive.salvager", "Salvager", "scrap_gain", "+50% Scrap (arrives with Scrap, M9).", 0.5f),
                 PassiveDefinition.CreateRuntime("passive.handy", "Handy", "repair_speed", "Repairs structures faster (arrives with Engineering, M9).", 0.5f));
 
             var demolitionist = ClassDefinition.CreateRuntime("class.demolitionist", "Demolitionist", "Explosives, area control", new Color(0.75f, 0.45f, 0.9f),
                 new[] { WeaponCategory.Heavy, WeaponCategory.Shotgun },
                 AbilityDefinition.CreateRuntime("ability.cluster_charge", "Cluster Charge", "cluster_charge",
-                    "Throw a charge that splits into 5 bomblets (coming in M4 part 2).", 25f, 0f, 5f),
+                    "Throw a charge that bursts on impact and scatters 5 bomblets.", 25f, 0f, 5f, 90f, 4.5f),
                 PassiveDefinition.CreateRuntime("passive.bandolier", "Bandolier", "grenade_capacity", "+2 grenades (arrives with grenades).", 2f),
                 PassiveDefinition.CreateRuntime("passive.blast_padding", "Blast Padding", "self_blast_reduction",
-                    "50% less damage from your own explosives (arrives with explosives).", 0.5f));
+                    "50% less damage from your own explosives.", 0.5f));
 
             return new[] { gunner, tank, warrior, engineer, demolitionist };
         }

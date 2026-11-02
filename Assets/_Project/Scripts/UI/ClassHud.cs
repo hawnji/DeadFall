@@ -63,6 +63,18 @@ namespace Deadfall.UI
             }
             GUI.Label(new Rect(bar.x + 6f, bar.y, bar.width, bar.height), label, _small);
 
+            // Doctrines from the squad, above the class name.
+            if (_class.ActiveDoctrines.Count > 0)
+            {
+                string d = "";
+                foreach (string id in _class.ActiveDoctrines)
+                {
+                    bool live = id == PrototypeClasses.Vanguard || id == PrototypeClasses.CombinedArms;
+                    d += (d.Length > 0 ? "  ·  " : "") + PrototypeClasses.DoctrineName(id) + (live ? "" : " (effect after playtests)");
+                }
+                GUI.Label(new Rect(x, y - 40f, 520f, 18f), "Doctrine: " + d, _small);
+            }
+
             // Passives, one line each, under the bar's label line.
             float py = y + 20f;
             for (int i = 0; i < c.Passives.Count; i++)

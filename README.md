@@ -13,7 +13,7 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M1.5 – Networking spike (host and join) | **Done** (two-player test passed 2026-11-02) |
 | M2 – Zombie AI and combat | **Done** (three enemy types, enemies in co-op; two-player check passed 2026-11-02) |
 | M3 – Wave management | **Done** (checked in the editor 2026-11-02) |
-| M4 – Class framework | **In review**: part 1 (framework, Gunner, Tank, Warrior) |
+| M4 – Class framework | **In review**: part 1 done (framework, Gunner, Tank, Warrior); part 2 in review (Engineer, Demolitionist, classes in co-op) |
 | M5–M13 | Not started. See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.

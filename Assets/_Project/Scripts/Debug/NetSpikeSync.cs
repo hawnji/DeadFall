@@ -42,6 +42,7 @@ namespace Deadfall.DebugTools
         private const float MaxPointError = 2.5f;    // metres between claimed hit point and the target's centre
         private const float ClaimsPerSecond = 60f;   // generous: 9-pellet shotgun or full-auto rifle plus melee
         private const float MaxClaimedOutgoing = 3f; // largest class bonus a claim may carry (Warrior Lunge strike ×3)
+        private const float MaxClaimedKnockback = 4f; // metres (Tank Shove)
 
         private sealed class ClaimBudget
         {
@@ -376,6 +377,7 @@ namespace Deadfall.DebugTools
                 if (claim.ForceStagger) claimFlags |= 2;
                 w.WriteValueSafe(claimFlags);
                 w.WriteValueSafe(claim.Request.OutgoingMultiplier);
+                w.WriteValueSafe(claim.Knockback);
                 _session.SendToServer(MsgHitClaim, w, NetworkDelivery.ReliableSequenced);
             }
         }
@@ -411,6 +413,7 @@ namespace Deadfall.DebugTools
             r.ReadValueSafe(out string weaponId);
             r.ReadValueSafe(out byte claimFlags);
             r.ReadValueSafe(out float outgoing);
+            r.ReadValueSafe(out float knockback);
 
             if (!ConsumeBudget(sender)) { Reject(sender, "rate"); return; }
             IDamageable target;
@@ -440,7 +443,7 @@ namespace Deadfall.DebugTools
             }
             if (!target.IsAlive) return; // already dead on the host: a normal race, not cheating
             if (!_proxies.TryGetValue(sender, out RemotePlayerProxy shooter) || shooter == null) { Reject(sender, "unknown shooter"); return; }
-            if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak) || !IsFinite(outgoing)) { Reject(sender, "malformed"); return; }
+            if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak) || !IsFinite(outgoing) || !IsFinite(knockback)) { Reject(sender, "malformed"); return; }
             if ((origin - shooter.EyePosition).sqrMagnitude > MaxOriginError * MaxOriginError) { Reject(sender, "origin"); return; }
             if ((point - targetCenter).sqrMagnitude > pointTolerance * pointTolerance) { Reject(sender, "point"); return; }
 
@@ -462,6 +465,7 @@ namespace Deadfall.DebugTools
                 Request = request,
                 IsMelee = isMelee,
                 ForceStagger = isMelee && (claimFlags & 2) != 0,
+                Knockback = isMelee ? Mathf.Clamp(knockback, 0f, MaxClaimedKnockback) : 0f,
             });
             if (!outcome.Applied) return;
 

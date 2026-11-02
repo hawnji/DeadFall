@@ -54,6 +54,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<NetSpikePanel>().Bind(sync, player);
             // M2: host enemies are sent to clients as compact snapshots.
             net.AddComponent<Deadfall.Enemies.EnemyReplicator>();
+            // M4: classes in co-op (roster, host-run shields, sentries and charges).
+            net.AddComponent<Deadfall.Classes.ClassNetwork>().Bind(player.GetComponent<Deadfall.Classes.PlayerClass>());
 
             // M3: survival waves. Press N to start a run.
             var waves = new GameObject("[Waves]").AddComponent<WaveManager>();

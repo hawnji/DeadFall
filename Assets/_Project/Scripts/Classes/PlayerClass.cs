@@ -19,6 +19,19 @@ namespace Deadfall.Classes
         private PlayerInputReader _input;
         private AbilityTimer _timer;
         private AbilityBehaviour _ability;
+        private readonly List<string> _doctrines = new List<string>(2);
+        private readonly List<string> _rosterClasses = new List<string>(4);
+
+        /// <summary>Cooldown speed with Combined Arms (placeholder, D-17).</summary>
+        public const float CombinedArmsCooldownRate = 1.15f;
+
+        /// <summary>The local player's class runner, or null.</summary>
+        public static PlayerClass Local { get; private set; }
+
+        /// <summary>Squad Doctrines this player has right now (at most two).</summary>
+        public IReadOnlyList<string> ActiveDoctrines => _doctrines;
+        public bool HasDoctrine(string id) => _doctrines.Contains(id);
+        public event Action DoctrinesChanged;
 
         public ClassDefinition Class => _ctx.Class;
         public AbilityDefinition Ability => _ctx.Class != null ? _ctx.Class.Ability : null;
@@ -47,9 +60,35 @@ namespace Deadfall.Classes
             _ctx.Motor = GetComponent<PlayerMotor>();
             _ctx.Look = GetComponent<PlayerLook>();
             if (_ctx.Weapons != null) _ctx.Weapons.HandlingSource = this;
+            Local = this;
+            ClassRoster.Changed += RefreshDoctrines;
         }
 
-        private void OnDestroy() => Clear();
+        private void OnDestroy()
+        {
+            ClassRoster.Changed -= RefreshDoctrines;
+            if (Local == this) Local = null;
+            Clear();
+        }
+
+        /// <summary>Recomputes doctrines from everyone's classes (this player first).</summary>
+        private void RefreshDoctrines()
+        {
+            _rosterClasses.Clear();
+            string mine = _ctx.Class != null ? _ctx.Class.ContentId : null;
+            _rosterClasses.Add(mine);
+            ulong me = PlayerIdentity.Local != null ? PlayerIdentity.Local.ClientId : 0UL;
+            foreach (KeyValuePair<ulong, string> kv in ClassRoster.All)
+                if (kv.Key != me) _rosterClasses.Add(kv.Value);
+            List<string>[] result = DoctrineResolver.Resolve(_rosterClasses, PrototypeClasses.Doctrines);
+            bool changed = result[0].Count != _doctrines.Count;
+            for (int i = 0; !changed && i < _doctrines.Count; i++) changed = _doctrines[i] != result[0][i];
+            if (!changed) return;
+            _doctrines.Clear();
+            _doctrines.AddRange(result[0]);
+            if (_timer != null) _timer.CooldownRate = HasDoctrine(PrototypeClasses.CombinedArms) ? CombinedArmsCooldownRate : 1f;
+            DoctrinesChanged?.Invoke();
+        }
 
         /// <summary>Switches class. The new ability starts ready.</summary>
         public void SetClass(ClassDefinition definition)
@@ -72,7 +111,15 @@ namespace Deadfall.Classes
                     _passives.Add(b);
                 }
             }
+            RefreshDoctrinesForced();
             ClassChanged?.Invoke(definition);
+        }
+
+        private void RefreshDoctrinesForced()
+        {
+            _doctrines.Clear();
+            RefreshDoctrines();
+            if (_timer != null) _timer.CooldownRate = HasDoctrine(PrototypeClasses.CombinedArms) ? CombinedArmsCooldownRate : 1f;
         }
 
         private void Clear()

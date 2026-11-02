@@ -63,6 +63,9 @@ namespace Deadfall.Net
         /// <summary>Host only: a remote player disconnected.</summary>
         public event Action<ulong> PeerDisconnected;
 
+        /// <summary>The service if it exists, without creating one (safe during teardown).</summary>
+        public static SessionService Current => _instance;
+
         public static SessionService Instance
         {
             get

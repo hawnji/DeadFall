@@ -24,6 +24,8 @@ namespace Deadfall.Combat
         public bool IsMelee;
         /// <summary>Ask the target to stagger (Warrior Lunge strike).</summary>
         public bool ForceStagger;
+        /// <summary>Metres of knockback (Tank Shove).</summary>
+        public float Knockback;
     }
 
     public interface IHitResolver
@@ -88,6 +90,7 @@ namespace Deadfall.Combat
                 Source = claim.Attacker,
                 WeaponId = claim.WeaponId,
                 ForceStagger = claim.ForceStagger,
+                Knockback = claim.Knockback,
             };
             float applied = claim.Target.ApplyDamage(info);
             if (applied <= 0f) return default;
