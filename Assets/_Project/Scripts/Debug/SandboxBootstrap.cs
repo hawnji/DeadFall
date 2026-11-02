@@ -1,6 +1,7 @@
 using Deadfall.Core;
 using Deadfall.Player;
 using Deadfall.UI;
+using Deadfall.World;
 using UnityEngine;
 
 namespace Deadfall.DebugTools
@@ -10,6 +11,7 @@ namespace Deadfall.DebugTools
     /// scene authoring: add this component to an empty GameObject in any scene and press Play.
     /// Areas: shooting range with distance markers, melee pit, movement course (ramps, stairs, jump
     /// boxes, crouch tunnel), and hazard/heal/ammo pads. Esc opens the co-op test panel (host / join).
+    /// A NavMesh is baked at startup so enemies (F5-F8) can path anywhere on the ground.
     /// </summary>
     public sealed class SandboxBootstrap : MonoBehaviour
     {
@@ -17,6 +19,7 @@ namespace Deadfall.DebugTools
         [SerializeField] private float _spawnYaw;
 
         private Transform _world;
+        private readonly RuntimeNavMesh _navMesh = new RuntimeNavMesh();
 
         private void Awake()
         {
@@ -28,12 +31,16 @@ namespace Deadfall.DebugTools
             BuildMeleePit();
             BuildMovementCourse();
             BuildZones();
+            // Bake after all geometry exists. Layer 2 (Ignore Raycast) holds players, so they don't carve holes.
+            Physics.SyncTransforms();
+            _navMesh.Build(new Bounds(new Vector3(0f, 3f, 20f), new Vector3(92f, 12f, 132f)), ~(1 << PlayerFactory.PlayerLayer));
 
             GameObject player = PlayerFactory.CreateLocalPlayer(_spawnPosition, _spawnYaw, SandboxContent.DefaultLoadout());
 
             var ui = new GameObject("[SandboxUI]");
             ui.AddComponent<PrototypeHud>().Bind(player);
             ui.AddComponent<SandboxDebugOverlay>().Bind(player, _spawnPosition, _spawnYaw);
+            ui.AddComponent<SandboxEnemySpawner>().Bind(player);
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");

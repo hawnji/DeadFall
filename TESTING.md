@@ -66,6 +66,22 @@ You need two copies of the game running. Easiest is the editor plus a Developmen
    - [ ] Join with no host running: after a few seconds the panel says it could not reach a host.
 6. The Console should show no errors on either side. Rejected hit claims appear as `[NetSpike] Rejected hit claim` warnings; there should be none in normal play.
 
+### 3.2 Manual checklist: M2 enemies (part 1)
+
+Play the sandbox in the editor. The overlay shows `Enemies alive / cap · AI ms` once something spawns.
+
+- [ ] F5 spawns a Husk 18–35 m away; it walks to you around obstacles (cover, stairs, tunnel) and swipes after a visible rear-back.
+- [ ] Backing off during the rear-back makes the swipe miss.
+- [ ] Head shots show crit markers and kill a Husk in 2 Halberd hits; body shots take about 5.
+- [ ] Sustained fire staggers a Husk (it tilts back); it can't be stagger-locked forever.
+- [ ] F6 Bolter weaves while running, then crouches briefly and lunges from 4–8 m. Sidestepping the lunge makes it miss.
+- [ ] F7 Bulwark: front shots hit the dark plate (small numbers, no crit); the orange growth on its back takes big crits. Its charge is telegraphed (it crouches about a second first) and can't be staggered.
+- [ ] Melee (V, Saber-7) works on all three.
+- [ ] Dead enemies fall over, stop blocking bullets, and disappear after about 4 s.
+- [ ] F8 three times: the alive count stops at the cap (24) and a message says so; `]` raises the cap.
+- [ ] When you die, enemies stop attacking; after respawn they come for you again.
+- [ ] Performance: with `]` to 120 and repeated F8, note FPS and AI ms on the overlay (target: AI under 2 ms at the cap, `TESTING.md` §5).
+
 Alternative without a build: install **Multiplayer Play Mode** from Package Manager, open **Window → Multiplayer → Multiplayer Play Mode**, enable Player 2, and use the panel in both windows. Two PCs on the same network also work: join with the host PC's local IP and allow port 7777 through the firewall.
 
 ## 4. Regression map
@@ -104,10 +120,11 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/HealthModelTests.cs` | Damage clamp, death, regen delay, segment cap |
 | EditMode | `Tests/EditMode/Rules/MotionMathTests.cs` | Frame-rate independent distance, sharpness, ballistic, jump height |
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
+| EditMode | `Tests/EditMode/Rules/EnemyBrainTests.cs` | Detection and alerting, strike lands once after wind-up, same attack timing at 8/30/144 Hz, stagger interrupt and immunity, meter decay, charge range/cooldown/contact/unstaggerable, death, armor zone multiplier |
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-01: 38/38 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 54/54 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -116,6 +133,8 @@ Status 2026-11-01: 38/38 EditMode tests pass in the compile-check runner. PlayMo
 - Viewmodel is primitive boxes rendered by the world camera, so it can clip into walls when pressed against them.
 - Melee hits use the camera position; a target directly overlapping the player's camera may be missed.
 - No audio yet.
+- M2 part 1: enemies exist only on the machine that spawns them. In a co-op session clients can't spawn them and don't see the host's enemies yet, and host enemies ignore remote players (part 2).
+- Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.
 - The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.

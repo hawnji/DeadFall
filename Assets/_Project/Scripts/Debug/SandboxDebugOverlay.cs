@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
+using Deadfall.Enemies;
 using Deadfall.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -34,6 +35,7 @@ namespace Deadfall.DebugTools
         private float _worstResetAt;
         private bool _showHelp = true;
         private GUIStyle _style, _numStyle;
+        private SandboxEnemySpawner _spawner;
 
         public void Bind(GameObject player, Vector3 spawnPos, float spawnYaw)
         {
@@ -144,10 +146,16 @@ namespace Deadfall.DebugTools
             if (_motor != null)
                 text += $"\nSpeed {_motor.HorizontalSpeed:0.00} m/s  {(_motor.IsGrounded ? "grounded" : "air")}{(_motor.IsSprinting ? "  sprint" : "")}{(_motor.IsCrouched ? "  crouch" : "")}";
             if (_health != null && _health.Invulnerable) text += "\nGOD MODE";
+            EnemyManager enemies = EnemyManager.Current;
+            if (enemies != null && enemies.ActiveCount > 0)
+                text += $"\nEnemies {enemies.AliveCount} / cap {enemies.MaxAlive}  ·  AI {enemies.UpdateMilliseconds:0.00} ms";
+            if (_spawner == null) _spawner = GetComponent<SandboxEnemySpawner>();
+            if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
             if (_showHelp)
                 text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · 1-4 / wheel swap · Esc pause" +
-                        "\nF1/F2/F3/F4 cap 30/60/144/off · F9 respawn · F10 god mode · H hide help";
-            GUI.Label(new Rect(12, 8, 900, 160), text, _style);
+                        "\nF1/F2/F3/F4 cap 30/60/144/off · F9 respawn · F10 god mode · H hide help" +
+                        "\nF5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap";
+            GUI.Label(new Rect(12, 8, 900, 220), text, _style);
 
             Camera cam = Camera.main;
             if (cam == null) return;
