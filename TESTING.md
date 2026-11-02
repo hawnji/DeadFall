@@ -99,6 +99,30 @@ Set up host and client as in §3.1, then on the **host**:
 
 Alternative without a build: install **Multiplayer Play Mode** from Package Manager, open **Window → Multiplayer → Multiplayer Play Mode**, enable Player 2, and use the panel in both windows. Two PCs on the same network also work: join with the host PC's local IP and allow port 7777 through the firewall.
 
+### 3.4 Manual checklist: M3 waves
+
+Solo, in the sandbox:
+
+- [ ] Press N: "DEPLOYMENT STARTED" appears, the top panel shows LULL with a 10 s timer and Field Credits 0.
+- [ ] When the timer runs out, "SURGE 1" appears and Husks walk in from one wall, out of sight where possible and never closer than 15 m. The panel counts enemies left down to 0.
+- [ ] Each kill shows "+10 Husk" (Bolter +15, Bulwark +60) and the credit total goes up.
+- [ ] Clearing a surge shows "SURGE 1 CLEARED, +60 Field Credits", then a 30 s LULL. G during the lull starts the next surge at once; G again before that cancels ready.
+- [ ] Bolters appear from surge 3, Bulwarks from surge 6. Surge 4 is a SWARM (only Husks, more of them at once). Surge 5 is a SIEGE (3 or more walls at once, a Bulwark may appear early).
+- [ ] Later surges have more enemies and they take more hits (the overlay line shows the plan: count, budget, at once, directions, health scale).
+- [ ] Die during a run: "SQUAD WIPED". N starts a new run (remaining enemies collapse).
+- [ ] N during a run stops it and removes its enemies. F5–F8 debug enemies don't count toward a surge and don't block it from ending.
+- [ ] Stuck enemy check: in a surge, turn on F10 god mode and stop shooting once everything has spawned. 40 s after the last kill the leftovers collapse and the surge clears.
+- [ ] No errors or warnings in the console except "could not place" lines if a spawn point is unusable.
+
+Two players (set up as in §3.1):
+
+- [ ] Host presses N. The client sees the same panel, timer and announcements. Client pressing N says the host starts runs.
+- [ ] Lull shows "0/2 ready". G on the client shows 1/2; G on the host starts the surge.
+- [ ] Kills by the client give the client the credits (shown on the client), kills by the host give the host credits. Surge clear pays both.
+- [ ] Spawn count is higher than solo for the same surge (the overlay plan line on the host).
+- [ ] One player dies: the run continues. Both dead at the same time: SQUAD WIPED on both screens.
+- [ ] A client joining during a surge sees the right surge, enemies left and their credits (0).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -135,11 +159,12 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/HealthModelTests.cs` | Damage clamp, death, regen delay, segment cap |
 | EditMode | `Tests/EditMode/Rules/MotionMathTests.cs` | Frame-rate independent distance, sharpness, ballistic, jump height |
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
+| EditMode | `Tests/EditMode/Rules/WaveTests.cs` | Budget growth by surge and players, adaptive ±10%, health cap, unlock surges, same seed same plan, budget never exceeded, Swarm cheap-only, Siege directions and early heavies, share cap, minimum one enemy, spawn cap, type rotation; surge loop (lull, surge, reward), clear reported once, ready and skip, final surge, endless, squad wipe, straggler cull, no cull while spawning, unspawnable surge ends, credit numbers, ledger |
 | EditMode | `Tests/EditMode/Rules/EnemyBrainTests.cs` | Detection and alerting, strike lands once after wind-up, same attack timing at 8/30/144 Hz, stagger interrupt and immunity, meter decay, charge range/cooldown/contact/unstaggerable, death, armor zone multiplier |
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 54/54 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 77/77 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -149,6 +174,7 @@ Status 2026-11-02: 54/54 EditMode tests pass in the compile-check runner. PlayMo
 - Melee hits use the camera position; a target directly overlapping the player's camera may be missed.
 - No audio yet.
 - M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
+- M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Solo death ends the run right away because there are no revives yet (M11). Credits cannot be spent until Supply Caches (M6).
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

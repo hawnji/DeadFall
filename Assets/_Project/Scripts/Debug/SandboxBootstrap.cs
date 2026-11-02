@@ -1,4 +1,5 @@
 using Deadfall.Core;
+using Deadfall.Encounters;
 using Deadfall.Player;
 using Deadfall.UI;
 using Deadfall.World;
@@ -41,6 +42,7 @@ namespace Deadfall.DebugTools
             ui.AddComponent<PrototypeHud>().Bind(player);
             ui.AddComponent<SandboxDebugOverlay>().Bind(player, _spawnPosition, _spawnYaw);
             ui.AddComponent<SandboxEnemySpawner>().Bind(player);
+            ui.AddComponent<WaveHud>();
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -49,6 +51,30 @@ namespace Deadfall.DebugTools
             net.AddComponent<NetSpikePanel>().Bind(sync, player);
             // M2: host enemies are sent to clients as compact snapshots.
             net.AddComponent<Deadfall.Enemies.EnemyReplicator>();
+
+            // M3: survival waves. Press N to start a run.
+            var waves = new GameObject("[Waves]").AddComponent<WaveManager>();
+            AddPerimeterSpawnPoints(waves);
+        }
+
+        /// <summary>
+        /// Spawn points along the inside of each perimeter wall, one group (arrival direction) per wall. The
+        /// director picks points out of sight and at least 15 m from every player.
+        /// </summary>
+        private static void AddPerimeterSpawnPoints(WaveManager waves)
+        {
+            const float inset = 3f, spacing = 9f;
+            const float minX = -45f + inset, maxX = 45f - inset, minZ = -45f + inset, maxZ = 85f - inset;
+            for (float x = minX; x <= maxX + 0.01f; x += spacing)
+            {
+                waves.AddSpawnPoint(new Vector3(x, 0f, maxZ), 0); // north
+                waves.AddSpawnPoint(new Vector3(x, 0f, minZ), 2); // south
+            }
+            for (float z = minZ + spacing; z <= maxZ - spacing + 0.01f; z += spacing)
+            {
+                waves.AddSpawnPoint(new Vector3(maxX, 0f, z), 1); // east
+                waves.AddSpawnPoint(new Vector3(minX, 0f, z), 3); // west
+            }
         }
 
         private static void DisableSceneCameras()

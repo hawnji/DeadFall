@@ -47,6 +47,9 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-20 | **Netcode for GameObjects 2.13.3** pinned in the manifest | Latest 2.x release whose changelog lists Unity 6 support at the time of M1.5. If Package Manager offers a newer verified version for 6000.6, take it. |
 | T-21 | **Runtime NavMesh baking with Unity's built-in `NavMeshBuilder`**, no AI Navigation package yet | Generated maps need runtime baking anyway, and the built-in API (`NavMeshBuilder.BuildNavMeshData`, `NavMeshAgent`) ships with the AI module, so there is no package version to match to the editor. Add AI Navigation later if we want editor-baked NavMeshSurfaces or NavMeshLinks. |
 | T-22 | **`HitZone.Armor`** for plating | Armor uses the hurtbox's own multiplier, capped at 1, and never counts as critical. Directional armor (Bulwark's front plate) is just a hurtbox in front of the body, so a flank shot hits the body or the weak point instead. |
+| T-23 | **Surge rotation**: surges 1–3 Standard, then every 5th a Siege and every other 4th a Swarm; Standard otherwise | Teaches the basics first and gives a predictable rhythm. A rotation table in data replaces it when Elite, Hunt and Supply surges arrive (M7). |
+| T-24 | **Field Credit numbers (placeholder)**: kill = 10 × threat cost to the killer (Husk 10, Bolter 15, Bulwark 60); surge clear = 50 + 10 × surge to every player; no assist credit yet | Gives prices a scale for M6 Supply Caches. All numbers live in `SurgeRunSettings` and will be tuned with prices. Assists need damage tracking per player and come with M6/M11. |
+| T-25 | **Waves run on the host and reach clients as one small state message** ("df.wave", reliable, 2 Hz plus on change); clients send ready votes | Same named-message pattern as T-19. Clients never decide spawns or rewards, so there is nothing to duplicate or cheat. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -97,3 +100,4 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-01: T-13 to T-17 recorded during M1.
 - 2026-11-02: T-18 recorded (editor pin). T-19 and T-20 recorded for the M1.5 networking spike.
 - 2026-11-02: T-21 and T-22 recorded for M2 enemies.
+- 2026-11-02: T-23 to T-25 recorded for M3 waves.

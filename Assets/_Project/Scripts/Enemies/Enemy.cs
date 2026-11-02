@@ -40,6 +40,7 @@ namespace Deadfall.Enemies
         private bool _chargeLanded;
         private float _weavePhase;
         private float _health;
+        private float _maxHealth = 1f;
         private double _diedAt;
         private bool _mirrored;
         private Vector3 _mirrorPos;
@@ -51,7 +52,8 @@ namespace Deadfall.Enemies
         public EnemyBrain Brain => _brain;
         public EnemyState State => _brain.State;
         public float Health => _health;
-        public float MaxHealth => _definition.Stats.MaxHealth;
+        /// <summary>Max health after the surge's health scale (GAME_DESIGN §8).</summary>
+        public float MaxHealth => _maxHealth;
         public bool IsAlive => _health > 0f;
         public float DamageReduction => _definition.Stats.DamageReduction;
         /// <summary>Per-session slot id used by the snapshot channel (assigned by EnemyManager).</summary>
@@ -62,7 +64,7 @@ namespace Deadfall.Enemies
         public bool IsMirror => _mirrored;
         internal double LastSnapshotTime => _lastSnapshot;
         /// <summary>Health as a fraction 0..1 (what snapshots carry).</summary>
-        public float Health01 => _definition.Stats.MaxHealth > 0f ? Mathf.Clamp01(_health / _definition.Stats.MaxHealth) : 0f;
+        public float Health01 => _maxHealth > 0f ? Mathf.Clamp01(_health / _maxHealth) : 0f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => SharedMaterials.Clear();
@@ -179,8 +181,9 @@ namespace Deadfall.Enemies
 
         // ---------------------------------------------------------------- pooling
 
-        internal void Activate(Vector3 position, float yaw, double now)
+        internal void Activate(Vector3 position, float yaw, double now, float healthScale = 1f)
         {
+            _maxHealth = _definition.Stats.MaxHealth * Mathf.Max(0.01f, healthScale);
             _mirrored = false;
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             gameObject.SetActive(true);
@@ -188,7 +191,7 @@ namespace Deadfall.Enemies
             _agent.Warp(position);
             _agent.isStopped = true;
             _moving = false;
-            _health = _definition.Stats.MaxHealth;
+            _health = _maxHealth;
             _target = null;
             _targetDistance = 0f;
             foreach (Collider c in _hurtColliders) c.enabled = true;
@@ -208,7 +211,8 @@ namespace Deadfall.Enemies
             _mirrorYaw = yaw;
             _lastSnapshot = now;
             _moving = false;
-            _health = _definition.Stats.MaxHealth;
+            _maxHealth = _definition.Stats.MaxHealth; // clients only see health as a fraction
+            _health = _maxHealth;
             _target = null;
             foreach (Collider c in _hurtColliders) c.enabled = true;
             _visual.localRotation = Quaternion.identity;
@@ -233,7 +237,7 @@ namespace Deadfall.Enemies
                 }
                 return;
             }
-            _health = Mathf.Max(0.01f, health01 * _definition.Stats.MaxHealth);
+            _health = Mathf.Max(0.01f, health01 * _maxHealth);
             _brain.Mirror(state, now);
         }
 
