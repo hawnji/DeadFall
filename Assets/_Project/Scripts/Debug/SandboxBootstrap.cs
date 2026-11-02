@@ -47,6 +47,8 @@ namespace Deadfall.DebugTools
             var sync = net.AddComponent<NetSpikeSync>();
             sync.Bind(player);
             net.AddComponent<NetSpikePanel>().Bind(sync, player);
+            // M2: host enemies are sent to clients as compact snapshots.
+            net.AddComponent<Deadfall.Enemies.EnemyReplicator>();
         }
 
         private static void DisableSceneCameras()

@@ -82,6 +82,21 @@ Play the sandbox in the editor. The overlay shows `Enemies alive / cap · AI ms`
 - [ ] When you die, enemies stop attacking; after respawn they come for you again.
 - [ ] Performance: with `]` to 120 and repeated F8, note FPS and AI ms on the overlay (target: AI under 2 ms at the cap, `TESTING.md` §5).
 
+### 3.3 Two-player check: M2 enemies in co-op
+
+Set up host and client as in §3.1, then on the **host**:
+
+- [ ] F8 spawns a horde. The client sees the same enemies in the same places, moving smoothly, with wind-ups and staggers visible.
+- [ ] Enemies go for whichever player is nearest. Stand near them on the client: they chase and hit the client, whose health bar drops and damage direction shows.
+- [ ] Client shoots and melees enemies: hit markers and damage numbers on the client; the enemy dies on both screens. Bulwark plate and back weak point behave the same for the client.
+- [ ] Both shoot the same Bulwark: it dies once.
+- [ ] Corpses disappear on both screens after about 4 s. F11 on the host kills everything on both.
+- [ ] The alive cap on the host overlay reads 32 with one client connected.
+- [ ] Client presses F5: "Enemies are controlled by the host."
+- [ ] A client that joins while enemies are already alive sees them right away.
+- [ ] Client leaves: the client's enemies vanish; the host's keep going. Host closes the session: the client's enemies vanish.
+- [ ] No `Rejected hit claim` warnings on the host in normal play.
+
 Alternative without a build: install **Multiplayer Play Mode** from Package Manager, open **Window → Multiplayer → Multiplayer Play Mode**, enable Player 2, and use the panel in both windows. Two PCs on the same network also work: join with the host PC's local IP and allow port 7777 through the firewall.
 
 ## 4. Regression map
@@ -133,7 +148,7 @@ Status 2026-11-02: 54/54 EditMode tests pass in the compile-check runner. PlayMo
 - Viewmodel is primitive boxes rendered by the world camera, so it can clip into walls when pressed against them.
 - Melee hits use the camera position; a target directly overlapping the player's camera may be missed.
 - No audio yet.
-- M2 part 1: enemies exist only on the machine that spawns them. In a co-op session clients can't spawn them and don't see the host's enemies yet, and host enemies ignore remote players (part 2).
+- M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

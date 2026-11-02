@@ -43,7 +43,7 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpolation buffers, Relay/Lobby, player-vs-player damage, reconnect (M11).
 
 ## M2 – Zombie AI and combat 🔄 in progress
-**Part 1 (offline), in review**
+**Part 1 (offline)** ✅ merged as #14, checked in the editor 2026-11-02
 1. ✅ Rules: `EnemyBrain` (idle → chase → wind-up → strike → recover, charge wind-up → charge, stagger, death; time-driven so identical at any tick rate), `StaggerMeter` (decaying build-up, immunity window), `EnemyStats`. New `HitZone.Armor` for plating. 16 EditMode tests.
 2. ✅ `EnemyDefinition` asset type and three prototype enemies in code (`PrototypeEnemies`): **Husk** (baseline), **Bolter** (fast, weaving approach, lunge), **Bulwark** (650 HP, front armor plate ×0.25, weak-point growth on the back ×2.5, unstaggerable charge).
 3. ✅ `Enemy` body: health, head/body/armor/weak-point hurtboxes, NavMeshAgent movement, strike arc check, charge contact, placeholder poses for wind-ups and staggers, death and corpse timer.
@@ -51,9 +51,15 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 5. ✅ `CombatTargets` registry (players register themselves) so AI never searches the scene.
 6. ✅ `RuntimeNavMesh` baking with Unity's built-in `NavMeshBuilder` (T-21); the sandbox bakes at startup.
 7. ✅ Sandbox hotkeys F5–F8, F11, `[` `]`, enemy count and AI cost on the overlay.
-8. ⬜ Feel check and first tuning pass in the editor (`TESTING.md` §3.2).
+8. ✅ Feel check in the editor (`TESTING.md` §3.2). Number tuning continues with waves in M3.
 
-**Part 2 (next)**: enemy snapshot channel so co-op clients see the host's enemies (slot id, quantised position, yaw, state, health %, 10–15 Hz), host enemies target remote players, client hits on enemies through the host resolver. Then profile 50 / 100 enemies in a build.
+**Part 2 (co-op), in review**
+1. ✅ `EnemyReplicator`: the host sends every enemy at 12 Hz in 12 bytes (slot id, type, position in 2 cm steps, yaw in 256 steps, state, health %), split into messages of at most 90 enemies so each fits one packet; despawns are sent reliably. About 7 KB/s per client at 48 enemies.
+2. ✅ `EnemyManager` mirror mode on clients: pooled copies created from snapshots, smoothed toward each update, wind-up and stagger poses replayed from the host's state, removed on despawn or after 3 s without news.
+3. ✅ Host enemies hunt remote players too (proxies register as combat targets); their hits are sent to that player's machine, which applies them with its own damage reduction.
+4. ✅ Client hits on enemies go through the host's hit validation (same path as dummies, with extra tolerance for enemy movement).
+5. ✅ The alive cap grows with connected players (D-19).
+6. ⬜ Two-player check (`TESTING.md` §3.3) and a 50 / 100 enemy profile in a Development Build.
 
 ## M3 – Wave management ⬜
 `DifficultyCurve`, `WavePlanner` threat budget, `WaveManager` states (Lull → Surge → Reward), `SpawnDirector` with concurrency cap, special surge types (Swarm, Siege), announcements, Field Credit rewards. Deadlock tests.

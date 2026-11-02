@@ -12,9 +12,14 @@ namespace Deadfall.Enemies
     public static class PrototypeEnemies
     {
         private static EnemyDefinition _husk, _bolter, _bulwark;
+        private static EnemyDefinition[] _all;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => _husk = _bolter = _bulwark = null;
+        private static void ResetStatics()
+        {
+            _husk = _bolter = _bulwark = null;
+            _all = null;
+        }
 
         /// <summary>Standard infected: walks at you, swipes, comes in numbers. ~5 body shots, 2 head shots.</summary>
         public static EnemyDefinition Husk => _husk != null ? _husk : _husk = EnemyDefinition.CreateRuntime(
@@ -56,6 +61,14 @@ namespace Deadfall.Enemies
             },
             EnemyBodyType.Plated, 2.3f, 0.6f, new Color(0.38f, 0.36f, 0.42f), threatCost: 6f);
 
-        public static IReadOnlyList<EnemyDefinition> All => new[] { Husk, Bolter, Bulwark };
+        /// <summary>Fixed order: the network numbers enemy types by position here (EnemyCatalog). Append only.</summary>
+        public static IReadOnlyList<EnemyDefinition> All
+        {
+            get
+            {
+                if (_all == null || _all[0] == null) _all = new[] { Husk, Bolter, Bulwark };
+                return _all;
+            }
+        }
     }
 }
