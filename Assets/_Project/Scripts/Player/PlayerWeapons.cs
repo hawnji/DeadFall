@@ -63,6 +63,57 @@ namespace Deadfall.Player
         private MeleeStats _activeMelee;
         private float _aimBlend;
         private static uint _rngCounter;
+        private WeaponHandling _handling = WeaponHandling.Default;
+        private MeleeBonus? _nextMeleeBonus;
+        private MeleeBonus? _activeMeleeBonus;
+        private readonly MeleeStats _bonusMelee = new MeleeStats();
+        private double _sustainStart = double.NaN;
+        private double _lastShotTime = double.NegativeInfinity;
+
+        /// <summary>Class passives and abilities plug in here.</summary>
+        public IWeaponHandlingSource HandlingSource { get; set; }
+        /// <summary>The handling applied this frame to the weapon in hand.</summary>
+        public WeaponHandling Handling => _handling;
+        /// <summary>Seconds of continuous fire so far (0 when not firing). Short gaps between shots don't reset it.</summary>
+        public float SustainedFireSeconds => double.IsNaN(_sustainStart) ? 0f : (float)(Time.timeAsDouble - _sustainStart);
+        /// <summary>A melee bonus is waiting for the next swing.</summary>
+        public bool HasMeleeBonus => _nextMeleeBonus.HasValue;
+
+        /// <summary>Raised after a melee swing resolves, with the number of targets it hit.</summary>
+        public event Action<int> MeleeResolved;
+
+        /// <summary>The next melee swing gets this bonus (replaces any waiting bonus).</summary>
+        public void SetNextMeleeBonus(MeleeBonus bonus) => _nextMeleeBonus = bonus;
+
+        public void ClearMeleeBonus() => _nextMeleeBonus = null;
+
+        /// <summary>Clears the waiting bonus only if <paramref name="tag"/> set it.</summary>
+        public void ClearMeleeBonus(string tag)
+        {
+            if (_nextMeleeBonus.HasValue && _nextMeleeBonus.Value.Tag == tag) _nextMeleeBonus = null;
+        }
+
+        /// <summary>The waiting bonus's tag, or null.</summary>
+        public string MeleeBonusTag => _nextMeleeBonus?.Tag;
+
+        /// <summary>Raised when the slots are (re)built from the loadout.</summary>
+        public event Action LoadoutBuilt;
+
+        /// <summary>Starts a melee swing now if nothing blocks it (abilities that end in a strike).</summary>
+        public bool TryMeleeNow()
+        {
+            if (_current < 0 || IsMeleeing || Time.timeAsDouble < _equipEnd) return false;
+            Slot slot = _slots[_current];
+            StartMelee(slot.IsMelee ? slot.Definition.Melee : _quickMelee, Time.timeAsDouble, slot);
+            return true;
+        }
+
+        /// <summary>Scales every firearm's reserve capacity (Gunner +25%). <paramref name="refill"/> fills to the new cap.</summary>
+        public void SetReserveCapacity(float multiplier, bool refill)
+        {
+            foreach (Slot s in _slots)
+                s.Firearm?.SetMaxReserve(UnityEngine.Mathf.RoundToInt(s.Definition.Firearm.MaxReserve * UnityEngine.Mathf.Max(0f, multiplier)), refill);
+        }
 
         public int SlotCount => _slots.Count;
         public int CurrentIndex => _current;
@@ -118,6 +169,7 @@ namespace Deadfall.Player
             }
             _current = -1;
             if (_slots.Count > 0) Equip(0);
+            LoadoutBuilt?.Invoke();
         }
 
         public void Equip(int index)
@@ -128,16 +180,17 @@ namespace Deadfall.Player
             _current = index;
             Slot slot = _slots[_current];
             _equipStart = now;
+            RefreshHandling(slot);
             if (slot.Firearm != null)
             {
                 slot.Firearm.Equip(now);
-                _equipEnd = now + slot.Definition.Firearm.EquipSeconds;
+                _equipEnd = now + slot.Definition.Firearm.EquipSeconds / _handling.EquipSpeed;
                 slot.Spread.Reset();
                 if (_look != null) _look.AimFovMultiplier = slot.Definition.Firearm.AimFovMultiplier;
             }
             else
             {
-                _equipEnd = now + _meleeEquipSeconds;
+                _equipEnd = now + _meleeEquipSeconds / _handling.EquipSpeed;
                 if (_look != null) _look.AimFovMultiplier = 1f;
             }
             if (_viewmodel != null) _viewmodel.Show(slot.Definition);
@@ -163,6 +216,7 @@ namespace Deadfall.Player
 
             HandleSwap(f);
             slot = _slots[_current];
+            RefreshHandling(slot);
             bool equipping = now < _equipEnd;
 
             // Sprint → fire delay: weapons need a moment to come up after sprinting.
@@ -197,6 +251,15 @@ namespace Deadfall.Player
                 shots = result.ShotsFired;
                 if (result.DryFire && slot.Firearm.CanReload) slot.Firearm.StartReload(now);
                 for (int i = 0; i < shots; i++) FireOneShot(slot);
+                if (shots > 0)
+                {
+                    if (double.IsNaN(_sustainStart)) _sustainStart = now;
+                    _lastShotTime = now;
+                }
+                else if (!double.IsNaN(_sustainStart) && (!f.FireHeld || now - _lastShotTime > 0.35))
+                {
+                    _sustainStart = double.NaN;
+                }
                 if (shots > 0)
                     EventBus<WeaponFired>.Publish(new WeaponFired { Owner = gameObject, WeaponId = slot.Definition.ContentId, Shots = shots });
 
@@ -271,7 +334,7 @@ namespace Deadfall.Player
                             Origin = origin,
                             Point = hit.point,
                             WeaponId = slot.Definition.ContentId,
-                            Request = DamageRequest.FromWeapon(w, zone, hit.distance, weak),
+                            Request = DamageRequest.FromWeapon(w, zone, hit.distance, weak, _handling.Damage),
                         });
                     }
                 }
@@ -280,7 +343,7 @@ namespace Deadfall.Player
             }
 
             slot.Spread.OnShot();
-            float recoilMult = Mathf.Lerp(1f, w.AimRecoilMultiplier, _aimBlend);
+            float recoilMult = Mathf.Lerp(1f, w.AimRecoilMultiplier, _aimBlend) * _handling.Recoil;
             if (_look != null) _look.AddRecoil(w.RecoilPitch * recoilMult, _rng.Range(-w.RecoilYaw, w.RecoilYaw) * recoilMult);
             if (_viewmodel != null) _viewmodel.Kick(recoilMult);
         }
@@ -288,6 +351,22 @@ namespace Deadfall.Player
         private void StartMelee(MeleeStats stats, double now, Slot slot)
         {
             slot.Firearm?.CancelReload();
+            _activeMeleeBonus = _nextMeleeBonus;
+            _nextMeleeBonus = null;
+            if (_activeMeleeBonus.HasValue)
+            {
+                // A copy of the swing with a wider arc / more targets, so the shared stats are never changed.
+                MeleeBonus b = _activeMeleeBonus.Value;
+                _bonusMelee.Damage = stats.Damage;
+                _bonusMelee.HeadMultiplier = stats.HeadMultiplier;
+                _bonusMelee.Range = stats.Range;
+                _bonusMelee.ArcDegrees = Mathf.Min(300f, stats.ArcDegrees * Mathf.Max(1f, b.ArcMultiplier));
+                _bonusMelee.WindupSeconds = stats.WindupSeconds;
+                _bonusMelee.RecoverySeconds = stats.RecoverySeconds;
+                _bonusMelee.MaxTargets = stats.MaxTargets + Mathf.Max(0, b.ExtraTargets);
+                _bonusMelee.MoveSpeedMultiplier = stats.MoveSpeedMultiplier;
+                stats = _bonusMelee;
+            }
             _activeMelee = stats;
             _meleePending = true;
             _meleeHitTime = now + stats.WindupSeconds;
@@ -302,6 +381,9 @@ namespace Deadfall.Player
             Transform cam = _look != null && _look.Camera != null ? _look.Camera.transform : transform;
             CombatQueries.MeleeArc(cam.position, cam.forward, _activeMelee, transform, _meleeTargets);
             string weaponId = CurrentDefinition != null && CurrentDefinition.Kind == WeaponKind.Melee ? CurrentDefinition.ContentId : "melee.quick";
+            float outgoing = _handling.MeleeDamage * (_activeMeleeBonus.HasValue ? Mathf.Max(0f, _activeMeleeBonus.Value.DamageMultiplier) : 1f);
+            bool stagger = _activeMeleeBonus.HasValue && _activeMeleeBonus.Value.Stagger;
+            _activeMeleeBonus = null;
             for (int i = 0; i < _meleeTargets.Count; i++)
             {
                 MeleeTarget t = _meleeTargets[i];
@@ -314,9 +396,23 @@ namespace Deadfall.Player
                     Origin = cam.position,
                     Point = t.Point,
                     WeaponId = weaponId,
-                    Request = DamageRequest.FromMelee(_activeMelee, t.Zone, t.WeakPointMultiplier),
+                    Request = DamageRequest.FromMelee(_activeMelee, t.Zone, t.WeakPointMultiplier, outgoing),
+                    IsMelee = true,
+                    ForceStagger = stagger,
                 });
             }
+            MeleeResolved?.Invoke(_meleeTargets.Count);
+        }
+
+        private void RefreshHandling(Slot slot)
+        {
+            _handling = WeaponHandling.Default;
+            HandlingSource?.ModifyHandling(slot.Definition, ref _handling);
+            if (slot.Firearm == null) return;
+            slot.Firearm.FireRateMultiplier = _handling.FireRate;
+            slot.Firearm.ReloadSpeedMultiplier = _handling.ReloadSpeed;
+            slot.Firearm.EquipSpeedMultiplier = _handling.EquipSpeed;
+            slot.Firearm.FreeReloads = _handling.FreeReloads;
         }
 
         /// <summary>Refills reserve ammo on all firearms (ammo crates, debug).</summary>

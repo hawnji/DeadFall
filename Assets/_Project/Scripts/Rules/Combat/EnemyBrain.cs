@@ -173,6 +173,14 @@ namespace Deadfall.Rules.Combat
             if (!IsDead) _alerted = true;
         }
 
+        /// <summary>Queues a stagger now, if the enemy can be staggered at the moment (ignores the meter).</summary>
+        public void ForceStagger(double now)
+        {
+            if (IsDead) return;
+            _alerted = true;
+            if (CanBeStaggered()) _staggerPending = true;
+        }
+
         /// <summary>Call when the enemy takes damage. Alerts it and may queue a stagger for the next tick.</summary>
         public void OnDamaged(float amount, double now)
         {

@@ -40,6 +40,8 @@ namespace Deadfall.Rules.Combat
         private bool _reloadCommitted;
         private bool _reloadFromEmpty;
         private bool _triggerWasDown;
+        private float _fireRate = 1f, _reloadSpeed = 1f, _equipSpeed = 1f;
+        private int _maxReserve;
 
         /// <summary>Upper bound on rounds released in one call, so a long hitch can't empty a magazine instantly.</summary>
         public const int MaxShotsPerCall = 8;
@@ -48,7 +50,8 @@ namespace Deadfall.Rules.Combat
         {
             _stats = stats ?? throw new ArgumentNullException(nameof(stats));
             Magazine = Clamp(magazine, 0, stats.MagazineSize);
-            Reserve = Clamp(reserve, 0, stats.MaxReserve);
+            _maxReserve = Math.Max(0, stats.MaxReserve);
+            Reserve = Clamp(reserve, 0, _maxReserve);
             State = WeaponState.Holstered;
         }
 
@@ -60,7 +63,27 @@ namespace Deadfall.Rules.Combat
         public int Reserve { get; private set; }
         public bool IsReloading => State == WeaponState.Reloading;
         public bool IsEmpty => Magazine == 0;
-        public bool CanReload => Magazine < _stats.MagazineSize && Reserve > 0;
+        public bool CanReload => Magazine < _stats.MagazineSize && (Reserve > 0 || FreeReloads);
+
+        // ---- handling modifiers (class passives, abilities, attachments). They change timing, never the stats asset.
+
+        /// <summary>Fire rate multiplier: 1.4 fires 40% faster.</summary>
+        public float FireRateMultiplier { get => _fireRate; set => _fireRate = Math.Max(0.05f, value); }
+        /// <summary>Reload speed multiplier: 1.25 reloads in 80% of the time. Applies to reloads that start after it is set.</summary>
+        public float ReloadSpeedMultiplier { get => _reloadSpeed; set => _reloadSpeed = Math.Max(0.05f, value); }
+        /// <summary>Equip (swap) speed multiplier.</summary>
+        public float EquipSpeedMultiplier { get => _equipSpeed; set => _equipSpeed = Math.Max(0.05f, value); }
+        /// <summary>Reloads fill the magazine without using reserve ammo (Gunner Overdrive).</summary>
+        public bool FreeReloads { get; set; }
+        /// <summary>Reserve capacity, normally the weapon's MaxReserve (Gunner: +25%).</summary>
+        public int MaxReserve => _maxReserve;
+
+        /// <summary>Changes the reserve capacity. Current reserve is clamped; <paramref name="fill"/> tops it up.</summary>
+        public void SetMaxReserve(int max, bool fill)
+        {
+            _maxReserve = Math.Max(0, max);
+            Reserve = fill ? _maxReserve : Clamp(Reserve, 0, _maxReserve);
+        }
 
         /// <summary>0..1 progress of the current equip or reload, 1 otherwise.</summary>
         public float StateProgress(double now)
@@ -78,7 +101,7 @@ namespace Deadfall.Rules.Combat
         {
             State = WeaponState.Equipping;
             _stateStart = now;
-            _stateEnd = now + Math.Max(0f, _stats.EquipSeconds);
+            _stateEnd = now + Math.Max(0f, _stats.EquipSeconds) / _equipSpeed;
             _nextShotTime = _stateEnd;
             if (_stateEnd <= now) State = WeaponState.Ready;
         }
@@ -131,7 +154,7 @@ namespace Deadfall.Rules.Combat
             if (Magazine == 0)
                 return new FireResult(0, triggerPressedThisFrame);
 
-            double interval = _stats.SecondsBetweenShots;
+            double interval = _stats.SecondsBetweenShots / _fireRate;
             if (now < _nextShotTime) return FireResult.None;
 
             // A fresh trigger pull restarts the cadence from now instead of releasing a backlog of shots.
@@ -169,7 +192,7 @@ namespace Deadfall.Rules.Combat
         {
             if (State != WeaponState.Ready || !CanReload) return false;
             _reloadFromEmpty = Magazine == 0;
-            float duration = _reloadFromEmpty ? _stats.EmptyReloadSeconds : _stats.TacticalReloadSeconds;
+            float duration = (_reloadFromEmpty ? _stats.EmptyReloadSeconds : _stats.TacticalReloadSeconds) / _reloadSpeed;
             State = WeaponState.Reloading;
             _reloadCommitted = false;
             _stateStart = now;
@@ -194,7 +217,7 @@ namespace Deadfall.Rules.Combat
         {
             if (amount <= 0) return 0;
             int before = Reserve;
-            Reserve = Clamp(Reserve + amount, 0, _stats.MaxReserve);
+            Reserve = Clamp(Reserve + amount, 0, _maxReserve);
             return Reserve - before;
         }
 
@@ -202,9 +225,9 @@ namespace Deadfall.Rules.Combat
         {
             _reloadCommitted = true;
             int needed = _stats.MagazineSize - Magazine;
-            int taken = Math.Min(needed, Reserve);
+            int taken = FreeReloads ? needed : Math.Min(needed, Reserve);
             Magazine += taken;
-            Reserve -= taken;
+            if (!FreeReloads) Reserve -= taken;
             ReloadCommitted?.Invoke();
         }
 

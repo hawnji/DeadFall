@@ -123,6 +123,19 @@ Two players (set up as in §3.1):
 - [ ] One player dies: the run continues. Both dead at the same time: SQUAD WIPED on both screens.
 - [ ] A client joining during a surge sees the right surge, enemies left and their credits (0).
 
+### 3.5 Manual checklist: M4 classes (part 1)
+
+In the sandbox, Esc shows the class list on the left. The class name, ability bar and passives sit above the health bar.
+
+- [ ] Picking a class updates the HUD at once and is remembered after stopping and starting Play.
+- [ ] Any class can still use every weapon. The class's preferred weapons reload and swap a little faster (Gunner: Halberd AR; Tank: Breacher-12; Warrior: melee).
+- [ ] **Gunner**: reserve ammo shows 25% more after picking it. Holding fire on the Halberd, recoil settles noticeably after 2–3 s. Q: the bar counts down 8 s, the Halberd fires faster and reloading doesn't lower the reserve; then a 45 s cooldown. Q during cooldown does nothing.
+- [ ] **Tank**: Q plants a blue wall 2 m ahead. Enemies within about 12 m go for the wall and hit it until it breaks (it darkens as it takes damage); breaking it starts the 40 s cooldown early. Your bullets pass through it. Taking hits above half health hurts noticeably less than as Gunner.
+- [ ] **Warrior**: Q dashes about 8 m forward and swings at the end; a Husk hit by it dies or staggers (a Bulwark staggers unless it is charging). Dashing into a wall stops the dash. Three quick melee hits: the third hits more enemies in a wider arc. Melee kills heal 5.
+- [ ] **Engineer** and **Demolitionist**: selectable, the HUD says their ability is coming soon, Q does nothing.
+- [ ] Switching class during Overdrive or with a shield up ends the effect cleanly (shield disappears, fire rate back to normal).
+- [ ] Co-op (as §3.1): a client Warrior's Lunge strike staggers and does triple damage to host enemies; a client Gunner's Overdrive fires faster with no rejected-claim warnings on the host. Known gap: a client's Tank shield doesn't pull host enemies yet (part 2).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -159,12 +172,13 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/HealthModelTests.cs` | Damage clamp, death, regen delay, segment cap |
 | EditMode | `Tests/EditMode/Rules/MotionMathTests.cs` | Frame-rate independent distance, sharpness, ballistic, jump height |
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
+| EditMode | `Tests/EditMode/Rules/ClassRulesTests.cs` | Ability timer phases, instant abilities, early end, long frames, cooldown rate and refunds; Guard threshold, sustained recoil floor, combined reduction; combo chain; doctrine pairs, duplicates, two-per-player cap, four distinct; weapon fire rate, reload speed, free reloads, reserve capacity |
 | EditMode | `Tests/EditMode/Rules/WaveTests.cs` | Budget growth by surge and players, adaptive ±10%, health cap, unlock surges, same seed same plan, budget never exceeded, Swarm cheap-only, Siege directions and early heavies, share cap, minimum one enemy, spawn cap, type rotation; surge loop (lull, surge, reward), clear reported once, ready and skip, final surge, endless, squad wipe, straggler cull, no cull while spawning, unspawnable surge ends, credit numbers, ledger |
 | EditMode | `Tests/EditMode/Rules/EnemyBrainTests.cs` | Detection and alerting, strike lands once after wind-up, same attack timing at 8/30/144 Hz, stagger interrupt and immunity, meter decay, charge range/cooldown/contact/unstaggerable, death, armor zone multiplier |
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 77/77 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 95/95 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -175,6 +189,7 @@ Status 2026-11-02: 77/77 EditMode tests pass in the compile-check runner. PlayMo
 - No audio yet.
 - M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
 - M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Solo death ends the run right away because there are no revives yet (M11). Credits cannot be spent until Supply Caches (M6).
+- M4 part 1: classes are local only. Other players don't see your class, and a client's Tank shield is invisible to the host's enemies. Lunge and Overdrive work for clients. Tank Shove and the Engineer and Demolitionist kits come in part 2.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

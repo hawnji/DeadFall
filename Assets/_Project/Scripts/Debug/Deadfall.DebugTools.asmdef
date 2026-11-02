@@ -5,6 +5,7 @@
         "Deadfall.Rules.Combat",
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Encounters",
+        "Deadfall.Rules.Classes",
         "Deadfall.Core",
         "Deadfall.Net",
         "Deadfall.Combat",

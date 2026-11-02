@@ -36,7 +36,10 @@ namespace Deadfall.Player
         public float Max => _model.Max;
         public float Normalized => _model.Normalized;
         public bool IsAlive => !_model.IsDead;
-        public float DamageReduction => _damageReduction;
+        /// <summary>Base reduction combined with <see cref="BonusDamageReduction"/> (never reaches 100%).</summary>
+        public float DamageReduction => 1f - (1f - Mathf.Clamp01(_damageReduction)) * (1f - Mathf.Clamp01(BonusDamageReduction));
+        /// <summary>Extra reduction from class passives and abilities, set by whoever owns it each frame.</summary>
+        public float BonusDamageReduction { get; set; }
         public bool Invulnerable { get; set; }
 
         public Transform TargetTransform => transform;
@@ -79,7 +82,7 @@ namespace Deadfall.Player
         /// <summary>Convenience for environmental damage (hazards, falls, test volumes).</summary>
         public float ApplyRawDamage(float amount, Vector3 direction, GameObject source = null)
         {
-            var info = new DamageInfo { Amount = amount * (1f - Mathf.Clamp01(_damageReduction)), Direction = direction, Source = source, Zone = HitZone.Body };
+            var info = new DamageInfo { Amount = amount * (1f - DamageReduction), Direction = direction, Source = source, Zone = HitZone.Body };
             return ApplyDamage(info);
         }
 

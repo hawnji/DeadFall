@@ -82,6 +82,9 @@ namespace Deadfall.Player
         /// <summary>When false (dead), input is ignored but gravity still applies.</summary>
         public bool InputEnabled { get; set; } = true;
 
+        /// <summary>True during an ability dash (Warrior Lunge): normal movement input is ignored.</summary>
+        public bool IsDashing => _dashRemaining > 0f;
+        public event Action DashEnded;
         public event Action Jumped;
         public event Action<float> Landed;
 
@@ -155,8 +158,22 @@ namespace Deadfall.Player
             else
                 sharpness = c.AirSharpness;
 
-            _horizontalVelocity.x = MotionMath.ExpApproach(_horizontalVelocity.x, target.x, sharpness, dt, out float dx);
-            _horizontalVelocity.z = MotionMath.ExpApproach(_horizontalVelocity.z, target.z, sharpness, dt, out float dz);
+            float dx, dz;
+            if (_dashRemaining > 0f)
+            {
+                // Dash: a fixed-speed burst along the dash direction, ending when its distance is covered.
+                float step = Mathf.Min(_dashRemaining, _dashSpeed * dt);
+                _dashRemaining -= step;
+                dx = _dashDirection.x * step;
+                dz = _dashDirection.z * step;
+                _horizontalVelocity = _dashDirection * (_dashRemaining > 0f ? _dashSpeed : c.SprintSpeed);
+                if (_dashRemaining <= 0f) _dashEndPending = true;
+            }
+            else
+            {
+                _horizontalVelocity.x = MotionMath.ExpApproach(_horizontalVelocity.x, target.x, sharpness, dt, out dx);
+                _horizontalVelocity.z = MotionMath.ExpApproach(_horizontalVelocity.z, target.z, sharpness, dt, out dz);
+            }
 
             // Jump with coyote time and input buffering so jumps feel reliable at the edge of timing.
             _jumpBufferTimer = input.JumpPressed ? 0f : _jumpBufferTimer + dt;
@@ -187,6 +204,18 @@ namespace Deadfall.Player
             Vector3 before = transform.position;
             CollisionFlags flags = _controller.Move(new Vector3(dx, dy, dz));
             Vector3 moved = transform.position - before;
+            if (_dashRemaining > 0f && (flags & CollisionFlags.Sides) != 0 && new Vector2(moved.x, moved.z).sqrMagnitude < 0.25f * new Vector2(dx, dz).sqrMagnitude)
+            {
+                // Ran into a wall: the dash stops here instead of grinding along it.
+                _dashRemaining = 0f;
+                _horizontalVelocity = Vector3.zero;
+                _dashEndPending = true;
+            }
+            if (_dashEndPending)
+            {
+                _dashEndPending = false;
+                DashEnded?.Invoke();
+            }
 
             if ((flags & CollisionFlags.Above) != 0 && _verticalVelocity > 0f) _verticalVelocity = 0f;
 
@@ -244,8 +273,33 @@ namespace Deadfall.Player
         }
 
         /// <summary>Moves the player instantly (spawn, respawn) and clears momentum.</summary>
+        /// <summary>
+        /// Moves <paramref name="distance"/> metres along <paramref name="direction"/> (flattened) over
+        /// <paramref name="seconds"/>, with collisions. Gravity still applies, so dashing off a ledge falls.
+        /// </summary>
+        public void Dash(Vector3 direction, float distance, float seconds)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.0001f || distance <= 0f) return;
+            _dashDirection = direction.normalized;
+            _dashRemaining = distance;
+            _dashSpeed = distance / Mathf.Max(0.05f, seconds);
+        }
+
+        public void CancelDash()
+        {
+            if (_dashRemaining <= 0f) return;
+            _dashRemaining = 0f;
+            DashEnded?.Invoke();
+        }
+
+        private Vector3 _dashDirection;
+        private float _dashRemaining, _dashSpeed;
+        private bool _dashEndPending;
+
         public void Teleport(Vector3 position, float yaw)
         {
+            _dashRemaining = 0f;
             _controller.enabled = false;
             transform.position = position;
             _controller.enabled = true;

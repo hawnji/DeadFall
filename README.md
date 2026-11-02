@@ -12,8 +12,9 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M1 – Playable first-person foundation | **Done** (feel pass checked in the editor 2026-11-02; tuning continues) |
 | M1.5 – Networking spike (host and join) | **Done** (two-player test passed 2026-11-02) |
 | M2 – Zombie AI and combat | **Done** (three enemy types, enemies in co-op; two-player check passed 2026-11-02) |
-| M3 – Wave management | **In review**: surges, difficulty curve, spawn director, Field Credits, wave HUD |
-| M4–M13 | Not started. See `IMPLEMENTATION_ROADMAP.md` |
+| M3 – Wave management | **Done** (checked in the editor 2026-11-02) |
+| M4 – Class framework | **In review**: part 1 (framework, Gunner, Tank, Warrior) |
+| M5–M13 | Not started. See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -71,6 +72,7 @@ Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB ai
 Debug: F1/F2/F3/F4 cap 30/60/144/unlimited FPS, F9 respawn, F10 god mode, H toggle help.
 Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill all, `[` / `]` lower or raise the alive cap.
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
+Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
 

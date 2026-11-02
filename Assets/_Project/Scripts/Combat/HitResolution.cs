@@ -20,6 +20,10 @@ namespace Deadfall.Combat
         public string WeaponId;
         /// <summary>The damage request built from the attacker's weapon and modifiers.</summary>
         public DamageRequest Request;
+        /// <summary>Melee swing rather than a bullet.</summary>
+        public bool IsMelee;
+        /// <summary>Ask the target to stagger (Warrior Lunge strike).</summary>
+        public bool ForceStagger;
     }
 
     public interface IHitResolver
@@ -53,6 +57,7 @@ namespace Deadfall.Combat
                 IsCritical = outcome.IsCritical,
                 Killed = outcome.Killed,
                 Point = claim.Point,
+                IsMelee = claim.IsMelee,
             });
         }
 
@@ -82,6 +87,7 @@ namespace Deadfall.Combat
                 Direction = (claim.Point - claim.Origin).normalized,
                 Source = claim.Attacker,
                 WeaponId = claim.WeaponId,
+                ForceStagger = claim.ForceStagger,
             };
             float applied = claim.Target.ApplyDamage(info);
             if (applied <= 0f) return default;
