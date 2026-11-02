@@ -42,6 +42,7 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-14 | **Reload commit point** (default 75% of the reload) | Interrupting before it keeps the old magazine; after it keeps the new one. Clear and testable, avoids "lost" ammo. |
 | T-15 | **Input actions defined in code for M1** | Works without asset authoring; the same actions move into an `.inputactions` asset when the rebinding menu is built. |
 | T-16 | **IMGUI placeholder HUD for M1** | Zero asset setup; the real HUD uses UI Toolkit and only reads the same state and events. |
+| T-18 | **Editor pinned to 6000.6.6f1**; packages added from Package Manager as milestones need them | The user's installed editor. Adding packages through Package Manager picks versions that match it instead of guessed versions. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet

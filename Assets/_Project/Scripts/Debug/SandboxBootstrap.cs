@@ -176,7 +176,9 @@ namespace Deadfall.DebugTools
             if (r == null) return;
             if (_baseMaterial == null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                // Works with or without URP set up: URP Lit when a render pipeline asset is active, Standard otherwise.
+                bool srp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+                Shader shader = Shader.Find(srp ? "Universal Render Pipeline/Lit" : "Standard");
                 _baseMaterial = shader != null ? new Material(shader) : new Material(r.sharedMaterial);
             }
             var m = new Material(_baseMaterial);
