@@ -34,7 +34,8 @@ namespace Deadfall.Player
         private void Awake()
         {
             _currentPos = _hipPosition;
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            bool srp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+            Shader shader = Shader.Find(srp ? "Universal Render Pipeline/Lit" : "Standard");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader != null) _material = new Material(shader);
         }
