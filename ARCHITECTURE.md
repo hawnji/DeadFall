@@ -205,7 +205,8 @@ Outcome table (detail in `GAME_DESIGN.md` §9):
 - **Ticking.** Gameplay MonoBehaviours avoid individual `Update` where many instances exist. `EnemyManager` ticks AI in time slices (e.g. 1/4 of enemies per frame for decisions; locomotion every frame via NavMeshAgent). Perception runs at 5–10 Hz.
 - **Movement.** Kinematic controller on `CharacterController`, simulated in `Update` with exponential, framerate-independent acceleration; camera look in `LateUpdate` from raw mouse delta (never multiplied by `deltaTime`). Weapon logic driven by timestamps, not frame counts.
 - **No per-frame allocations** in gameplay loops. Use `NonAlloc` physics queries, pooled lists, struct events.
-- **Physics layers** defined once in `Settings/PhysicsLayers` and referenced by a generated constants class.
+- **Physics layers** defined once in `Settings/PhysicsLayers` and referenced by a generated constants class. (M1 uses the built-in Ignore Raycast layer for players, see T-17.)
+- **Execution order** for the player: input (-100) → look (-50) → motor (0) → weapons (10) → viewmodel (LateUpdate). Components share per-frame state through `PlayerStatus` instead of referencing each other's internals.
 
 ## 10. Development conventions
 
@@ -222,7 +223,7 @@ Outcome table (detail in `GAME_DESIGN.md` §9):
 
 | # | Risk | Impact | Mitigation |
 |---|---|---|---|
-| R1 | Unity cannot run in the cloud dev environment; code written there is unverified until opened in the editor | High | Keep logic in Rules assemblies with EditMode tests; add GitHub Actions with GameCI to compile and run tests on every push (needs a Unity license secret); the user runs a short manual check per increment |
+| R1 | Unity cannot run in the cloud dev environment; code written there is unverified until opened in the editor | High | `Tools/CompileCheck` compiles each asmdef against Unity reference DLLs and runs Rules tests; keep logic in Rules assemblies with EditMode tests; add GitHub Actions with GameCI to compile and run tests on every push (needs a Unity license secret); the user runs a short manual check per increment |
 | R2 | Horde scale (CPU): NavMeshAgent + Animator cost per zombie | High | Time-sliced AI, Animator culling, LOD, population caps, profile at M2; vertex-animation shader for distant zombies if needed |
 | R3 | Enemy sync bandwidth with 4 players and large hordes | High | Custom compact snapshot channel, relevance prioritisation, 10–15 Hz, measure in M11 (planned early spike in M2/M3) |
 | R4 | Runtime NavMesh baking on generated maps (time, hitches, door links) | Medium | Bake per room section asynchronously, use NavMeshLinks at sockets, bake new sections when unlocked |

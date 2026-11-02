@@ -1,0 +1,188 @@
+using Deadfall.Player;
+using Deadfall.UI;
+using UnityEngine;
+
+namespace Deadfall.DebugTools
+{
+    /// <summary>
+    /// Builds the Milestone 1 movement and combat sandbox from primitives at runtime, so it needs no
+    /// scene authoring: add this component to an empty GameObject in any scene and press Play.
+    /// Areas: shooting range with distance markers, melee pit, movement course (ramps, stairs, jump
+    /// boxes, crouch tunnel), and hazard/heal/ammo pads.
+    /// </summary>
+    public sealed class SandboxBootstrap : MonoBehaviour
+    {
+        [SerializeField] private Vector3 _spawnPosition = new Vector3(0f, 0.05f, 0f);
+        [SerializeField] private float _spawnYaw;
+
+        private static Material _baseMaterial;
+        private Transform _world;
+
+        private void Awake()
+        {
+            DisableSceneCameras();
+            _world = new GameObject("[SandboxWorld]").transform;
+            EnsureLight();
+            BuildGround();
+            BuildShootingRange();
+            BuildMeleePit();
+            BuildMovementCourse();
+            BuildZones();
+
+            GameObject player = PlayerFactory.CreateLocalPlayer(_spawnPosition, _spawnYaw, SandboxContent.DefaultLoadout());
+
+            var ui = new GameObject("[SandboxUI]");
+            ui.AddComponent<PrototypeHud>().Bind(player);
+            ui.AddComponent<SandboxDebugOverlay>().Bind(player, _spawnPosition, _spawnYaw);
+        }
+
+        private static void DisableSceneCameras()
+        {
+            foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+                cam.gameObject.SetActive(false);
+        }
+
+        private void EnsureLight()
+        {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.32f, 0.34f, 0.38f);
+            if (Object.FindObjectsByType<Light>(FindObjectsSortMode.None).Length > 0) return;
+            var go = new GameObject("Sun");
+            go.transform.SetParent(_world, false);
+            go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.1f;
+            light.shadows = LightShadows.Soft;
+        }
+
+        private void BuildGround()
+        {
+            Box("Ground", new Vector3(0f, -0.25f, 20f), new Vector3(90f, 0.5f, 130f), new Color(0.3f, 0.31f, 0.3f));
+            // Perimeter walls
+            Box("WallN", new Vector3(0f, 2f, 85f), new Vector3(90f, 4f, 1f), new Color(0.25f, 0.26f, 0.28f));
+            Box("WallS", new Vector3(0f, 2f, -45f), new Vector3(90f, 4f, 1f), new Color(0.25f, 0.26f, 0.28f));
+            Box("WallE", new Vector3(45f, 2f, 20f), new Vector3(1f, 4f, 130f), new Color(0.25f, 0.26f, 0.28f));
+            Box("WallW", new Vector3(-45f, 2f, 20f), new Vector3(1f, 4f, 130f), new Color(0.25f, 0.26f, 0.28f));
+        }
+
+        private void BuildShootingRange()
+        {
+            // Lane straight ahead of spawn (+Z). Markers every 10 m.
+            for (int d = 10; d <= 80; d += 10)
+                Box($"Marker{d}m", new Vector3(-3f, 0.02f, d), new Vector3(1.2f, 0.04f, 0.2f), d % 50 == 0 ? new Color(0.9f, 0.7f, 0.2f) : new Color(0.7f, 0.7f, 0.7f));
+
+            float[] distances = { 5f, 15f, 30f, 50f, 80f };
+            foreach (float d in distances) TrainingDummy.Create(new Vector3(0f, 0f, d), _world);
+            TrainingDummy.Create(new Vector3(5f, 0f, 20f), _world, 150f, strafeDistance: 3f);
+            TrainingDummy.Create(new Vector3(-6f, 0f, 25f), _world, 1000f); // high-HP target for full-magazine DPS checks
+
+            // Cover pieces at the range.
+            Box("Cover1", new Vector3(3f, 0.5f, 10f), new Vector3(2f, 1f, 0.4f), new Color(0.4f, 0.38f, 0.33f));
+            Box("Cover2", new Vector3(-2f, 0.6f, 35f), new Vector3(2.5f, 1.2f, 0.4f), new Color(0.4f, 0.38f, 0.33f));
+        }
+
+        private void BuildMeleePit()
+        {
+            Vector3 c = new Vector3(-14f, 0f, 4f);
+            Box("MeleePitFloor", c + new Vector3(0f, 0.01f, 0f), new Vector3(8f, 0.02f, 8f), new Color(0.35f, 0.28f, 0.25f));
+            TrainingDummy.Create(c + new Vector3(-1.2f, 0f, 1.5f), _world);
+            TrainingDummy.Create(c + new Vector3(0f, 0f, 2f), _world);
+            TrainingDummy.Create(c + new Vector3(1.2f, 0f, 1.5f), _world);
+            TrainingDummy.Create(c + new Vector3(0f, 0f, -2.5f), _world); // behind: must NOT be hit by a forward swing
+        }
+
+        private void BuildMovementCourse()
+        {
+            float x = 18f;
+            Color ramp = new Color(0.42f, 0.45f, 0.5f);
+
+            // Ramps at increasing angles (slope limit is 46°, so the 50° ramp should block).
+            float[] angles = { 15f, 30f, 45f, 50f };
+            for (int i = 0; i < angles.Length; i++)
+            {
+                float a = angles[i];
+                float len = 6f;
+                var go = Box($"Ramp{a}", Vector3.zero, new Vector3(2.5f, 0.3f, len), ramp);
+                go.transform.position = new Vector3(x + i * 3.5f, Mathf.Sin(a * Mathf.Deg2Rad) * len * 0.5f, 8f + Mathf.Cos(a * Mathf.Deg2Rad) * len * 0.5f);
+                go.transform.rotation = Quaternion.Euler(-a, 0f, 0f);
+            }
+
+            // Stairs: 0.2 m and 0.3 m steps should be walkable, 0.45 m steps should need a jump.
+            BuildStairs(new Vector3(x, 0f, 20f), 0.2f, 10);
+            BuildStairs(new Vector3(x + 4f, 0f, 20f), 0.3f, 7);
+            BuildStairs(new Vector3(x + 8f, 0f, 20f), 0.45f, 4);
+
+            // Jump boxes: 0.5 m (step/jump), 0.9 m (max jump), 1.3 m (too high).
+            float[] heights = { 0.5f, 0.9f, 1.3f };
+            for (int i = 0; i < heights.Length; i++)
+                Box($"JumpBox{heights[i]}", new Vector3(x + i * 3.5f, heights[i] * 0.5f, 34f), new Vector3(2f, heights[i], 2f), new Color(0.5f, 0.42f, 0.3f));
+
+            // Crouch tunnel: 1.3 m clearance (standing height is 1.8 m).
+            Vector3 t = new Vector3(x + 12f, 0f, 30f);
+            Box("TunnelRoof", t + new Vector3(0f, 1.3f + 0.15f, 0f), new Vector3(2.4f, 0.3f, 6f), new Color(0.3f, 0.3f, 0.35f));
+            Box("TunnelWallL", t + new Vector3(-1.35f, 0.9f, 0f), new Vector3(0.3f, 1.8f, 6f), new Color(0.3f, 0.3f, 0.35f));
+            Box("TunnelWallR", t + new Vector3(1.35f, 0.9f, 0f), new Vector3(0.3f, 1.8f, 6f), new Color(0.3f, 0.3f, 0.35f));
+
+            // Narrow corridor with a corner, for strafing and collision checks.
+            Box("CorridorA", new Vector3(x + 2f, 1.5f, 45f), new Vector3(0.3f, 3f, 10f), new Color(0.32f, 0.33f, 0.36f));
+            Box("CorridorB", new Vector3(x + 4f, 1.5f, 43f), new Vector3(0.3f, 3f, 6f), new Color(0.32f, 0.33f, 0.36f));
+            Box("CorridorC", new Vector3(x + 7f, 1.5f, 50f), new Vector3(10f, 3f, 0.3f), new Color(0.32f, 0.33f, 0.36f));
+        }
+
+        private void BuildStairs(Vector3 start, float stepHeight, int steps)
+        {
+            float depth = 0.35f;
+            for (int i = 0; i < steps; i++)
+            {
+                float h = stepHeight * (i + 1);
+                Box($"Step{stepHeight}_{i}", start + new Vector3(0f, h * 0.5f, i * depth), new Vector3(2.5f, h, depth), new Color(0.45f, 0.45f, 0.48f));
+            }
+        }
+
+        private void BuildZones()
+        {
+            Zone("HazardPad", new Vector3(-8f, 0f, -8f), SandboxZone.ZoneKind.Damage, 10f, new Color(0.7f, 0.15f, 0.12f));
+            Zone("HealPad", new Vector3(-3f, 0f, -8f), SandboxZone.ZoneKind.Heal, 15f, new Color(0.2f, 0.65f, 0.3f));
+            Zone("AmmoPad", new Vector3(2f, 0f, -8f), SandboxZone.ZoneKind.Ammo, 0f, new Color(0.25f, 0.45f, 0.75f));
+        }
+
+        private void Zone(string zoneName, Vector3 pos, SandboxZone.ZoneKind kind, float amount, Color color)
+        {
+            var marker = Box(zoneName, pos + new Vector3(0f, 0.015f, 0f), new Vector3(3f, 0.03f, 3f), color);
+            Object.Destroy(marker.GetComponent<Collider>());
+            var zone = new GameObject(zoneName + "Zone").AddComponent<SandboxZone>();
+            zone.transform.SetParent(_world, false);
+            zone.transform.position = pos;
+            zone.Configure(kind, new Vector3(3f, 2f, 3f), amount);
+        }
+
+        private GameObject Box(string boxName, Vector3 position, Vector3 size, Color color)
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = boxName;
+            go.transform.SetParent(_world, false);
+            go.transform.position = position;
+            go.transform.localScale = size;
+            go.isStatic = true;
+            Tint(go, color);
+            return go;
+        }
+
+        /// <summary>Applies a flat URP Lit color (falls back to the default material's color).</summary>
+        public static void Tint(GameObject go, Color color)
+        {
+            var r = go.GetComponent<Renderer>();
+            if (r == null) return;
+            if (_baseMaterial == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                _baseMaterial = shader != null ? new Material(shader) : new Material(r.sharedMaterial);
+            }
+            var m = new Material(_baseMaterial);
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            if (m.HasProperty("_Color")) m.color = color;
+            r.sharedMaterial = m;
+        }
+    }
+}

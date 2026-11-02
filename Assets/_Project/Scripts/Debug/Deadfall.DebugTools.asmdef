@@ -2,6 +2,8 @@
     "name": "Deadfall.DebugTools",
     "rootNamespace": "Deadfall.DebugTools",
     "references": [
+        "Deadfall.Rules.Combat",
+        "Deadfall.Rules.Common",
         "Deadfall.Core",
         "Deadfall.Net",
         "Deadfall.Combat",

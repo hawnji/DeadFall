@@ -13,21 +13,25 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 - ✅ Open decisions listed with recommended defaults
 - ✅ `Assets/_Project` folder tree and assembly definitions
 - ⬜ User creates the Unity project per `README.md` (requires the Unity editor)
-- ⬜ Approval of open decisions (`DECISIONS.md`)
+- ✅ Approval of open decisions (`DECISIONS.md`, 2026-11-01)
 
-## M1 – Playable first-person foundation 🔄 next
-1. Rules: `WeaponStateMachine` (fire modes, fire rate, mag/reserve, tactical/empty reload, reload interruption), `DamageCalculator` basics, `StatBlock`/modifiers. EditMode tests.
-2. Core: bootstrap, `ServiceRegistry`, `EventBus`, logging, settings (sensitivity, FOV).
-3. Input actions asset (move, look, sprint, jump, crouch, fire, ADS, reload, melee, swap, interact, ability).
-4. `PlayerMotor` (kinematic, frame-rate independent acceleration) + `PlayerLook` (raw delta, LateUpdate).
-5. `Health` + damage receiver + test damage volume.
-6. `WeaponRuntime`: hitscan firing, recoil and spread, reload, swap, melee sweep. Two placeholder weapons (pistol, rifle) + one melee.
-7. Minimal HUD (health, ammo, crosshair, hit marker).
-8. Sandbox scene: corridors, targets with head zones, ramps and stairs, a frame-rate limiter (30/60/144/unlocked) for testing.
-9. Net spike: host + one client in Multiplayer Play Mode see each other move and shoot targets (validated hit claims).
-10. PlayMode tests: movement distance consistent across frame rates; reload completes and refills; melee registers.
+## M1 – Playable first-person foundation 🔄 in review
+1. ✅ Rules: `WeaponStateMachine` (semi/auto, exact fire rate at any FPS, mag/reserve, tactical/empty reload, commit point for interruption), `DamageCalculator` (range falloff, zones, crits, reduction), `SpreadModel`, `HealthModel` (segmented regen), `MotionMath`, `ModifierStack`, `DeterministicRandom`. 38 EditMode tests.
+2. ✅ Core: `GameBootstrap`, `ServiceRegistry`, `EventBus<T>`, `GameLog`, `GameSettings` + PlayerPrefs settings service. Fast enter-play-mode safe.
+3. ✅ Input: actions defined in code in `PlayerInputReader` (keyboard/mouse + gamepad bindings). An `.inputactions` asset with rebinding comes with the settings menu.
+4. ✅ `PlayerMotor` (exact frame-rate independent acceleration, sprint cone, jump with coyote time and buffering, crouch with headroom check) + `PlayerLook` (raw delta, recoil with recovery, horizontal FOV).
+5. ✅ `PlayerHealth` (IDamageable), hazard/heal/ammo pads in the sandbox.
+6. ✅ `PlayerWeapons`: hitscan with pellets and spread, recoil, reload, swap, ADS, sprint-to-fire delay, quick melee and melee weapons, all through `IHitResolver` (local now, host later). Four placeholder weapons (AR, shotgun, pistol, sword).
+7. ✅ `PrototypeHud` (IMGUI placeholder): health, ammo, weapon, reload bar, spread-accurate crosshair, hit/crit/kill markers, damage direction.
+8. ✅ Runtime-built sandbox (`SandboxBootstrap`): range with distance markers and strafing target, melee pit with a target behind the player, ramps 15–50°, stairs 0.2/0.3/0.45 m, jump boxes, crouch tunnel, corridor, pads; debug overlay with FPS, frame cap hotkeys, damage numbers.
+9. ⬜ Net spike: host + one client see each other move and shoot. **Moved to M1.5** so the feel pass happens first and NGO code can be compiled in the editor (packages aren't reachable from the cloud environment).
+10. ✅ PlayMode tests: walk distance equal at 30/60/144 FPS, sprint vs strafe, stopping distance, headshot multiplier, self-ignore raycast, melee arc front/back, one hit per target, dead targets.
+11. ⬜ In-editor feel check against `TESTING.md` §3, then tune numbers.
 
-**Acceptance**: brief's M1 criteria + host/client smoke test.
+**Acceptance**: brief's M1 criteria, verified in the editor.
+
+## M1.5 – Networking spike ⬜
+NGO host/join via direct IP and Multiplayer Play Mode; owner-authoritative player transform; hit claims sent to a host `IHitResolver`; two players shooting the same dummy see the same health.
 
 ## M2 – Zombie AI and combat ⬜
 Enemy definition + Husk, NavMesh on sandbox, perception at 5–10 Hz, `EnemyManager` time-slicing, attacks, hurtbox zones/crits, stagger, death, pooling, 2nd and 3rd enemy types (Bolter, Bulwark). Enemy snapshot channel prototype. Profile 50 / 100 enemies in a build.

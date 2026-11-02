@@ -1,6 +1,6 @@
 # Decisions
 
-Three lists: what the brief already confirmed, technical choices made in M0, and open design questions with a **recommended default**. A recommendation is not a decision until it moves to "Confirmed". All open items are implemented as configurable data so they can change later.
+Three lists: what the brief already confirmed, technical choices made in M0, and open design questions with a **recommended default**. A recommendation is not a decision until the user approves it. All open items are implemented as configurable data so they can change later.
 
 ## Confirmed (from the project brief)
 
@@ -38,6 +38,12 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-11 | **Input System, UI Toolkit, AI Navigation, Newtonsoft JSON** | Rebinding and controller-ready input; UI Toolkit scales for many menu screens; runtime NavMesh baking for generated rooms; robust versioned JSON. |
 | T-12 | **Git + Git LFS**, branch per feature, PR into `main` | Recoverable history, binary assets in LFS. |
 
+| T-13 | **Sprinting does not cancel a reload; firing or aiming stops a sprint** | Keeps reloads from being lost to habitual sprinting. Weapons need a short sprint-to-fire delay (per weapon) to keep sprinting a commitment. Revisit after the feel pass. |
+| T-14 | **Reload commit point** (default 75% of the reload) | Interrupting before it keeps the old magazine; after it keeps the new one. Clear and testable, avoids "lost" ammo. |
+| T-15 | **Input actions defined in code for M1** | Works without asset authoring; the same actions move into an `.inputactions` asset when the rebinding menu is built. |
+| T-16 | **IMGUI placeholder HUD for M1** | Zero asset setup; the real HUD uses UI Toolkit and only reads the same state and events. |
+| T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
+
 ### T-03 detail: NGO vs FishNet
 
 | | Netcode for GameObjects | FishNet |
@@ -51,9 +57,11 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 
 **Recommendation: NGO.** FishNet's main advantages (prediction, lag compensation) matter most for competitive PvP; Deadfall is co-op PvE with owner-authoritative movement. NGO's first-party services and Multiplayer Play Mode reduce setup and testing friction, which matters more for a small team. The horde bandwidth problem needs a custom snapshot channel under either framework.
 
-## Open design decisions (recommended defaults, awaiting approval)
+## Design decisions D-01 to D-21 (confirmed 2026-11-01)
 
-| ID | Question | Recommended default | Tradeoff |
+Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data and can be retuned after playtesting.
+
+| ID | Question | Decision | Tradeoff |
 |---|---|---|---|
 | D-01 | Revives per player/team | Unlimited teammate revives, but each down raises bleed-out speed (30 s → 20 s → 10 s). **3 self-revive kits per team** findable/purchasable | Encourages teamwork without hard caps; a per-player cap (e.g. 3 downs = eliminated) is harsher and easier to read |
 | D-02 | Can eliminated players return? | **Yes**, at the end of the next surge (Survival/Endless) or at the next objective checkpoint (Operations), with base loadout | Keeps friends playing; slightly lowers stakes |
@@ -80,3 +88,5 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 ## Change log
 
 - 2026-11-01: M0 created. Technical decisions T-01 to T-12 recorded. D-01 to D-21 proposed.
+- 2026-11-01: D-01 to D-21 approved as recommended.
+- 2026-11-01: T-13 to T-17 recorded during M1.
