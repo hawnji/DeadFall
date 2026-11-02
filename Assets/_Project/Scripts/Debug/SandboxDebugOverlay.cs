@@ -121,13 +121,38 @@ namespace Deadfall.DebugTools
         {
             if (ServiceRegistry.TryGet(out ISettingsService settings))
             {
+                // A manual cap is a frame-rate test, so it turns VSync off.
+                settings.Current.VSync = false;
                 settings.Current.FrameRateCap = cap;
                 settings.NotifyChanged();
+                settings.Save();
             }
             else
             {
                 QualitySettings.vSyncCount = 0;
                 Application.targetFrameRate = cap > 0 ? cap : -1;
+            }
+        }
+
+        private PlayerCursorLock _cursor;
+
+        /// <summary>Pause screen: VSync on/off (saved with the settings).</summary>
+        private void DrawVSyncToggle()
+        {
+            if (_cursor == null && _player != null) _cursor = _player.GetComponent<PlayerCursorLock>();
+            if (_cursor == null || _cursor.IsLocked || UiModal.Active) return;
+            bool on = QualitySettings.vSyncCount > 0;
+            if (!GUI.Button(new Rect(24f, Screen.height - 54f, 200f, 30f), on ? "VSync: On (click to turn off)" : "VSync: Off (click to turn on)")) return;
+            if (ServiceRegistry.TryGet(out ISettingsService settings))
+            {
+                settings.Current.VSync = !on;
+                settings.NotifyChanged();
+                settings.Save();
+            }
+            else
+            {
+                QualitySettings.vSyncCount = on ? 0 : 1;
+                Application.targetFrameRate = -1;
             }
         }
 
@@ -141,7 +166,8 @@ namespace Deadfall.DebugTools
             }
 
             int cap = Application.targetFrameRate;
-            string capText = cap > 0 ? cap.ToString() : "off";
+            string capText = QualitySettings.vSyncCount > 0 ? "vsync" : cap > 0 ? cap.ToString() : "off";
+            DrawVSyncToggle();
             string text = $"FPS {1f / Mathf.Max(0.0001f, _smoothedDt):0}  ({_smoothedDt * 1000f:0.0} ms, worst {_worstDt * 1000f:0.0} ms)  cap {capText}";
             if (_motor != null)
                 text += $"\nSpeed {_motor.HorizontalSpeed:0.00} m/s  {(_motor.IsGrounded ? "grounded" : "air")}{(_motor.IsSprinting ? "  sprint" : "")}{(_motor.IsCrouched ? "  crouch" : "")}";
@@ -161,7 +187,7 @@ namespace Deadfall.DebugTools
             if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
             if (_showHelp)
                 text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · 1-4 / wheel swap · Esc pause" +
-                        "\nF1/F2/F3/F4 cap 30/60/144/off · F9 respawn · F10 god mode · H hide help" +
+                        "\nF1/F2/F3/F4 cap 30/60/144/off (turns VSync off; Esc for the VSync button) · F9 respawn · F10 god mode · H hide help" +
                         "\nF12 next advanced enemy (Ctrl: variant) · F5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap" +
                         "\nN start / stop survival run · G ready (ends the lull)" +
                         "\nQ class ability · Esc to pick a class";

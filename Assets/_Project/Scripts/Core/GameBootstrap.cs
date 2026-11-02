@@ -29,8 +29,8 @@ namespace Deadfall.Core
 
         private static void ApplyFrameRate(GameSettings s)
         {
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = s.FrameRateCap > 0 ? s.FrameRateCap : -1;
+            QualitySettings.vSyncCount = s.VSync ? 1 : 0;
+            Application.targetFrameRate = !s.VSync && s.FrameRateCap > 0 ? s.FrameRateCap : -1;
         }
     }
 }

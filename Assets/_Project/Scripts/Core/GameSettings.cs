@@ -16,7 +16,9 @@ namespace Deadfall.Core
         public bool InvertY;
         public float FieldOfView = 90f;
         public bool HeadBob;
-        /// <summary>0 = unlimited.</summary>
+        /// <summary>Sync to the monitor's refresh rate. When on, <see cref="FrameRateCap"/> is ignored.</summary>
+        public bool VSync = true;
+        /// <summary>0 = unlimited. Used only with VSync off.</summary>
         public int FrameRateCap;
         public float MasterVolume = 1f;
 

@@ -75,7 +75,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 3. Press Play. FOB Halcyon (M10), the range, melee pit, movement course, and pads build themselves; the scene's own camera is switched off. You start in the FOB; the Training Range console (or its "Go to the firing range" button) takes you to the range.
 
 Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, 1–4 or wheel to swap, Esc pause.
-Debug: F1/F2/F3/F4 cap 30/60/144/unlimited FPS, F9 respawn, F10 god mode, H toggle help.
+Debug: VSync is on by default (toggle with the button at the bottom left of the pause screen); F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, H toggle help.
 Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill all, `[` / `]` lower or raise the alive cap.
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.
