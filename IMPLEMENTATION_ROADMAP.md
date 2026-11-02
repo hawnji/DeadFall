@@ -73,7 +73,7 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 9. ✅ 23 new EditMode tests (`WaveTests.cs`).
 10. ✅ Play check in the editor (`TESTING.md` §3.4), passed 2026-11-02 after #18 (surge enemies now hunt from any distance).
 
-Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
+Not in scope yet: ~~Elite, Hunt, Supply and Specimen surges~~ (done in M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
 ## M4 – Class framework ✅
 **Part 1 (framework, Gunner, Tank, Warrior)** ✅ merged as #19
@@ -104,7 +104,7 @@ Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during 
 5. ✅ Loot: ammo crates, medkits and secret stashes (full refill plus 250 credits) on randomised slots (D-05), taken through the host so only one player gets each (T-35). Supply Cache slots are placed and filled in M6.
 6. ✅ Secret vents: breakable panels, resolved by the host through the new `INetTarget` id path (T-34).
 7. ✅ Co-op: only the seed travels (T-09). `df.map` on join and regenerate, `df.sector`, `df.secret`, `df.loot*`.
-8. ✅ Debug: seed field, Random, Back to sandbox and Open next sector on the pause screen; F9 minimap overlay with validation result; scene-view gizmos.
+8. ✅ Debug: seed field, Random, Back to sandbox and Open next sector on the pause screen; M minimap overlay (was F9, which clashed with respawn) with validation result; scene-view gizmos.
 9. ✅ Also: Interact key (F) with `IInteractable` and HUD prompts, explosions blocked by walls (T-30 follow-up), wave spawns accept points 7 m away when nothing is 15 m away.
 10. ✅ 10 new EditMode tests (`LayoutTests.cs`), including 3000 seeds validated.
 
@@ -118,8 +118,19 @@ Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during 
 7. ✅ Weapon XP foundation (`WeaponXp` curve, per-weapon XP from kills, level-up toasts; PlayerPrefs until M10's save).
 8. ✅ 11 new EditMode tests (`RunEconomyTests.cs`).
 
-## M7 – Advanced enemies and encounters ⬜
-Creeper, Pyre, Retcher, Alpha, Variant mutations, mini-bosses, Specimen framework + Specimen Zero, boss rewards and modifiers, Elite/Hunt/Supply surges.
+## M7 – Advanced enemies and encounters ✅ (editor check held until M10)
+1. ✅ Brain: ranged attacks (hold at range with line of sight, wind-up, cooldown), exploders (commit, can't be staggered out, burst on contact or death), regeneration, per-enemy stat copies (T-40).
+2. ✅ New enemies in `PrototypeEnemies` (appended, network order kept): **Creeper** (low crawler), **Pyre** (goes for the biggest cluster, blast hurts players and infected; chain kills credit whoever shot it), **Retcher** (lobbed acid glob that leaves a pool), **Alpha** (elite, aura buffs nearby infected, ×3 glowing growth), **Goliath** (elite heavy), **The Stalker** (Hunt pursuer), **Specimen Zero**.
+3. ✅ Variants (`VariantRules`): Regenerating, Splitting (bursts into two Creepers), Hardened, Swift, with coloured bands as the visual tell; +50% kill credits per trait.
+4. ✅ Specimen framework (`SpecimenRules`): three phases by health (stalk; rampage with charges and summons, back growths open; exposed core ×3 with acid), phase roar, modifiers (Enraged, Armored, Brood) in late surges, extra health per player.
+5. ✅ Surge types Elite, Hunt, Supply and Specimen in the planner and rotation (T-44); hunters and bosses are placed, never bought.
+6. ✅ Boss rewards: 1000 credits each, a guaranteed Prototype weapon drop, a Field Mod offer.
+7. ✅ Supply surges drop ammo crates and medkits near the squad (host-authoritative pickups).
+8. ✅ Co-op: one extra snapshot byte for traits and boss phase (T-41), attack visuals relayed to clients (T-42).
+9. ✅ HUD: boss bar with phase ticks, phase and modifiers; Hunt pursuer bar; phase banners. Sandbox: F12 spawns the next advanced enemy (Ctrl for a variant).
+10. ✅ 18 new EditMode tests (`AdvancedEnemyTests.cs`).
+
+Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs NavMesh links), arena hazards for Specimens, damage-type armor, ambushes during lulls.
 
 ## M8 – Objectives, events, environment ⬜
 Objective framework, generators/power grid, samples, keycards, nests, data cores, extraction defense, random events (Blackout and The Stalker first), lockdowns.

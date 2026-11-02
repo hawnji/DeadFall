@@ -9,6 +9,7 @@
         "Deadfall.Core",
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Encounters",
+        "Deadfall.Rules.Combat",
         "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [],

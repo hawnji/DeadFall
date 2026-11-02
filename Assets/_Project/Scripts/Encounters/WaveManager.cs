@@ -4,6 +4,7 @@ using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Enemies;
 using Deadfall.Net;
+using Deadfall.Rules.Combat;
 using Deadfall.Rules.Encounters;
 using Unity.Collections;
 using Unity.Netcode;
@@ -83,6 +84,10 @@ namespace Deadfall.Encounters
         public event Action<WaveAnnouncement> Announced;
         /// <summary>The local player earned credits (amount, reason).</summary>
         public event Action<int, string> LocalCreditsEarned;
+        /// <summary>Host/offline: a surge was planned and is starting (supply drops, boss music, telemetry).</summary>
+        public event Action<SurgePlan> SurgePlanned;
+        /// <summary>Host/offline: a Specimen died (the bounty is already paid).</summary>
+        public event Action<EnemyDied> SpecimenDefeated;
 
         private ulong LocalId => _session != null ? _session.LocalClientId : 0UL;
 
@@ -103,13 +108,14 @@ namespace Deadfall.Encounters
         {
             var options = new List<EnemyOption>(defs.Count);
             foreach (EnemyDefinition d in defs)
-                if (d != null) options.Add(new EnemyOption(d.ContentId, d.ThreatCost, d.UnlockSurge, d.SpawnWeight, d.MaxBudgetShare));
+                if (d != null) options.Add(new EnemyOption(d.ContentId, d.ThreatCost, d.UnlockSurge, d.SpawnWeight, d.MaxBudgetShare, d.Role, d.CanSplit));
             return options;
         }
 
         private void OnEnable()
         {
             EventBus<EnemyDied>.Subscribe(OnEnemyDied);
+            Enemy.SummonRequested += OnSummonRequested;
             _session = SessionService.Instance;
             _session.Started += OnSessionStarted;
             _session.Stopped += OnSessionStopped;
@@ -123,6 +129,7 @@ namespace Deadfall.Encounters
         private void OnDisable()
         {
             EventBus<EnemyDied>.Unsubscribe(OnEnemyDied);
+            Enemy.SummonRequested -= OnSummonRequested;
             if (EnemyManager.Current != null) EnemyManager.Current.Despawned -= OnEnemyDespawned;
             if (_session == null) return;
             _session.Started -= OnSessionStarted;
@@ -180,6 +187,7 @@ namespace Deadfall.Encounters
             if (!IsAuthority) return;
             _director.Stop();
             _director.KillAll();
+            EnemyAttacks.ClearAll();
             _run.Abort();
             _plan = null;
             _ready.Clear();
@@ -249,6 +257,7 @@ namespace Deadfall.Encounters
                 _ready.Clear();
                 _plan = _planner.Plan(_run.Surge, Mathf.Max(1, _players.Count), _seed);
                 _director.Begin(_plan, _seed, now);
+                SurgePlanned?.Invoke(_plan);
                 GameLog.Info("Waves", $"Surge {_plan.Surge} ({_plan.Type}): {_plan.Spawns.Count} enemies, budget {_plan.Budget:0.#}, " +
                                       $"concurrency {_plan.Concurrency}, directions {_director.ActiveGroups.Count}, health x{_plan.HealthScale:0.00}.");
             }
@@ -273,12 +282,32 @@ namespace Deadfall.Encounters
         {
             if (!IsAuthority || !_director.Forget(e.Enemy)) return;
             _run.NotifyKill(Time.timeAsDouble);
+            EnemyTraits traits = e.Enemy != null ? e.Enemy.Traits : EnemyTraits.None;
+            if ((traits & EnemyTraits.Splitting) != 0)
+                _director.SpawnNear(PrototypeEnemies.Creeper, e.Position, VariantRules.SplitCount, 0.6f, 1.6f);
+            if (e.Definition != null && e.Definition.IsBoss)
+            {
+                foreach (ulong id in _players) _credits.Add(id, SpecimenRules.Bounty);
+                if (_players.Contains(LocalId)) LocalCreditsEarned?.Invoke(SpecimenRules.Bounty, $"{e.Definition.DisplayName} destroyed");
+                Announced?.Invoke(new WaveAnnouncement { Title = "SPECIMEN DOWN", Subtitle = $"+{SpecimenRules.Bounty} Field Credits each" });
+                SpecimenDefeated?.Invoke(e);
+                _stateDirty = true;
+            }
             PlayerIdentity killer = PlayerIdentity.Of(e.Killer);
             if (killer == null || e.Definition == null) return;
-            int amount = _run.KillCredits(e.Definition.ThreatCost);
+            int amount = _run.KillCredits(e.Definition.ThreatCost * VariantRules.CreditMultiplier(traits));
             _credits.Add(killer.ClientId, amount);
             if (killer.IsLocal) LocalCreditsEarned?.Invoke(amount, e.Definition.DisplayName);
             _stateDirty = true;
+        }
+
+        /// <summary>A Specimen in its Rampage phase calls infected to its side: mostly Husks, every fourth a Bolter.</summary>
+        private void OnSummonRequested(Enemy boss, int count)
+        {
+            if (!IsAuthority || boss == null || _run.Phase != RunPhase.Surge) return;
+            int bolters = count / 4;
+            _director.SpawnNear(PrototypeEnemies.Husk, boss.transform.position, count - bolters, 3f, 7f);
+            if (bolters > 0) _director.SpawnNear(PrototypeEnemies.Bolter, boss.transform.position, bolters, 3f, 7f);
         }
 
         private void OnEnemyDespawned(Enemy e)
@@ -377,6 +406,10 @@ namespace Deadfall.Encounters
                     {
                         SurgeType.Swarm => "Swarm · a flood of weak infected",
                         SurgeType.Siege => "Siege · they're coming from every side",
+                        SurgeType.Elite => "Elite · Alphas lead the pack, mutations everywhere",
+                        SurgeType.Hunt => "Hunt · something is tracking you. Stay together",
+                        SurgeType.Supply => "Supply · crates are dropping into the area",
+                        SurgeType.Specimen => "Specimen · the test subject is loose",
                         _ => _surge == FinalSurge ? "Final surge" : null,
                     };
                     break;
@@ -478,7 +511,7 @@ namespace Deadfall.Encounters
                 r.ReadValueSafe(out int credits);
                 _credits.Set(id, credits);
             }
-            if (phase > (byte)RunPhase.Failed || type > (byte)SurgeType.Siege) return;
+            if (phase > (byte)RunPhase.Failed || type > (byte)SurgeType.Specimen) return;
             int gained = _credits.Get(me) - before;
             if (gained > 0) LocalCreditsEarned?.Invoke(gained, null);
             ApplyState((RunPhase)phase, surge, (SurgeType)type, directions, Time.timeAsDouble + Mathf.Max(0f, timeLeft),

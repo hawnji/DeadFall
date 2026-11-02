@@ -194,14 +194,16 @@ namespace Deadfall.Game
             if (!IsAuthority || e.Definition == null) return;
             WaveManager waves = Waves;
             if (waves == null || !waves.IsRunning) return; // drops only in runs (sandbox spawns stay clean)
-            if (_dropRng.NextFloat() >= LootRules.DropChance(e.Definition.ThreatCost)) return;
-            if (_drops.Count >= MaxDrops) return;
+            // A Specimen always drops a Prototype weapon (GAME_DESIGN §7 boss reward); everything else rolls.
+            bool boss = e.Definition.IsBoss;
+            if (!boss && _dropRng.NextFloat() >= LootRules.DropChance(e.Definition.ThreatCost)) return;
+            if (!boss && _drops.Count >= MaxDrops) return;
             IReadOnlyList<WeaponDefinition> all = WeaponCatalog.All;
             WeaponDefinition def = all[_dropRng.Range(0, all.Count)];
-            WeaponTier tier = LootRules.RollTier(_dropRng, waves.Surge);
+            WeaponTier tier = boss ? WeaponTier.Prototype : LootRules.RollTier(_dropRng, waves.Surge);
             WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category);
             PlayerIdentity killer = PlayerIdentity.Of(e.Killer);
-            ulong finder = killer != null ? killer.ClientId : ulong.MaxValue;
+            ulong finder = killer != null && !boss ? killer.ClientId : ulong.MaxValue; // the boss drop is anyone's
             ushort id = _nextDropId++;
             if (_nextDropId == 0) _nextDropId = 1;
             SpawnDrop(id, def, mods, e.Position, finder, Time.timeAsDouble + FinderSeconds);

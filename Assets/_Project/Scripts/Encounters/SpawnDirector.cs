@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Enemies;
+using Deadfall.Rules.Combat;
 using Deadfall.Rules.Common;
 using Deadfall.Rules.Encounters;
 using UnityEngine;
@@ -159,7 +160,11 @@ namespace Deadfall.Encounters
                 Vector3 pos = _points[point].Position;
                 Vector3 toPlayer = NearestPlayer(pos) - pos;
                 float yaw = toPlayer.sqrMagnitude > 0.01f ? Mathf.Atan2(toPlayer.x, toPlayer.z) * Mathf.Rad2Deg : 0f;
-                enemy = manager.Spawn(def, pos, yaw, _plan.HealthScale);
+                float health = _plan.HealthScale;
+                // Specimens and hunters are one enemy for the whole squad, so they get tougher per player instead.
+                if (def.Role == EnemyRole.Boss || def.Role == EnemyRole.Hunter) health *= SpecimenRules.PlayerHealthScale(_players.Count);
+                enemy = manager.Spawn(def, pos, yaw, health, _plan.TraitsAt(_next),
+                    def.IsBoss ? _plan.BossModifiers : SpecimenModifiers.None);
             }
             if (enemy == null)
             {
@@ -175,6 +180,30 @@ namespace Deadfall.Encounters
             _next++;
             _attempts = 0;
             return true;
+        }
+
+        /// <summary>
+        /// Spawns extra enemies around <paramref name="center"/> that count toward the surge (Specimen summons,
+        /// Splitting variants). Ignores the surge's concurrency but not the global cap. Returns how many spawned.
+        /// </summary>
+        public int SpawnNear(EnemyDefinition def, Vector3 center, int count, float minRadius = 1f, float maxRadius = 4f)
+        {
+            EnemyManager manager = EnemyManager.Current;
+            if (manager == null || def == null) return 0;
+            float health = _plan != null ? _plan.HealthScale : 1f;
+            int spawned = 0;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = _rng.Range(0f, Mathf.PI * 2f);
+                float dist = _rng.Range(minRadius, maxRadius);
+                Vector3 pos = center + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
+                Enemy e = manager.Spawn(def, pos, angle * Mathf.Rad2Deg, health);
+                if (e == null) continue;
+                e.Alert();
+                _alive.Add(e);
+                spawned++;
+            }
+            return spawned;
         }
 
         private void SkipCurrent()

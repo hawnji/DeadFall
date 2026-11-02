@@ -40,7 +40,7 @@ namespace Deadfall.DebugTools
             MapSession map = boot.MapSession;
             SessionService session = SessionService.Current;
             bool client = session != null && session.Role == SessionRole.Client;
-            GUILayout.Label(boot.InMap ? $"Cinder Ridge, seed {map.Seed} ({map.Map.Layout.Rooms.Count} rooms, {map.SectorCount} sectors). F9: map overlay." : "Movement and combat sandbox.", _small);
+            GUILayout.Label(boot.InMap ? $"Cinder Ridge, seed {map.Seed} ({map.Map.Layout.Rooms.Count} rooms, {map.SectorCount} sectors). M: map overlay." : "Movement and combat sandbox.", _small);
 
             if (client)
             {

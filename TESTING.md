@@ -158,13 +158,13 @@ Two players (as §3.1):
 
 Solo:
 
-- [ ] Esc, then on the right **Generate** (seed 1): the sandbox is replaced by a grey underground facility and you stand in the airlock. **Random** gives a different layout each time; the same seed always gives the same one (compare the hash in the F9 overlay).
+- [ ] Esc, then on the right **Generate** (seed 1): the sandbox is replaced by a grey underground facility and you stand in the airlock. **Random** gives a different layout each time; the same seed always gives the same one (compare the hash in the M overlay).
 - [ ] Walls have doorways only where rooms connect. Rooms have a light, a few crates, and a coloured square showing their sector.
 - [ ] Doors to later sectors are closed and tinted. **Open next sector (debug)** slides the next set open.
-- [ ] F9 shows the minimap: rooms in sector colours (faded while locked), red/green door dots, orange spawn points, yellow loot, you in green, enemies in red. It says "Validation: OK".
+- [ ] M shows the minimap: rooms in sector colours (faded while locked), red/green door dots, orange spawn points, yellow loot, you in green, enemies in red. It says "Validation: OK".
 - [ ] Press N: enemies spawn only in open sectors and path to you around closed doors. After surge 3 a "SECTOR 1 UNLOCKED" banner shows and those doors open; later surges also spawn there.
 - [ ] Look at an ammo crate or medkit: "[F] Take ammo" / "[F] Take medkit". F uses it once.
-- [ ] Find the cyan dot on the F9 map (a vent cover low on a wall). Shoot it; crouch through into the vent crawl and open the gold stash (full refill, +250 credits during a run).
+- [ ] Find the cyan dot on the M map (a vent cover low on a wall). Shoot it; crouch through into the vent crawl and open the gold stash (full refill, +250 credits during a run).
 - [ ] A Cluster Charge thrown on the other side of a wall doesn't hurt enemies behind it.
 - [ ] **Back to sandbox** restores the M1 sandbox with its dummies.
 
@@ -193,6 +193,29 @@ Two players (as §3.1):
 - [ ] A client buys from a cache: the host's credits for that client go down and only the client gets the weapon.
 - [ ] A drop from the host's kill can't be taken by the client for 10 s, then can. Once taken it disappears for both.
 - [ ] A client's launcher grenades hurt host enemies and the client gets the kill credits.
+
+### 3.9 Manual checklist: M7 advanced enemies and encounters
+
+Solo, in the sandbox (F12 spawns the next advanced enemy; hold Ctrl for a variant):
+
+- [ ] **Creeper**: low and quick, bites at ankle height; you have to aim down. A shotgun blast drops it.
+- [ ] **Pyre**: runs at you, swells and shakes for under a second, then bursts (orange flash) and hurts you if you're close and in the open; a wall between you blocks it. Shot at range it bursts where it dies and kills Husks around it (you get the credits during a run).
+- [ ] **Retcher**: stops about 13 m away when it can see you, rears back and lobs a green glob; where it lands a green pool hurts you while you stand in it and shrinks away after ~5 s. Break line of sight and it walks closer.
+- [ ] **Alpha**: Husks near it move faster and take less damage. The blue growth on its shoulders takes triple damage.
+- [ ] **Goliath**: a bigger Bulwark with a wide slam; flank it for the back pack.
+- [ ] **The Stalker**: very fast, weaves, pounces; a purple bar at the top says it's hunting the squad.
+- [ ] **Specimen Zero**: red boss bar with two ticks. At 66% it roars, a banner says infected are coming, Husks and a Bolter appear around it every ~9 s and two orange growths open on its back. At 33% the chest plate is gone and a red core is exposed (shoot it for big damage); it spits acid. The bar shows the phase.
+- [ ] Ctrl+F12 variants show coloured bands: green Regenerating (heals after 3 s untouched), purple Splitting (two Creepers on death), grey Hardened (tougher), red Swift (faster).
+
+During a run (N; sandbox or a generated map):
+
+- [ ] Surge 4 announces Swarm, 5 Siege, 6 Hunt (the Stalker arrives first), 7 Elite (Alphas, more variants), 9 Supply (a toast says crates dropped; ammo crates and medkits sit within ~20 m), 10 Specimen.
+- [ ] Killing Specimen Zero announces SPECIMEN DOWN with +1000 credits, drops a Prototype weapon anyone can take, and a Field Mod is offered after the surge.
+
+Two players (as §3.1):
+
+- [ ] The client sees the same enemies with the same variant bands, the same boss phase and modifiers on the bar, and the globs, pools and blasts the host's enemies make. Damage to the client from globs, pools and blasts matches what it sees.
+- [ ] Supply crates appear in the same places for both; only one player gets each.
 
 ## 4. Regression map
 
@@ -232,11 +255,12 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
 | EditMode | `Tests/EditMode/Rules/ClassRulesTests.cs` | Ability timer phases, instant abilities, early end, long frames, cooldown rate and refunds; Guard threshold, sustained recoil floor, combined reduction; combo chain; doctrine pairs, duplicates, two-per-player cap, four distinct; weapon fire rate, reload speed, free reloads, reserve capacity |
 | EditMode | `Tests/EditMode/Rules/WaveTests.cs` | Budget growth by surge and players, adaptive ±10%, health cap, unlock surges, same seed same plan, budget never exceeded, Swarm cheap-only, Siege directions and early heavies, share cap, minimum one enemy, spawn cap, type rotation; surge loop (lull, surge, reward), clear reported once, ready and skip, final surge, endless, squad wipe, straggler cull, no cull while spawning, unspawnable surge ends, credit numbers, ledger |
+| EditMode | `Tests/EditMode/Rules/AdvancedEnemyTests.cs` | Spitter holds at range with line of sight, shoots after wind-up, closes without sight, still melees; exploder commits and can't be staggered; stat copies; variant chance curve, no traits on bosses and hunters, no Splitting Creepers, double traits late, trait stats and credit multiplier; Specimen phases, phase stats, modifiers and packing, summon counts; hunters and bosses never bought, Specimen and Hunt lead, Elite guarantees early elites, Supply crates, missing roles fall back, deterministic traits |
 | EditMode | `Tests/EditMode/Rules/EnemyBrainTests.cs` | Detection and alerting, strike lands once after wind-up, same attack timing at 8/30/144 Hz, stagger interrupt and immunity, meter decay, charge range/cooldown/contact/unstaggerable, death, armor zone multiplier |
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 116/116 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 134/134 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -248,6 +272,7 @@ Status 2026-11-02: 116/116 EditMode tests pass in the compile-check runner. Play
 - M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
 - M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Solo death ends the run right away because there are no revives yet (M11). Credits cannot be spent until Supply Caches (M6).
 - M4: a client's shield copy doesn't darken with damage (only the host's copy tracks health). Explosions ignore walls (no line-of-sight check yet). Bomblet copies on clients may land slightly differently from the host's; the damage follows the host's.
+- M7: Creepers don't use vents yet. Specimen Zero has no arena hazards or damage-type armor yet. Supply crates aren't sent to players who join mid-surge. Acid globs fly through walls on their arc (Retchers only fire with a clear line of sight).
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

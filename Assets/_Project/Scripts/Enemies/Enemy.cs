@@ -30,7 +30,33 @@ namespace Deadfall.Enemies
         private static readonly Dictionary<Color, Material> SharedMaterials = new Dictionary<Color, Material>();
 
         private EnemyDefinition _definition;
+        /// <summary>This enemy's own copy of its stats: traits, auras and Specimen phases change it, never the definition.</summary>
+        private EnemyStats _stats;
         private EnemyBrain _brain;
+        private EnemyTraits _traits;
+        private Transform _traitMarkers;
+        private SpecimenPhase _phase;
+        private SpecimenModifiers _bossMods;
+        private double _nextSummonAt;
+        private double _lastDamagedAt;
+        private bool _hasLineOfSight;
+        private bool _exploded;
+        private bool _explodePending;
+        private GameObject _explodeCredit;
+        private readonly List<PhasePart> _phaseParts = new List<PhasePart>(4);
+
+        /// <summary>A hurtbox that only exists in some Specimen phases (growths, core, plates).</summary>
+        private struct PhasePart
+        {
+            public GameObject Go;
+            public SpecimenPhase From;
+            public SpecimenPhase To;
+        }
+
+        /// <summary>Host: a Specimen in its Rampage phase calls for help (boss, how many). The encounter layer spawns them.</summary>
+        public static event System.Action<Enemy, int> SummonRequested;
+        /// <summary>Any machine: a Specimen changed phase (boss, new phase).</summary>
+        public static event System.Action<Enemy, SpecimenPhase> PhaseChanged;
         private NavMeshAgent _agent;
         private Transform _visual;
         private readonly List<Collider> _hurtColliders = new List<Collider>(4);
@@ -58,7 +84,17 @@ namespace Deadfall.Enemies
         /// <summary>Max health after the surge's health scale (GAME_DESIGN §8).</summary>
         public float MaxHealth => _maxHealth;
         public bool IsAlive => _health > 0f;
-        public float DamageReduction => _definition.Stats.DamageReduction;
+        public float DamageReduction => Mathf.Min(0.8f, _stats.DamageReduction + AuraReduction);
+        /// <summary>This enemy's live stats (after traits and phase).</summary>
+        public EnemyStats Stats => _stats;
+        public EnemyTraits Traits => _traits;
+        public SpecimenPhase Phase => _phase;
+        public SpecimenModifiers BossModifiers => _bossMods;
+        /// <summary>Set every frame by EnemyManager from nearby Alphas.</summary>
+        internal float AuraSpeedBonus { get; set; }
+        internal float AuraReduction { get; set; }
+        /// <summary>The extra byte in each snapshot: traits, or phase and modifiers for a Specimen.</summary>
+        internal byte ExtraByte => _definition.IsBoss ? SpecimenRules.Pack(_phase, _bossMods) : (byte)_traits;
         public Vector3 AimPoint => transform.position + Vector3.up * (_definition.Height * 0.6f);
         public IDamageable Damageable => this;
         /// <summary>Per-session slot id used by the snapshot channel (assigned by EnemyManager).</summary>
@@ -72,7 +108,12 @@ namespace Deadfall.Enemies
         public float Health01 => _maxHealth > 0f ? Mathf.Clamp01(_health / _maxHealth) : 0f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => SharedMaterials.Clear();
+        private static void ResetStatics()
+        {
+            SharedMaterials.Clear();
+            SummonRequested = null;
+            PhaseChanged = null;
+        }
 
         // ---------------------------------------------------------------- construction (pooled)
 
@@ -85,7 +126,8 @@ namespace Deadfall.Enemies
 
             var enemy = root.AddComponent<Enemy>();
             enemy._definition = def;
-            enemy._brain = new EnemyBrain(def.Stats);
+            enemy._stats = def.Stats.Clone();
+            enemy._brain = new EnemyBrain(enemy._stats);
             enemy._weavePhase = Random.value * Mathf.PI * 2f;
 
             NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
@@ -141,6 +183,60 @@ namespace Deadfall.Enemies
                     Part(PrimitiveType.Cube, "ArmR", new Vector3(r + 0.12f, h * 0.5f, 0.25f), new Vector3(0.2f, 0.2f, 0.75f), skin, null);
                     break;
                 }
+                case EnemyBodyType.Crawler:
+                {
+                    Transform body = Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.45f, 0f), new Vector3(r * 1.8f, 0.45f, r * 1.8f), skin, HitZone.Body);
+                    body.localRotation = Quaternion.Euler(90f, 0f, 0f); // lying flat
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.55f, 0.48f), Vector3.one * 0.24f, dark, HitZone.Head);
+                    Part(PrimitiveType.Cube, "ArmL", new Vector3(-r, h * 0.2f, 0.35f), new Vector3(0.07f, 0.3f, 0.07f), skin, null);
+                    Part(PrimitiveType.Cube, "ArmR", new Vector3(r, h * 0.2f, 0.35f), new Vector3(0.07f, 0.3f, 0.07f), skin, null);
+                    break;
+                }
+                case EnemyBodyType.Bloated:
+                {
+                    Part(PrimitiveType.Sphere, "Body", new Vector3(0f, h * 0.45f, 0f), new Vector3(r * 2.4f, h * 0.5f, r * 2.2f), skin, HitZone.Body);
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.88f, 0.05f), Vector3.one * 0.26f, dark, HitZone.Head);
+                    // Glowing sacs: the tell that it's about to burst, and a weak point.
+                    Part(PrimitiveType.Sphere, "Sac", new Vector3(0f, h * 0.42f, r * 0.95f), Vector3.one * 0.38f,
+                        new Color(1f, 0.55f, 0.1f), HitZone.WeakPoint, d.WeakPointMultiplier);
+                    break;
+                }
+                case EnemyBodyType.Spitter:
+                {
+                    Transform torso = Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.42f, 0f), new Vector3(r * 2f, h * 0.38f, r * 1.7f), skin, HitZone.Body);
+                    torso.localRotation = Quaternion.Euler(12f, 0f, 0f);
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.84f, 0.14f), Vector3.one * 0.28f, dark, HitZone.Head);
+                    Part(PrimitiveType.Sphere, "ThroatSac", new Vector3(0f, h * 0.7f, 0.28f), new Vector3(0.34f, 0.3f, 0.3f),
+                        new Color(0.7f, 0.85f, 0.2f), HitZone.WeakPoint, d.WeakPointMultiplier);
+                    break;
+                }
+                case EnemyBodyType.Alpha:
+                {
+                    Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.43f, 0f), new Vector3(r * 2.1f, h * 0.42f, r * 1.7f), skin, HitZone.Body);
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.89f, 0.06f), Vector3.one * 0.32f, dark, HitZone.Head);
+                    Part(PrimitiveType.Cube, "Growth", new Vector3(0f, h * 0.78f, -r * 0.6f), new Vector3(r * 1.6f, 0.28f, 0.34f),
+                        new Color(0.35f, 0.85f, 1f), HitZone.WeakPoint, d.WeakPointMultiplier);
+                    Part(PrimitiveType.Cube, "ArmL", new Vector3(-r - 0.1f, h * 0.62f, 0.3f), new Vector3(0.13f, 0.13f, 0.75f), skin, null);
+                    Part(PrimitiveType.Cube, "ArmR", new Vector3(r + 0.1f, h * 0.62f, 0.3f), new Vector3(0.13f, 0.13f, 0.75f), skin, null);
+                    break;
+                }
+                case EnemyBodyType.Specimen:
+                {
+                    Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.45f, 0f), new Vector3(r * 2f, h * 0.42f, r * 1.6f), skin, HitZone.Body);
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.9f, 0.2f), Vector3.one * 0.55f, dark, HitZone.Head);
+                    Color plate = new Color(0.25f, 0.24f, 0.27f);
+                    PhaseOnly(Part(PrimitiveType.Cube, "ChestPlate", new Vector3(0f, h * 0.52f, r * 0.9f), new Vector3(r * 1.9f, h * 0.4f, 0.16f),
+                        plate, HitZone.Armor, d.ArmorMultiplier), SpecimenPhase.Stalk, SpecimenPhase.Rampage);
+                    PhaseOnly(Part(PrimitiveType.Sphere, "GrowthL", new Vector3(-r * 0.55f, h * 0.7f, -r * 0.8f), Vector3.one * 0.5f,
+                        new Color(0.95f, 0.45f, 0.2f), HitZone.WeakPoint, SpecimenRules.GrowthMultiplier), SpecimenPhase.Rampage, SpecimenPhase.ExposedCore);
+                    PhaseOnly(Part(PrimitiveType.Sphere, "GrowthR", new Vector3(r * 0.55f, h * 0.7f, -r * 0.8f), Vector3.one * 0.5f,
+                        new Color(0.95f, 0.45f, 0.2f), HitZone.WeakPoint, SpecimenRules.GrowthMultiplier), SpecimenPhase.Rampage, SpecimenPhase.ExposedCore);
+                    PhaseOnly(Part(PrimitiveType.Sphere, "Core", new Vector3(0f, h * 0.55f, r * 0.85f), Vector3.one * 0.6f,
+                        new Color(1f, 0.2f, 0.35f), HitZone.WeakPoint, SpecimenRules.CoreMultiplier), SpecimenPhase.ExposedCore, SpecimenPhase.ExposedCore);
+                    Part(PrimitiveType.Cube, "ArmL", new Vector3(-r - 0.25f, h * 0.55f, 0.4f), new Vector3(0.35f, 0.35f, 1.4f), skin, null);
+                    Part(PrimitiveType.Cube, "ArmR", new Vector3(r + 0.25f, h * 0.55f, 0.4f), new Vector3(0.35f, 0.35f, 1.4f), skin, null);
+                    break;
+                }
                 default:
                 {
                     Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.42f, 0f), new Vector3(r * 2f, h * 0.4f, r * 1.6f), skin, HitZone.Body);
@@ -174,6 +270,59 @@ namespace Deadfall.Enemies
             return go.transform;
         }
 
+        private void PhaseOnly(Transform part, SpecimenPhase from, SpecimenPhase to) =>
+            _phaseParts.Add(new PhasePart { Go = part.gameObject, From = from, To = to });
+
+        private void ShowPhaseParts()
+        {
+            foreach (PhasePart p in _phaseParts)
+                if (p.Go != null) p.Go.SetActive(_phase >= p.From && _phase <= p.To);
+        }
+
+        /// <summary>Small coloured bands that tell players which mutations this enemy has (GAME_DESIGN §7: read the tell).</summary>
+        private void ShowTraitMarkers()
+        {
+            if (_traitMarkers != null) Destroy(_traitMarkers.gameObject);
+            _traitMarkers = null;
+            if (_traits == EnemyTraits.None) return;
+            _traitMarkers = new GameObject("Traits").transform;
+            _traitMarkers.SetParent(_visual, false);
+            float h = _definition.Height, r = _definition.Radius;
+            int i = 0;
+            void Band(Color c)
+            {
+                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(go.GetComponent<Collider>());
+                go.transform.SetParent(_traitMarkers, false);
+                go.transform.localPosition = new Vector3(0f, h * (0.62f - 0.12f * i), 0f);
+                go.transform.localScale = new Vector3(r * 2.3f, 0.07f, r * 2.1f);
+                go.GetComponent<Renderer>().sharedMaterial = MaterialFor(c);
+                i++;
+            }
+            if ((_traits & EnemyTraits.Regenerating) != 0) Band(new Color(0.2f, 0.95f, 0.35f));
+            if ((_traits & EnemyTraits.Splitting) != 0) Band(new Color(0.85f, 0.35f, 0.8f));
+            if ((_traits & EnemyTraits.Hardened) != 0) Band(new Color(0.6f, 0.6f, 0.62f));
+            if ((_traits & EnemyTraits.Swift) != 0) Band(new Color(0.95f, 0.15f, 0.1f));
+        }
+
+        private void SetPhase(SpecimenPhase phase, double now, bool announce)
+        {
+            if (phase == _phase && !announce) return;
+            bool changed = phase != _phase;
+            _phase = phase;
+            if (!_mirrored) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods);
+            ShowPhaseParts();
+            if (changed)
+            {
+                if (!_mirrored)
+                {
+                    _brain.Roar(now);
+                    _nextSummonAt = now + 2.0;
+                }
+                PhaseChanged?.Invoke(this, _phase);
+            }
+        }
+
         private static Material MaterialFor(Color c)
         {
             if (!SharedMaterials.TryGetValue(c, out Material m) || m == null)
@@ -186,9 +335,24 @@ namespace Deadfall.Enemies
 
         // ---------------------------------------------------------------- pooling
 
-        internal void Activate(Vector3 position, float yaw, double now, float healthScale = 1f)
+        internal void Activate(Vector3 position, float yaw, double now, float healthScale = 1f,
+            EnemyTraits traits = EnemyTraits.None, SpecimenModifiers bossMods = SpecimenModifiers.None)
         {
-            _maxHealth = _definition.Stats.MaxHealth * Mathf.Max(0.01f, healthScale);
+            _stats.CopyFrom(_definition.Stats);
+            _traits = _definition.IsBoss ? EnemyTraits.None : traits;
+            _bossMods = _definition.IsBoss ? bossMods : SpecimenModifiers.None;
+            VariantRules.Apply(_stats, _traits);
+            _phase = SpecimenPhase.Stalk;
+            if (_definition.IsBoss) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods);
+            ShowPhaseParts();
+            ShowTraitMarkers();
+            _exploded = false;
+            _explodePending = false;
+            _explodeCredit = null;
+            _hasLineOfSight = false;
+            _lastDamagedAt = now;
+            AuraSpeedBonus = AuraReduction = 0f;
+            _maxHealth = _stats.MaxHealth * Mathf.Max(0.01f, healthScale);
             _mirrored = false;
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             gameObject.SetActive(true);
@@ -211,6 +375,12 @@ namespace Deadfall.Enemies
         internal void ActivateMirror(Vector3 position, float yaw, double now)
         {
             _mirrored = true;
+            _stats.CopyFrom(_definition.Stats);
+            _traits = EnemyTraits.None;
+            _bossMods = SpecimenModifiers.None;
+            _phase = SpecimenPhase.Stalk;
+            ShowPhaseParts();
+            ShowTraitMarkers();
             _agent.enabled = false; // disabled before activation so it never looks for a NavMesh
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             gameObject.SetActive(true);
@@ -229,9 +399,20 @@ namespace Deadfall.Enemies
         }
 
         /// <summary>Applies one snapshot entry from the host.</summary>
-        internal void ApplySnapshot(Vector3 position, float yaw, EnemyState state, float health01, double now)
+        internal void ApplySnapshot(Vector3 position, float yaw, EnemyState state, float health01, byte extra, double now)
         {
             _lastSnapshot = now;
+            if (_definition.IsBoss)
+            {
+                SpecimenRules.Unpack(extra, out SpecimenPhase phase, out SpecimenModifiers mods);
+                _bossMods = mods;
+                if (phase != _phase) SetPhase(phase, now, false);
+            }
+            else if ((byte)_traits != extra)
+            {
+                _traits = (EnemyTraits)extra;
+                ShowTraitMarkers();
+            }
             _mirrorPos = position;
             _mirrorYaw = yaw;
             if (state == EnemyState.Dead || health01 <= 0f)
@@ -281,6 +462,7 @@ namespace Deadfall.Enemies
             if (applied <= 0f) return 0f;
             _health -= applied;
             double now = Time.timeAsDouble;
+            _lastDamagedAt = now;
             _brain.OnDamaged(applied, now);
             if (info.ForceStagger) _brain.ForceStagger(now);
             if (info.Knockback > 0f)
@@ -323,6 +505,21 @@ namespace Deadfall.Enemies
                 _agent.enabled = false; // stop avoidance so the living walk through
             }
             EventBus<EnemyDied>.Publish(new EnemyDied { Enemy = this, Definition = _definition, Killer = killer, Position = transform.position });
+            // A Pyre bursts when killed too; chain kills are credited to whoever killed it. Deferred to its next tick so a
+            // blast that kills another Pyre never runs inside the first blast's overlap loop. Culls (no killer) don't burst.
+            if (_stats.CanExplode && _stats.ExplodesOnDeath && killer != null && !_exploded)
+            {
+                _explodePending = true;
+                _explodeCredit = killer;
+            }
+        }
+
+        private void Explode(GameObject credit)
+        {
+            if (_exploded) return;
+            _exploded = true;
+            EnemyAttacks.Blast(this, transform.position + Vector3.up * (_definition.Height * 0.4f), _stats.ExplodeRadius, _stats.ExplodeDamage,
+                credit != null ? credit : gameObject);
         }
 
         // ---------------------------------------------------------------- per tick (called by EnemyManager)
@@ -331,16 +528,39 @@ namespace Deadfall.Enemies
         {
             if (!IsAlive)
             {
+                if (_explodePending)
+                {
+                    _explodePending = false;
+                    Explode(_explodeCredit);
+                    _explodeCredit = null;
+                }
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
                 _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
                 return;
             }
 
             if (perceive || (_target != null && !_target.IsTargetable))
-                _target = CombatTargets.Nearest(transform.position, out _targetDistance);
+                _target = _stats.CanExplode ? EnemyAttacks.BiggestCluster(transform.position, out _targetDistance)
+                                            : CombatTargets.Nearest(transform.position, out _targetDistance);
             bool hasTarget = _target != null && _target.IsTargetable;
             Vector3 targetPos = hasTarget ? _target.TargetTransform.position : transform.position;
             if (hasTarget) _targetDistance = Vector3.Distance(transform.position, targetPos);
+            if (perceive && _stats.CanShoot)
+                _hasLineOfSight = hasTarget && Explosions.HasLineOfSight(MouthPoint, targetPos + Vector3.up * 1.2f, null);
+
+            if (_stats.RegenPerSecond > 0f && now - _lastDamagedAt >= VariantRules.RegenDelaySeconds && _health < _maxHealth)
+                _health = Mathf.Min(_maxHealth, _health + _stats.RegenPerSecond * (_maxHealth / Mathf.Max(1f, _stats.MaxHealth)) * dt);
+
+            if (_definition.IsBoss)
+            {
+                SpecimenPhase want = SpecimenRules.PhaseFor(Health01);
+                if (want > _phase) SetPhase(want, now, false); // phases only move forward
+                if (_phase == SpecimenPhase.Rampage && now >= _nextSummonAt)
+                {
+                    _nextSummonAt = now + SpecimenRules.SummonIntervalSeconds;
+                    SummonRequested?.Invoke(this, SpecimenRules.SummonCount(Mathf.Max(1, CombatTargets.All.Count), _bossMods));
+                }
+            }
 
             if (_knockRemaining > 0f && _agent.enabled && _agent.isOnNavMesh)
             {
@@ -350,8 +570,22 @@ namespace Deadfall.Enemies
             }
             else _knockRemaining = 0f;
 
-            BrainOutput o = _brain.Tick(new BrainInput { Now = now, HasTarget = hasTarget, TargetDistance = _targetDistance });
-            EnemyStats s = _definition.Stats;
+            BrainOutput o = _brain.Tick(new BrainInput
+            {
+                Now = now, HasTarget = hasTarget, TargetDistance = _targetDistance, HasLineOfSight = _hasLineOfSight,
+            });
+            EnemyStats s = _stats;
+            if (o.Explode)
+            {
+                // Detonated on contact: the brain is already dead; the body dies (no killer, no credits) and bursts.
+                _health = 0f;
+                Die(null, now);
+                Explode(gameObject);
+                return;
+            }
+            if (o.Shoot && hasTarget)
+                EnemyAttacks.Spit(this, MouthPoint, Lead(targetPos), s);
+            float speedScale = 1f + AuraSpeedBonus;
             // Off the NavMesh (e.g. spawned in a bad spot): think and attack, but don't drive the agent.
             bool onMesh = _agent.isOnNavMesh;
 
@@ -380,7 +614,7 @@ namespace Deadfall.Enemies
             }
             else if (o.PathToTarget && hasTarget)
             {
-                Move(o.Speed, s.Acceleration);
+                Move(o.Speed * speedScale, s.Acceleration);
                 if (perceive || !_agent.hasPath) _agent.SetDestination(targetPos + Weave(targetPos, now, s));
             }
             else
@@ -394,6 +628,17 @@ namespace Deadfall.Enemies
 
             Face(o, hasTarget, targetPos, dt, s);
             Pose(now);
+        }
+
+        private Vector3 MouthPoint => transform.position + Vector3.up * (_definition.Height * 0.8f) + transform.forward * (_definition.Radius + 0.2f);
+
+        /// <summary>Aims where the target will be when the glob lands (half lead, so strafing still dodges it).</summary>
+        private Vector3 Lead(Vector3 targetPos)
+        {
+            Vector3 v = Vector3.zero;
+            if (_target?.TargetTransform != null && _target.TargetTransform.TryGetComponent(out CharacterController cc)) v = cc.velocity;
+            float t = Vector3.Distance(MouthPoint, targetPos) / Mathf.Max(1f, _stats.ProjectileSpeed);
+            return targetPos + Flat(v) * (t * 0.5f);
         }
 
         private void Move(float speed, float acceleration)
@@ -466,6 +711,13 @@ namespace Deadfall.Enemies
                 case EnemyState.ChargeWindup: scale = new Vector3(1f, 1f - 0.15f * p, 1f); rot = Quaternion.Euler(15f * p, 0f, 0f); break;
                 case EnemyState.Charge: rot = Quaternion.Euler(25f, 0f, 0f); break;
                 case EnemyState.Stagger: rot = Quaternion.Euler(-25f * (1f - p), 0f, 12f * (1f - p)); break;
+                case EnemyState.RangedWindup: rot = Quaternion.Euler(-30f * p, 0f, 0f); scale = new Vector3(1f, 1f + 0.06f * p, 1f); break; // rear back, throat swells
+                case EnemyState.RangedRecover: rot = Quaternion.Euler(Mathf.Lerp(15f, 0f, p), 0f, 0f); break;
+                case EnemyState.ExplodeWindup:                                                                                       // swell and shudder
+                    float swell = 1f + 0.35f * p;
+                    scale = new Vector3(swell, swell, swell);
+                    rot = Quaternion.Euler(0f, 0f, Mathf.Sin((float)now * 60f) * 6f * p);
+                    break;
             }
             _visual.localRotation = rot;
             _visual.localScale = scale;
