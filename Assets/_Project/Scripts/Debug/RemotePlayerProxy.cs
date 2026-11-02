@@ -1,4 +1,7 @@
+using System;
+using Deadfall.Combat;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Deadfall.DebugTools
 {
@@ -7,7 +10,7 @@ namespace Deadfall.DebugTools
     /// head and a gun barrel that follows their aim. It has no colliders, so it never blocks shots or
     /// movement. Positions are smoothed toward the latest state; real interpolation arrives with M11.
     /// </summary>
-    public sealed class RemotePlayerProxy : MonoBehaviour
+    public sealed class RemotePlayerProxy : MonoBehaviour, ICombatTarget, IDamageable
     {
         private const float PositionSharpness = 18f;
         private const float RotationSharpness = 22f;
@@ -28,6 +31,26 @@ namespace Deadfall.DebugTools
         public ulong ClientId { get; private set; }
         public float Health01 { get; private set; } = 1f;
         public bool IsDead => _dead;
+
+        /// <summary>Host: an enemy hit this player. The amount is sent to their machine, which applies it.</summary>
+        public event Action<RemotePlayerProxy, float, Vector3> DamageRequested;
+
+        // Host enemies hunt remote players through these (ICombatTarget / IDamageable).
+        public Transform TargetTransform => transform;
+        public bool IsTargetable => _hasState && !_dead && isActiveAndEnabled;
+        public IDamageable Damageable => this;
+        public bool IsAlive => !_dead;
+        public float DamageReduction => 0f; // the owner applies their own reduction
+
+        public float ApplyDamage(in DamageInfo info)
+        {
+            if (_dead || info.Amount <= 0f) return 0f;
+            DamageRequested?.Invoke(this, info.Amount, info.Direction);
+            return info.Amount;
+        }
+
+        private void OnEnable() => CombatTargets.Register(this);
+        private void OnDisable() => CombatTargets.Unregister(this);
         /// <summary>Latest reported eye position (unsmoothed), used by the host to validate hit claims.</summary>
         public Vector3 EyePosition => _targetPos + Vector3.up * (_crouched ? CrouchEye : StandEye);
 

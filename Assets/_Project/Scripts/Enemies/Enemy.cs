@@ -41,6 +41,10 @@ namespace Deadfall.Enemies
         private float _weavePhase;
         private float _health;
         private double _diedAt;
+        private bool _mirrored;
+        private Vector3 _mirrorPos;
+        private float _mirrorYaw;
+        private double _lastSnapshot;
         private bool _moving;
 
         public EnemyDefinition Definition => _definition;
@@ -54,6 +58,11 @@ namespace Deadfall.Enemies
         public ushort SlotId { get; internal set; }
         internal double NextPerception { get; set; }
         internal bool ReadyToDespawn(double now) => !IsAlive && now >= _diedAt + CorpseSeconds;
+        /// <summary>True on a co-op client: this body copies the host's enemy and never decides anything.</summary>
+        public bool IsMirror => _mirrored;
+        internal double LastSnapshotTime => _lastSnapshot;
+        /// <summary>Health as a fraction 0..1 (what snapshots carry).</summary>
+        public float Health01 => _definition.Stats.MaxHealth > 0f ? Mathf.Clamp01(_health / _definition.Stats.MaxHealth) : 0f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => SharedMaterials.Clear();
@@ -172,6 +181,7 @@ namespace Deadfall.Enemies
 
         internal void Activate(Vector3 position, float yaw, double now)
         {
+            _mirrored = false;
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             gameObject.SetActive(true);
             _agent.enabled = true;
@@ -187,6 +197,62 @@ namespace Deadfall.Enemies
             _brain.Reset(now);
         }
 
+        /// <summary>Activates as a client-side copy of a host enemy: no agent, no AI, health from snapshots.</summary>
+        internal void ActivateMirror(Vector3 position, float yaw, double now)
+        {
+            _mirrored = true;
+            _agent.enabled = false; // disabled before activation so it never looks for a NavMesh
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+            gameObject.SetActive(true);
+            _mirrorPos = position;
+            _mirrorYaw = yaw;
+            _lastSnapshot = now;
+            _moving = false;
+            _health = _definition.Stats.MaxHealth;
+            _target = null;
+            foreach (Collider c in _hurtColliders) c.enabled = true;
+            _visual.localRotation = Quaternion.identity;
+            _visual.localScale = Vector3.one;
+            _brain.Reset(now);
+        }
+
+        /// <summary>Applies one snapshot entry from the host.</summary>
+        internal void ApplySnapshot(Vector3 position, float yaw, EnemyState state, float health01, double now)
+        {
+            _lastSnapshot = now;
+            _mirrorPos = position;
+            _mirrorYaw = yaw;
+            if (state == EnemyState.Dead || health01 <= 0f)
+            {
+                if (IsAlive)
+                {
+                    _health = 0f;
+                    _diedAt = now;
+                    _brain.Kill(now);
+                    foreach (Collider c in _hurtColliders) c.enabled = false;
+                }
+                return;
+            }
+            _health = Mathf.Max(0.01f, health01 * _definition.Stats.MaxHealth);
+            _brain.Mirror(state, now);
+        }
+
+        internal void TickMirror(double now, float dt)
+        {
+            if (!IsAlive)
+            {
+                float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
+                _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
+                return;
+            }
+            // Smoothly chase the latest snapshot; snap if it jumped (spawned, teleported, or long gap).
+            if ((transform.position - _mirrorPos).sqrMagnitude > 25f) transform.position = _mirrorPos;
+            else transform.position = Vector3.Lerp(transform.position, _mirrorPos, 1f - Mathf.Exp(-14f * dt));
+            Quaternion want = Quaternion.Euler(0f, _mirrorYaw, 0f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, want, 1f - Mathf.Exp(-16f * dt));
+            Pose(now);
+        }
+
         internal void Deactivate()
         {
             if (_agent.enabled && _agent.isOnNavMesh) _agent.ResetPath();
@@ -197,7 +263,7 @@ namespace Deadfall.Enemies
 
         public float ApplyDamage(in DamageInfo info)
         {
-            if (!IsAlive) return 0f;
+            if (!IsAlive || _mirrored) return 0f; // clients never apply damage; the host does
             float applied = Mathf.Min(_health, info.Amount);
             if (applied <= 0f) return 0f;
             _health -= applied;
@@ -210,7 +276,7 @@ namespace Deadfall.Enemies
         /// <summary>Kills instantly (debug and scripted events).</summary>
         public void Kill(GameObject killer = null)
         {
-            if (!IsAlive) return;
+            if (!IsAlive || _mirrored) return;
             _health = 0f;
             Die(killer, Time.timeAsDouble);
         }

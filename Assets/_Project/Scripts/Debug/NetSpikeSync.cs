@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
+using Deadfall.Enemies;
 using Deadfall.Net;
 using Deadfall.Player;
 using Deadfall.Rules.Combat;
@@ -29,6 +30,10 @@ namespace Deadfall.DebugTools
         private const string MsgHitConfirm = "df.hitok";
         private const string MsgTargets = "df.tgt";
         private const string MsgPlayerLeft = "df.left";
+        private const string MsgPlayerDamage = "df.pdmg";
+        private const byte TargetDummy = 0;
+        private const byte TargetEnemy = 1;
+        private const float EnemyPointSlack = 3f; // enemy copies trail the host's by up to ~150 ms
         private const string QuickMeleeId = "melee.quick";
 
         private const float StateInterval = 0.05f; // 20 Hz
@@ -89,6 +94,7 @@ namespace Deadfall.DebugTools
             _session.RegisterHandler(MsgHitConfirm, OnHitConfirm);
             _session.RegisterHandler(MsgTargets, OnTargets);
             _session.RegisterHandler(MsgPlayerLeft, OnPlayerLeft);
+            _session.RegisterHandler(MsgPlayerDamage, OnPlayerDamage);
             EventBus<ShotTraced>.Subscribe(OnLocalShot);
             foreach (TrainingDummy d in TrainingDummy.All)
                 if (d != null) d.HealthChanged += OnDummyHealthChanged;
@@ -110,6 +116,7 @@ namespace Deadfall.DebugTools
             _session.UnregisterHandler(MsgHitConfirm);
             _session.UnregisterHandler(MsgTargets);
             _session.UnregisterHandler(MsgPlayerLeft);
+            _session.UnregisterHandler(MsgPlayerDamage);
             // Leaving the sandbox ends the spike session.
             _session.Stop();
         }
@@ -250,6 +257,7 @@ namespace Deadfall.DebugTools
         {
             if (_proxies.TryGetValue(id, out RemotePlayerProxy proxy) && proxy != null) return proxy;
             proxy = RemotePlayerProxy.Create(id, transform);
+            proxy.DamageRequested += OnProxyDamaged;
             _proxies[id] = proxy;
             return proxy;
         }
@@ -307,14 +315,56 @@ namespace Deadfall.DebugTools
 
         // ---------------------------------------------------------------- hits (client side)
 
-        /// <summary>Client resolver: forwards claims on training dummies to the host. Nothing is applied locally.</summary>
+        // ---------------------------------------------------------------- enemy damage to remote players
+
+        /// <summary>Host: a host enemy hit a remote player's proxy; tell that player's machine.</summary>
+        private void OnProxyDamaged(RemotePlayerProxy proxy, float amount, Vector3 direction)
+        {
+            if (!_session.IsHost) return;
+            using (var w = new FastBufferWriter(32, Allocator.Temp))
+            {
+                w.WriteValueSafe(amount);
+                w.WriteValueSafe(direction);
+                _session.SendToClient(MsgPlayerDamage, proxy.ClientId, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        /// <summary>Client: the host says an enemy hit us. Our own health applies it (with our damage reduction).</summary>
+        private void OnPlayerDamage(ulong sender, FastBufferReader r)
+        {
+            if (_session.IsHost || _health == null) return;
+            r.ReadValueSafe(out float amount);
+            r.ReadValueSafe(out Vector3 direction);
+            if (!IsFinite(amount) || amount <= 0f || amount > 1000f || !IsFinite(direction)) return;
+            _health.ApplyRawDamage(amount, direction);
+        }
+
+        // ---------------------------------------------------------------- hits (client side)
+
+        /// <summary>Client resolver: forwards claims on dummies and enemies to the host. Nothing is applied locally.</summary>
         public void Submit(in HitClaim claim)
         {
-            if (!(claim.Target is TrainingDummy dummy) || dummy.NetworkIndex < 0 || dummy.NetworkIndex > ushort.MaxValue) return;
             if (!_session.IsConnectedClient) return;
+            byte kind;
+            ushort id;
+            if (claim.Target is TrainingDummy dummy && dummy.NetworkIndex >= 0 && dummy.NetworkIndex <= ushort.MaxValue)
+            {
+                kind = TargetDummy;
+                id = (ushort)dummy.NetworkIndex;
+            }
+            else if (claim.Target is Enemy enemy && enemy.SlotId != 0)
+            {
+                kind = TargetEnemy;
+                id = enemy.SlotId;
+            }
+            else
+            {
+                return;
+            }
             using (var w = new FastBufferWriter(96 + (claim.WeaponId?.Length ?? 0) * 2, Allocator.Temp))
             {
-                w.WriteValueSafe((ushort)dummy.NetworkIndex);
+                w.WriteValueSafe(kind);
+                w.WriteValueSafe(id);
                 w.WriteValueSafe((byte)claim.Zone);
                 w.WriteValueSafe(claim.WeakPointMultiplier);
                 w.WriteValueSafe(claim.Origin);
@@ -345,6 +395,7 @@ namespace Deadfall.DebugTools
         private void OnHitClaim(ulong sender, FastBufferReader r)
         {
             if (!_session.IsHost) return;
+            r.ReadValueSafe(out byte kind);
             r.ReadValueSafe(out ushort index);
             r.ReadValueSafe(out byte zoneByte);
             r.ReadValueSafe(out float weak);
@@ -353,14 +404,36 @@ namespace Deadfall.DebugTools
             r.ReadValueSafe(out string weaponId);
 
             if (!ConsumeBudget(sender)) { Reject(sender, "rate"); return; }
-            TrainingDummy dummy = TrainingDummy.ByIndex(index);
-            if (dummy == null || !dummy.IsAlive) return; // already dead on the host: a normal race, not cheating
+            IDamageable target;
+            Vector3 targetCenter;
+            float pointTolerance;
+            if (kind == TargetDummy)
+            {
+                TrainingDummy dummy = TrainingDummy.ByIndex(index);
+                if (dummy == null) return;
+                target = dummy;
+                targetCenter = dummy.transform.position + Vector3.up;
+                // Strafing dummies move on each peer's own clock, so allow for their travel.
+                pointTolerance = MaxPointError + dummy.StrafeDistance * 2f;
+            }
+            else if (kind == TargetEnemy)
+            {
+                Enemy enemy = EnemyManager.Current != null ? EnemyManager.Current.FindBySlot(index) : null;
+                if (enemy == null) return; // despawned on the host already
+                target = enemy;
+                targetCenter = enemy.transform.position + Vector3.up * (enemy.Definition.Height * 0.5f);
+                pointTolerance = MaxPointError + EnemyPointSlack;
+            }
+            else
+            {
+                Reject(sender, "target kind");
+                return;
+            }
+            if (!target.IsAlive) return; // already dead on the host: a normal race, not cheating
             if (!_proxies.TryGetValue(sender, out RemotePlayerProxy shooter) || shooter == null) { Reject(sender, "unknown shooter"); return; }
             if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak)) { Reject(sender, "malformed"); return; }
             if ((origin - shooter.EyePosition).sqrMagnitude > MaxOriginError * MaxOriginError) { Reject(sender, "origin"); return; }
-            // Strafing dummies move on each peer's own clock, so allow for their travel.
-            float pointTolerance = MaxPointError + dummy.StrafeDistance * 2f;
-            if ((point - (dummy.transform.position + Vector3.up)).sqrMagnitude > pointTolerance * pointTolerance) { Reject(sender, "point"); return; }
+            if ((point - targetCenter).sqrMagnitude > pointTolerance * pointTolerance) { Reject(sender, "point"); return; }
 
             var zone = (HitZone)zoneByte;
             weak = Mathf.Clamp(weak, zone == HitZone.Armor ? 0f : 1f, 3f);
@@ -369,7 +442,7 @@ namespace Deadfall.DebugTools
             HitOutcome outcome = LocalHitResolver.Apply(new HitClaim
             {
                 Attacker = shooter.gameObject,
-                Target = dummy,
+                Target = target,
                 Zone = zone,
                 WeakPointMultiplier = weak,
                 Origin = origin,

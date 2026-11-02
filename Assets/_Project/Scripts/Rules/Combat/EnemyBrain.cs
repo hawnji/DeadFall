@@ -181,6 +181,15 @@ namespace Deadfall.Rules.Combat
             if (State == EnemyState.Charge) Enter(EnemyState.AttackRecover, now);
         }
 
+        /// <summary>
+        /// Co-op clients don't think: they copy the host's state from snapshots. Changing state restarts the
+        /// local state clock so wind-up poses still play over the right duration.
+        /// </summary>
+        public void Mirror(EnemyState state, double now)
+        {
+            if (state != State) Enter(state, now);
+        }
+
         public void Kill(double now)
         {
             if (!IsDead) Enter(EnemyState.Dead, now);
