@@ -49,7 +49,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 | Package | Needed from |
 |---|---|
 | Universal RP (then **Assets → Create → Rendering → URP Asset (with Universal Renderer)** and assign it in **Project Settings → Graphics**) | Art and lighting work; optional for M1, the sandbox renders with either pipeline |
-| Test Framework | Running the EditMode/PlayMode tests (often already installed) |
+| Test Framework | Running the EditMode/PlayMode tests. The test assemblies are skipped until it is installed |
 | Netcode for GameObjects, Multiplayer Services, Multiplayer Play Mode | M1.5 networking spike |
 | AI Navigation | M2 zombie AI |
 | Newtonsoft Json (`com.unity.nuget.newtonsoft-json`) | M10 save system |

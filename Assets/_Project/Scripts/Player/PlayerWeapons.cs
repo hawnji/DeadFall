@@ -54,6 +54,7 @@ namespace Deadfall.Player
         private bool _meleePending;
         private MeleeStats _activeMelee;
         private float _aimBlend;
+        private static uint _rngCounter;
 
         public int SlotCount => _slots.Count;
         public int CurrentIndex => _current;
@@ -87,7 +88,8 @@ namespace Deadfall.Player
             _motor = GetComponent<PlayerMotor>();
             _status = GetComponent<PlayerStatus>();
             _viewmodel = GetComponentInChildren<WeaponViewmodel>(true);
-            _rng = new DeterministicRandom((ulong)GetInstanceID() ^ 0x5DEECE66DUL);
+            // Spread only needs to differ between players; it is not gameplay-authoritative.
+            _rng = new DeterministicRandom((ulong)System.Environment.TickCount ^ ((ulong)++_rngCounter << 32) ^ 0x5DEECE66DUL);
         }
 
         private void Start() => BuildSlots();
