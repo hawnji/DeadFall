@@ -59,6 +59,20 @@ namespace Deadfall.Game
 
         public float Total(ModStat s) => _totals[(int)s];
 
+        private float[] _permanent;
+
+        /// <summary>
+        /// Permanent bonuses from the profile (skill tree + research, M10), added under the run's Field Mods. Same
+        /// stats, so every effect path (health, handling, cooldowns) picks them up.
+        /// </summary>
+        public void SetPermanentBonuses(float[] totals)
+        {
+            _permanent = totals;
+            Apply();
+        }
+
+        public float Permanent(ModStat s) => _permanent != null && (int)s < _permanent.Length ? _permanent[(int)s] : 0f;
+
         /// <summary>Deployment over or starting: every mod and pending offer goes.</summary>
         public void ResetRun()
         {
@@ -112,7 +126,7 @@ namespace Deadfall.Game
 
         private void Apply()
         {
-            foreach (ModStat s in (ModStat[])Enum.GetValues(typeof(ModStat))) _totals[(int)s] = _inventory.Total(s);
+            foreach (ModStat s in (ModStat[])Enum.GetValues(typeof(ModStat))) _totals[(int)s] = _inventory.Total(s) + Permanent(s);
             if (_health != null)
             {
                 _health.SetBonusMaxHealth(Total(ModStat.MaxHealth));

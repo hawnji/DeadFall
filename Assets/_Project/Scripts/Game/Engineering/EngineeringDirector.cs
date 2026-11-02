@@ -55,6 +55,8 @@ namespace Deadfall.Game
         public ulong LocalId => _session != null ? _session.LocalClientId : 0UL;
         /// <summary>Every machine: a short message for the local player (denied build, not enough Scrap...).</summary>
         public event Action<string> LocalMessage;
+        /// <summary>A structure owned by the local player appeared during a run (progression stats).</summary>
+        public event Action<StructureKind> LocalStructureBuilt;
 
         private bool IsAuthority => _session == null || _session.Role != SessionRole.Client;
 
@@ -418,6 +420,7 @@ namespace Deadfall.Game
             };
             s.Init(id, kind, owner, engineer, mirror);
             _structures[id] = s;
+            if (owner == LocalId && !Free) LocalStructureBuilt?.Invoke(kind);
             return s;
         }
 

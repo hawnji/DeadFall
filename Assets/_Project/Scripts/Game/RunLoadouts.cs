@@ -6,11 +6,37 @@ namespace Deadfall.Game
 {
     /// <summary>
     /// Starting loadout per class (D-07 slot layout: two primaries, sidearm, melee), given at the start of every
-    /// deployment. Placeholder until the FOB loadout screen (M10) lets players choose.
+    /// deployment. The Armory (M10) saves a custom one per class in the profile; an illegal or missing one falls
+    /// back to the class default below.
     /// </summary>
     public static class RunLoadouts
     {
         public static List<PlayerWeapons.LoadoutEntry> For(string classId)
+        {
+            List<PlayerWeapons.LoadoutEntry> def = Default(classId);
+            ProfileService profile = ProfileService.Current;
+            if (profile == null) return def;
+            string[] ids = profile.LoadoutFor(classId, DefaultIds(classId));
+            var list = new List<PlayerWeapons.LoadoutEntry>(4);
+            foreach (string id in ids)
+            {
+                WeaponDefinition w = WeaponCatalog.ById(id);
+                if (w == null) return def;
+                list.Add(new PlayerWeapons.LoadoutEntry(w));
+            }
+            return list;
+        }
+
+        /// <summary>Content ids of the class default, in slot order.</summary>
+        public static string[] DefaultIds(string classId)
+        {
+            List<PlayerWeapons.LoadoutEntry> def = Default(classId);
+            var ids = new string[def.Count];
+            for (int i = 0; i < def.Count; i++) ids[i] = def[i].Definition.ContentId;
+            return ids;
+        }
+
+        public static List<PlayerWeapons.LoadoutEntry> Default(string classId)
         {
             var list = new List<PlayerWeapons.LoadoutEntry>(4);
             switch (classId)
