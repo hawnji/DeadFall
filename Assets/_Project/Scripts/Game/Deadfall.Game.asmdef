@@ -16,6 +16,7 @@
         "Deadfall.Rules.World",
         "Deadfall.Rules.Encounters",
         "Deadfall.Rules.Progression",
+        "Deadfall.Rules.Engineering",
         "Unity.Netcode.Runtime",
         "Unity.InputSystem"
     ],

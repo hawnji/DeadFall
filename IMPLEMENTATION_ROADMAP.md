@@ -144,8 +144,18 @@ Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs
 
 Not in scope yet: the power grid feeding doors and turrets (generators only end Blackouts for now), Red Sky and Containment Breach events, objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
 
-## M9 – Engineering ⬜
-Scrap, placement validator, Sentry, Drone, Arc Fence, Barricade, upgrades, repair, destruction, perf caps.
+## M9 – Engineering ✅ (editor check held until M10)
+1. ✅ Rules (`Deadfall.Rules.Engineering`): `StructureCatalog` (three tiers each), `ScrapRules` (kills, surge clears, objectives, Engineer +50%, non-Engineer cost ×1.5, dismantle refund), `RepairRules` (chunked repairs, Engineers better), `PlacementRules` validator with a reason for every refusal, `ScrapLedger`.
+2. ✅ Shared Scrap for the squad (D-13), starting at 60 per run; building is free outside runs so the sandbox can be used to try structures.
+3. ✅ **Sentry** (ammo-limited, refill with Scrap, enemies attack it), **Drone** (follows its Engineer; attack mode shoots, repair mode beams health into structures; Z switches), **Arc Fence** (slows and shocks infected crossing it, drains charge, wears down), **Barricade** (carves the NavMesh; enemies cut off from the squad tear it down, so a path is never blocked for good; anyone can build it, Engineers cheaper).
+4. ✅ Build mode on B with a ghost preview (green or red with the reason): ground angle, clearance, distance, NavMesh, and distance from enemy spawn points, objectives, sector doors and the deployment point.
+5. ✅ Upgrades (U, tiers 2 and 3), repairs and refills (F), dismantle (X, half refund), destruction by enemies.
+6. ✅ Perf caps: 16 structures per squad, per-player caps per type, 4 Hz targeting, 10 Hz fence checks.
+7. ✅ Co-op: host-authoritative (`df.build`, `df.sact`, state in `df.eng`, refusals in `df.engmsg`); drones fly beside their owner on every machine.
+8. ✅ Demolition Crew doctrine is live: a Demolitionist's blasts repair structures by 10% when the squad has an Engineer.
+9. ✅ 8 new EditMode tests (`EngineeringTests.cs`).
+
+Not in scope yet: the Arc Fence drawing on the map's power grid, the Overwatch and Covering Fire doctrine effects, structure upgrade branches from the Engineer specialization tree (M10+).
 
 ## M10 – FOB and permanent progression ⬜
 Greybox FOB, seven facilities, loadouts, skill trees, research, currencies, challenges, achievements, prestige foundation, versioned saves.

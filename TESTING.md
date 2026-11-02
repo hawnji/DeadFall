@@ -230,6 +230,24 @@ Two players (as §3.1):
 - [ ] Both see the same objectives, props, progress and banners; either player can use a prop and both see it advance. A client's shots damage the nest.
 - [ ] Blackout darkens both screens and Lockdown seals the doors for both; both end together. Extraction counts either player standing in the ring.
 
+### 3.11 Manual checklist: M9 engineering
+
+Solo, as Engineer (pick it on the pause screen), in the sandbox (building is free outside a run):
+
+- [ ] B shows the build menu at the bottom and a box ghost where you look. It's green on open floor and red with a reason on a wall, a slope, too far away, or next to a spawn point. 1-4 or the wheel switch type, R turns it, click places it, right click or B leaves. Weapons don't fire in build mode.
+- [ ] **Sentry**: turns to and shoots infected (F5 spawns Husks), ammo counts down in its prompt; at zero it stops and F refills it.
+- [ ] **Drone** (key 2): appears above your shoulder and follows you, shooting infected. Z switches it to repair mode: a green beam heals a damaged structure nearby.
+- [ ] **Arc Fence**: a blue arc between two posts; Husks crossing it slow down and take damage, the arc flickers white, the charge drops. Out of charge it goes dark until F refills it.
+- [ ] **Barricade**: block a corridor. Husks walk round if there's another way; if not they attack the barricade until it breaks (small burst) and then come through.
+- [ ] Looking at a structure shows its tier, health and actions: F repairs a damaged one, U upgrades (colour shifts blue at tier 2, gold at 3), X dismantles your own.
+- [ ] As another class: only the Barricade can be built, and it costs more during a run.
+- [ ] In a run (N): Scrap starts at 60, goes up with kills (faster as Engineer), surge clears and objectives; costs are taken and refused with "Not enough Scrap" when short.
+- [ ] Demolitionist + Engineer in co-op: the Demolitionist's grenades near damaged structures patch them up.
+
+Two players (as §3.1):
+
+- [ ] Both see the same structures, tiers, health and Scrap; a client can build, repair, upgrade and dismantle (its refusals show as toasts). A client's drone follows the client on both screens.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -268,13 +286,14 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
 | EditMode | `Tests/EditMode/Rules/ClassRulesTests.cs` | Ability timer phases, instant abilities, early end, long frames, cooldown rate and refunds; Guard threshold, sustained recoil floor, combined reduction; combo chain; doctrine pairs, duplicates, two-per-player cap, four distinct; weapon fire rate, reload speed, free reloads, reserve capacity |
 | EditMode | `Tests/EditMode/Rules/WaveTests.cs` | Budget growth by surge and players, adaptive ±10%, health cap, unlock surges, same seed same plan, budget never exceeded, Swarm cheap-only, Siege directions and early heavies, share cap, minimum one enemy, spawn cap, type rotation; surge loop (lull, surge, reward), clear reported once, ready and skip, final surge, endless, squad wipe, straggler cull, no cull while spawning, unspawnable surge ends, credit numbers, ledger |
+| EditMode | `Tests/EditMode/Rules/EngineeringTests.cs` | Placement validator (every refusal reason, drones skip ground checks, class limits, caps, free mode), Scrap economy (kills, Engineer bonus, upgrades, investment and refund, ledger cap), chunked repairs, tiers improve every stat |
 | EditMode | `Tests/EditMode/Rules/ObjectiveTests.cs` | Tracker progress and single completion, expiry, required-complete check, channel fill and drain, hold timer pause, side objective schedule and picks, mission template; event first surge, Specimen/Hunt exclusion, cooldown, Lockdown needs a map with two sectors |
 | EditMode | `Tests/EditMode/Rules/AdvancedEnemyTests.cs` | Spitter holds at range with line of sight, shoots after wind-up, closes without sight, still melees; exploder commits and can't be staggered; stat copies; variant chance curve, no traits on bosses and hunters, no Splitting Creepers, double traits late, trait stats and credit multiplier; Specimen phases, phase stats, modifiers and packing, summon counts; hunters and bosses never bought, Specimen and Hunt lead, Elite guarantees early elites, Supply crates, missing roles fall back, deterministic traits |
 | EditMode | `Tests/EditMode/Rules/EnemyBrainTests.cs` | Detection and alerting, strike lands once after wind-up, same attack timing at 8/30/144 Hz, stagger interrupt and immunity, meter decay, charge range/cooldown/contact/unstaggerable, death, armor zone multiplier |
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 144/144 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 152/152 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -288,6 +307,7 @@ Status 2026-11-02: 144/144 EditMode tests pass in the compile-check runner. Play
 - M4: a client's shield copy doesn't darken with damage (only the host's copy tracks health). Explosions ignore walls (no line-of-sight check yet). Bomblet copies on clients may land slightly differently from the host's; the damage follows the host's.
 - M7: Creepers don't use vents yet. Specimen Zero has no arena hazards or damage-type armor yet. Supply crates aren't sent to players who join mid-surge. Acid globs fly through walls on their arc (Retchers only fire with a clear line of sight).
 - M8: objective props are placed after the NavMesh bake, so enemies can bump into them. Generators don't power doors or turrets yet. Operations open every sector at once.
+- M9: structures use the Ignore Raycast layer so player bullets pass through them; Retcher globs and Pyre blasts don't hurt structures yet. Arc Fences don't use the map's power grid.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

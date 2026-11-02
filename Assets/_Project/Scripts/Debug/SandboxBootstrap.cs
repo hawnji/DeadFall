@@ -63,6 +63,9 @@ namespace Deadfall.DebugTools
             ui.AddComponent<BossHud>();
             ui.AddComponent<ObjectiveHud>();
             ui.AddComponent<BlackoutLighting>();
+            var build = ui.AddComponent<BuildTool>();
+            build.Bind(player);
+            ui.AddComponent<EngineeringHud>().Bind(build);
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -83,6 +86,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<SupplyDrops>();
             // M8: objectives, Operations and random events (host-run, synced as one state message).
             net.AddComponent<ObjectiveDirector>();
+            // M9: Engineering structures and the squad's Scrap (host-run).
+            net.AddComponent<EngineeringDirector>();
 
             // M3: survival waves. Press N to start a run.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();

@@ -69,7 +69,7 @@ namespace Deadfall.UI
                 string d = "";
                 foreach (string id in _class.ActiveDoctrines)
                 {
-                    bool live = id == PrototypeClasses.Vanguard || id == PrototypeClasses.CombinedArms;
+                    bool live = id == PrototypeClasses.Vanguard || id == PrototypeClasses.CombinedArms || id == PrototypeClasses.DemolitionCrew;
                     d += (d.Length > 0 ? "  ·  " : "") + PrototypeClasses.DoctrineName(id) + (live ? "" : " (effect after playtests)");
                 }
                 GUI.Label(new Rect(x, y - 40f, 520f, 18f), "Doctrine: " + d, _small);

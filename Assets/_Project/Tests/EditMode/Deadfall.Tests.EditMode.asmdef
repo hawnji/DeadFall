@@ -8,6 +8,7 @@
         "Deadfall.Rules.Classes",
         "Deadfall.Rules.World",
         "Deadfall.Rules.Progression",
+        "Deadfall.Rules.Engineering",
         "Deadfall.Core",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
