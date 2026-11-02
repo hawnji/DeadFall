@@ -167,6 +167,12 @@ namespace Deadfall.Rules.Combat
             Enter(EnemyState.Idle, now);
         }
 
+        /// <summary>Makes the enemy hunt its target at any distance (wave spawns know where the players are).</summary>
+        public void Alert()
+        {
+            if (!IsDead) _alerted = true;
+        }
+
         /// <summary>Call when the enemy takes damage. Alerts it and may queue a stagger for the next tick.</summary>
         public void OnDamaged(float amount, double now)
         {

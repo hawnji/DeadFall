@@ -166,6 +166,7 @@ namespace Deadfall.Encounters
                 }
                 return false;
             }
+            enemy.Alert(); // surge enemies come for the squad, however far away they spawn
             _alive.Add(enemy);
             _next++;
             _attempts = 0;
