@@ -248,6 +248,27 @@ Two players (as §3.1):
 
 - [ ] Both see the same structures, tiers, health and Scrap; a client can build, repair, upgrade and dismantle (its refusals show as toasts). A client's drone follows the client on both screens.
 
+### 3.12 Manual checklist: M10 FOB and permanent progression
+
+Solo:
+
+- [ ] Play starts in FOB Halcyon: a hangar with seven coloured booths and floating names. Locked ones show the operator level they need.
+- [ ] F at a console opens the FOB screen on that facility's tab; Esc, Close or walking away closes it. Tabs switch between facilities.
+- [ ] **Command Center**: "Dev: grant..." gives 20,000 REQ, 100 Intel and operator level 6 (use it to open everything). Deploy on Operation Cold Start builds a map and starts the Operation; Deploy on Survival builds a map and starts a run.
+- [ ] **Armory**: Engineer and Demolitionist are locked at operator level 1 and open at 2 and 3. Picking a class equips its loadout. < and > change each slot; the Anvil LMG, Tether Cleaver and Mule Launcher only appear after their research (or when the class starts with them). The new weapons are in your hands at once and on the next deployment.
+- [ ] **Training Range**: rank, XP to next rank and skill points. Unlock a tier 1 node (after a run or two, or with dev XP), see its effect (for example Tank Plating: max health goes up on the HUD). Respec refunds for 500 REQ. "Go to the firing range" teleports to the M1 range; the gold console near the range spawn brings you back.
+- [ ] **Research Lab / Workshop / Intelligence Center**: research a project, REQ and Intel drop, it shows ✔; locked ones say why. Field Medicine raises max health. Field Dossiers reveal the common infected in the Intelligence Center.
+- [ ] **Trophy Room**: lifetime stats, challenge progress, achievements (First Deployment ticks after starting a run).
+- [ ] Finish a run (win and lose one): the results screen shows kills, surges, objectives, rewards (half on a failure) and any level-ups or challenges; "Return to FOB" goes back to the hangar.
+- [ ] Toasts appear for challenge tiers and achievements during a run.
+- [ ] Quit and restart: currencies, levels, skills, research, loadouts, stats, weapon XP and the chosen class are all kept. The profile is `deadfall_profile.txt` in `Application.persistentDataPath`, with a `.bak` copy.
+- [ ] Weapon XP from before M10 (PlayerPrefs) appears in the Armory weapon levels after the first launch.
+- [ ] Edit a number in the profile file by hand and restart: the game warns and loads the backup.
+
+Two players (as §3.1):
+
+- [ ] Both start in the FOB. The host deploys from Command Center and the client goes to the same map; the client's Deploy buttons are disabled. After the run each player sees their own results, and "Return to FOB" on the host brings both back.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -286,6 +307,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | EditMode | `Tests/EditMode/Rules/CommonTests.cs` | RNG determinism and bounds, modifier stacking, spread |
 | EditMode | `Tests/EditMode/Rules/ClassRulesTests.cs` | Ability timer phases, instant abilities, early end, long frames, cooldown rate and refunds; Guard threshold, sustained recoil floor, combined reduction; combo chain; doctrine pairs, duplicates, two-per-player cap, four distinct; weapon fire rate, reload speed, free reloads, reserve capacity |
 | EditMode | `Tests/EditMode/Rules/WaveTests.cs` | Budget growth by surge and players, adaptive ±10%, health cap, unlock surges, same seed same plan, budget never exceeded, Swarm cheap-only, Siege directions and early heavies, share cap, minimum one enemy, spawn cap, type rotation; surge loop (lull, surge, reward), clear reported once, ready and skip, final surge, endless, squad wipe, straggler cull, no cull while spawning, unspawnable surge ends, credit numbers, ledger |
+| EditMode | `Tests/EditMode/Rules/ProgressionTests.cs` | Wallet, currency list, operator and class rank curves, facility and class gates; skill catalog shape, unlock rules (rank, prerequisite, points, per class), full tree fits; prestige reset and cap; research catalog, unlock rules, permanent totals by class, dossiers; loadout slots, research gates, class defaults, fallback; run rewards and D-03 retention, banking a run; challenge tiers, progress text, level and research achievements; save round trip, determinism, corrupt and tampered files, newer versions refused, migration, unknown keys and bad ids, legacy weapon XP import |
 | EditMode | `Tests/EditMode/Rules/EngineeringTests.cs` | Placement validator (every refusal reason, drones skip ground checks, class limits, caps, free mode), Scrap economy (kills, Engineer bonus, upgrades, investment and refund, ledger cap), chunked repairs, tiers improve every stat |
 | EditMode | `Tests/EditMode/Rules/ObjectiveTests.cs` | Tracker progress and single completion, expiry, required-complete check, channel fill and drain, hold timer pause, side objective schedule and picks, mission template; event first surge, Specimen/Hunt exclusion, cooldown, Lockdown needs a map with two sectors |
 | EditMode | `Tests/EditMode/Rules/AdvancedEnemyTests.cs` | Spitter holds at range with line of sight, shoots after wind-up, closes without sight, still melees; exploder commits and can't be staggered; stat copies; variant chance curve, no traits on bosses and hunters, no Splitting Creepers, double traits late, trait stats and credit multiplier; Specimen phases, phase stats, modifiers and packing, summon counts; hunters and bosses never bought, Specimen and Hunt lead, Elite guarantees early elites, Supply crates, missing roles fall back, deterministic traits |
@@ -293,7 +315,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 152/152 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -308,6 +330,7 @@ Status 2026-11-02: 152/152 EditMode tests pass in the compile-check runner. Play
 - M7: Creepers don't use vents yet. Specimen Zero has no arena hazards or damage-type armor yet. Supply crates aren't sent to players who join mid-surge. Acid globs fly through walls on their arc (Retchers only fire with a clear line of sight).
 - M8: objective props are placed after the NavMesh bake, so enemies can bump into them. Generators don't power doors or turrets yet. Operations open every sector at once.
 - M9: structures use the Ignore Raycast layer so player bullets pass through them; Retcher globs and Pyre blasts don't hurt structures yet. Arc Fences don't use the map's power grid.
+- M10: the sandbox pause-screen class buttons ignore class locks (dev override). The client in co-op deploys wherever the host deploys, with no ready check yet. Research doesn't affect host-run systems (Scrap, credits). Kill counts per enemy type (for dossiers) only count on the host or solo.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

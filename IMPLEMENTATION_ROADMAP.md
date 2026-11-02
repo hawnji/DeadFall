@@ -157,8 +157,18 @@ Not in scope yet: the power grid feeding doors and turrets (generators only end 
 
 Not in scope yet: the Arc Fence drawing on the map's power grid, the Overwatch and Covering Fire doctrine effects, structure upgrade branches from the Engineer specialization tree (M10+).
 
-## M10 – FOB and permanent progression ⬜
-Greybox FOB, seven facilities, loadouts, skill trees, research, currencies, challenges, achievements, prestige foundation, versioned saves.
+## M10 – FOB and permanent progression ✅ (editor check: `TESTING.md` §3.12)
+1. ✅ Rules (`Deadfall.Rules.Progression`): generic `CurrencyDefinition` and `Wallet` (Field Credits, Scrap, Requisition, Intel, D-04), operator levels (class and facility unlocks), class ranks with one skill point per rank, prestige foundation (rank 30, up to 10, titles), run rewards with 50% retention on failure (D-03).
+2. ✅ Skill trees: three branches of three tiers for each of the five classes (45 nodes), rank gates, prerequisites, respec. Effects use the Field Mod stats and are applied as a permanent layer under the run's Field Mods.
+3. ✅ Research: 19 projects in five categories (Survival, Combat, Arsenal, Intel, Engineering): stat bonuses, class-only bonuses, weapon clearances for loadouts, dossier tiers.
+4. ✅ Loadouts: per-class two primaries, sidearm and melee (D-07) chosen in the Armory, validated against slots and research, falling back to the class default.
+5. ✅ Challenges (8, three tiers each, paying REQ/Intel) and achievements (8), from lifetime stats counted live so failed runs keep their progress.
+6. ✅ Versioned save (T-54): checksummed text profile with a backup, migrations, refusal of newer files, corruption recovery; M6's PlayerPrefs weapon XP is imported once.
+7. ✅ Greybox FOB Halcyon next to the range with the seven facilities (GAME_DESIGN §13): Command Center (deploy Operation or Survival), Armory, Training Range, Research Lab, Engineering Workshop, Intelligence Center (dossiers), Trophy Room. The player starts there and returns there after a run.
+8. ✅ End-of-run results screen with rewards, level-ups and completed challenges.
+9. ✅ 28 new EditMode tests (`ProgressionTests.cs`).
+
+Not in scope yet: co-op ready check at the deployment board (the host deploys and clients follow), weapon camos and attachment unlocks through the Armory, cosmetics, timed research, rotating weekly challenges, prestige rewards beyond titles, a class select that respects locks on the sandbox pause screen (it stays a dev override).
 
 ## M11 – Multiplayer completion ⬜
 Lobby/Relay flow, 4-player validation of every system, revives, spectate, reconnect window, host-drop handling, reward duplication tests, bandwidth profiling.
