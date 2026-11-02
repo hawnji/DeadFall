@@ -71,6 +71,20 @@ namespace Deadfall.Classes
             Clear();
         }
 
+        private float _extraCooldownRate = 1f;
+
+        /// <summary>Cooldown speed from Field Mods and skills, on top of doctrines (1 = none).</summary>
+        public float ExtraCooldownRate
+        {
+            get => _extraCooldownRate;
+            set { _extraCooldownRate = Mathf.Max(0.1f, value); ApplyCooldownRate(); }
+        }
+
+        private void ApplyCooldownRate()
+        {
+            if (_timer != null) _timer.CooldownRate = (HasDoctrine(PrototypeClasses.CombinedArms) ? CombinedArmsCooldownRate : 1f) * _extraCooldownRate;
+        }
+
         /// <summary>Recomputes doctrines from everyone's classes (this player first).</summary>
         private void RefreshDoctrines()
         {
@@ -86,7 +100,7 @@ namespace Deadfall.Classes
             if (!changed) return;
             _doctrines.Clear();
             _doctrines.AddRange(result[0]);
-            if (_timer != null) _timer.CooldownRate = HasDoctrine(PrototypeClasses.CombinedArms) ? CombinedArmsCooldownRate : 1f;
+            ApplyCooldownRate();
             DoctrinesChanged?.Invoke();
         }
 
@@ -119,7 +133,7 @@ namespace Deadfall.Classes
         {
             _doctrines.Clear();
             RefreshDoctrines();
-            if (_timer != null) _timer.CooldownRate = HasDoctrine(PrototypeClasses.CombinedArms) ? CombinedArmsCooldownRate : 1f;
+            ApplyCooldownRate();
         }
 
         private void Clear()

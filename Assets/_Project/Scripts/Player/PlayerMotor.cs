@@ -139,7 +139,7 @@ namespace Deadfall.Player
             float speed = IsSprinting ? c.SprintSpeed : _isCrouched ? c.CrouchSpeed : c.WalkSpeed;
             if (_status != null)
             {
-                speed *= _status.WeaponMoveMultiplier;
+                speed *= _status.WeaponMoveMultiplier * _status.BonusMoveMultiplier;
                 speed *= Mathf.Lerp(1f, c.AimSpeedMultiplier, _status.AimBlend);
             }
             if (input.Move.y < 0f) speed *= Mathf.Lerp(1f, c.BackwardMultiplier, -input.Move.y);

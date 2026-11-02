@@ -12,6 +12,8 @@ namespace Deadfall.Player
         public bool SprintBlocked;
         /// <summary>Movement multiplier from the held weapon and aim state.</summary>
         public float WeaponMoveMultiplier = 1f;
+        /// <summary>Move speed bonus from Field Mods and skills (1 = none).</summary>
+        public float BonusMoveMultiplier = 1f;
         /// <summary>0..1 aim-down-sights blend, read by look (sensitivity, FOV) and motor (speed).</summary>
         public float AimBlend;
         public bool IsDead;

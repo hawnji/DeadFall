@@ -24,6 +24,7 @@ namespace Deadfall.DebugTools
             if (boot == null) return;
             if (_cursor == null && PlayerIdentityLocal() != null) _cursor = PlayerIdentityLocal().GetComponent<PlayerCursorLock>();
             if (_cursor != null && _cursor.IsLocked) return;
+            if (Deadfall.Core.UiModal.Active) return;
             if (_title == null)
             {
                 _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };

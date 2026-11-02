@@ -55,6 +55,11 @@ namespace Deadfall.DebugTools
             ui.AddComponent<SandboxMapPanel>();
             ui.AddComponent<MapHud>();
             ui.AddComponent<MapDebugOverlay>();
+            // M6: run economy UI (Supply Cache menu, Field Mod picks with T, toasts, weapon XP).
+            ui.AddComponent<RunToasts>();
+            ui.AddComponent<SupplyCacheMenu>();
+            ui.AddComponent<FieldModPanel>();
+            ui.AddComponent<WeaponXpTracker>().Bind(player);
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -67,6 +72,9 @@ namespace Deadfall.DebugTools
             net.AddComponent<Deadfall.Classes.ClassNetwork>().Bind(player.GetComponent<Deadfall.Classes.PlayerClass>());
             // M5: host-authoritative pickups.
             net.AddComponent<Deadfall.RunSystems.LootNetwork>();
+            // M6: host-run purchases and weapon drops; launcher grenades through the host.
+            net.AddComponent<RunEconomy>();
+            net.AddComponent<ProjectileNetwork>();
 
             // M3: survival waves. Press N to start a run.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();
@@ -75,6 +83,11 @@ namespace Deadfall.DebugTools
             // M5: the generated map lives here when active.
             _map = new GameObject("[Map]").AddComponent<MapSession>();
             _map.RemoteWorldRequested += OnRemoteWorldRequested;
+
+            // M6: run state (class starting loadouts, Field Mods, resets) for the local player.
+            var run = new GameObject("[Run]").AddComponent<RunDirector>();
+            run.Bind(player);
+            run.ResetRunState();
         }
 
         private void OnDestroy()

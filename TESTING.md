@@ -174,6 +174,26 @@ Two players (as §3.1):
 - [ ] Only one player can take each pickup. A vent broken by either player opens for both.
 - [ ] Sector unlocks happen on both screens at once.
 
+### 3.8 Manual checklist: M6 weapons and run progression
+
+Solo:
+
+- [ ] Picking a class on the pause screen hands out its starting loadout (Tank: Breacher-12, Anvil LMG, Ranger-9, Tether Cleaver; Demolitionist gets the Mule Launcher).
+- [ ] Mule Launcher: grenades arc a little and explode on impact; enemies in the blast die or get pushed; your own blast hurts you (half as Demolitionist).
+- [ ] Wasp SMG, Anvil LMG and Tether Cleaver each feel distinct (rate of fire, reload length, swing speed).
+- [ ] On a generated map, find the green Supply Cache in the airlock sector and press F. The menu shows three weapons with tier colours, attachments, prices and what they'd replace, plus Ammo refill. Without a run it says credits come from kills.
+- [ ] During a run (N), buy something once you have the credits: it goes into the right slot (pistol to slot 3, melee to slot 4, others replace the primary in hand) and the HUD name shows the tier and attachments.
+- [ ] Kill enemies until a weapon drops (a spinning box on a coloured disc). F takes it.
+- [ ] After surge 3 a toast and a hint say a Field Mod is ready. T shows three cards; clicking one applies it (Thick Skin raises max health, Fleet Foot speeds you up, Overclock shortens the ability cooldown...). Esc closes and the offer waits.
+- [ ] Starting a new run (or generating a new map) puts you back on the class loadout with no mods.
+- [ ] Kills raise the weapon's level now and then (toast).
+
+Two players (as §3.1):
+
+- [ ] A client buys from a cache: the host's credits for that client go down and only the client gets the weapon.
+- [ ] A drop from the host's kill can't be taken by the client for 10 s, then can. Once taken it disappears for both.
+- [ ] A client's launcher grenades hurt host enemies and the client gets the kill credits.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -216,7 +236,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 105/105 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 116/116 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 

@@ -15,7 +15,8 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M3 – Wave management | **Done** (checked in the editor 2026-11-02) |
 | M4 – Class framework | Done: five classes, abilities, passives, Squad Doctrines, classes in co-op |
 | M5 – Procedural maps | Done (editor check held until M10): Cinder Ridge greybox kit, seeded layouts, sectors, loot, secrets |
-| M6–M13 | See `IMPLEMENTATION_ROADMAP.md` |
+| M6 – Weapons and run progression | Done (editor check held until M10): 8 weapons, tiers and attachments, Supply Caches, drops, Field Mods, weapon XP |
+| M7–M13 | See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -76,6 +77,8 @@ Waves (M3): N starts or stops a survival run (host), G toggles ready during a lu
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.
 
 Maps (M5): Esc shows the map panel on the right: type a seed and press Generate (or Random) to play a generated Cinder Ridge map, F9 toggles the map overlay, F uses pickups. Back to sandbox returns here.
+
+Run economy (M6): F opens Supply Caches and takes weapon drops; T picks a Field Mod when one is offered (every third surge).
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
 

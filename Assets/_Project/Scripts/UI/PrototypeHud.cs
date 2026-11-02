@@ -129,7 +129,7 @@ namespace Deadfall.UI
                 WeaponDefinition def = _weapons.CurrentDefinition;
                 string ammo = def.Kind == WeaponKind.Firearm ? $"{_weapons.Magazine} / {_weapons.Reserve}" : "MELEE";
                 GUI.Label(new Rect(w - 324, h - 72, 300, 44), ammo, _big);
-                GUI.Label(new Rect(w - 324, h - 96, 300, 22), $"[{_weapons.CurrentIndex + 1}] {def.DisplayName}", new GUIStyle(_small) { alignment = TextAnchor.UpperRight });
+                GUI.Label(new Rect(w - 324, h - 96, 300, 22), $"[{_weapons.CurrentIndex + 1}] {def.DisplayName}{ModsSuffix()}", new GUIStyle(_small) { alignment = TextAnchor.UpperRight });
 
                 if (_weapons.IsReloading)
                 {
@@ -154,11 +154,18 @@ namespace Deadfall.UI
                 DrawDiagonalMarker(w * 0.5f, h * 0.5f, s, mc);
             }
 
-            if (_cursor != null && !_cursor.IsLocked)
+            if (_cursor != null && !_cursor.IsLocked && !UiModal.Active)
             {
                 DrawRect(new Rect(0, 0, w, h), new Color(0, 0, 0, 0.45f));
                 GUI.Label(new Rect(0, h * 0.4f, w, 40), "PAUSED  (Esc to resume)", _center);
             }
+        }
+
+        private string ModsSuffix()
+        {
+            Deadfall.Rules.Combat.WeaponMods m = _weapons.CurrentMods;
+            string d = m != null ? m.Describe() : string.Empty;
+            return string.IsNullOrEmpty(d) ? string.Empty : $"  ({d})";
         }
 
         private void DrawCrosshair(float cx, float cy, WeaponDefinition def)

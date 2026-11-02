@@ -108,8 +108,15 @@ Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during 
 9. ✅ Also: Interact key (F) with `IInteractable` and HUD prompts, explosions blocked by walls (T-30 follow-up), wave spawns accept points 7 m away when nothing is 15 m away.
 10. ✅ 10 new EditMode tests (`LayoutTests.cs`), including 3000 seeds validated.
 
-## M6 – Weapons and run progression ⬜
-Full prototype roster (8), Supply Caches, starting loadouts, drops, attachments, weapon XP foundation, Field Mod offers (3 choices, rarities, class pools, stacking/evolution), run state reset.
+## M6 – Weapons and run progression ✅ (editor check held until M10)
+1. ✅ Full prototype roster in `WeaponCatalog` (8): Halberd AR, Breacher-12, Ranger-9, Saber-7, plus **Wasp SMG**, **Anvil LMG**, **Tether Cleaver** and the **Mule Launcher** (impact grenades through the new projectile service, host-authoritative in co-op, T-38).
+2. ✅ Tiers (Standard / Refined / Prototype) and 12 attachments across the six slots (`WeaponMods`, `WeaponModder`, `AttachmentCatalog`). Each weapon in a loadout has its own effective stats; damage bonuses travel as the capped outgoing multiplier (T-39).
+3. ✅ Supply Caches on the map's cache slots: three seeded offers (better tiers in later sectors) and an ammo refill, bought with Field Credits through the host (T-36).
+4. ✅ Weapon drops from kills during runs: tier and attachments rolled, finder-only for 10 s then shared (D-06), taken through the host.
+5. ✅ Starting loadouts per class (two primaries, sidearm, melee); everything temporary resets at deployment and run start.
+6. ✅ Field Mods: offers after every third surge, 3 choices, Common/Rare/Legendary, class pools, Unique/Stacks/Evolves (Vampiric Rounds → Blood Harvest), T to pick (T-37). Effects: damage, fire rate, reload, recoil, reserve, melee, move speed, max health, damage reduction, cooldowns, heal on kill/clear, low-health damage, kill fire-rate burst.
+7. ✅ Weapon XP foundation (`WeaponXp` curve, per-weapon XP from kills, level-up toasts; PlayerPrefs until M10's save).
+8. ✅ 11 new EditMode tests (`RunEconomyTests.cs`).
 
 ## M7 – Advanced enemies and encounters ⬜
 Creeper, Pyre, Retcher, Alpha, Variant mutations, mini-bosses, Specimen framework + Specimen Zero, boss rewards and modifiers, Elite/Hunt/Supply surges.

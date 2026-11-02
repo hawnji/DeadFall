@@ -326,7 +326,8 @@ namespace Deadfall.Classes
         }
 
         /// <summary>Self-damage multiplier for the thrower: the Demolitionist's Blast Padding cuts it.</summary>
-        private static float SelfBlastMultiplier(ulong ownerId)
+        /// <summary>Share of their own explosive damage a player takes (Blast Padding halves it).</summary>
+        public static float SelfBlastMultiplier(ulong ownerId)
         {
             ClassDefinition c = PrototypeClasses.ById(ClassRoster.ClassOf(ownerId));
             if (c == null) return 1f;
