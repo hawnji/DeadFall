@@ -97,9 +97,10 @@ namespace Deadfall.Enemies
 
         /// <summary>
         /// Spawns an enemy at the nearest NavMesh point within 3 m of <paramref name="position"/>.
-        /// Returns null at the cap or when there is no NavMesh nearby.
+        /// Returns null at the cap or when there is no NavMesh nearby. <paramref name="healthScale"/> multiplies max
+        /// health (surge scaling).
         /// </summary>
-        public Enemy Spawn(EnemyDefinition definition, Vector3 position, float yaw)
+        public Enemy Spawn(EnemyDefinition definition, Vector3 position, float yaw, float healthScale = 1f)
         {
             if (definition == null || _mirrorMode || AliveCount >= MaxAlive) return null;
             if (!NavMesh.SamplePosition(position, out NavMeshHit hit, 3f, NavMesh.AllAreas)) return null;
@@ -116,7 +117,7 @@ namespace Deadfall.Enemies
             double now = Time.timeAsDouble;
             enemy.SlotId = _nextSlot++;
             if (_nextSlot == 0) _nextSlot = 1; // 0 means "none" on the wire
-            enemy.Activate(hit.position, yaw, now);
+            enemy.Activate(hit.position, yaw, now, healthScale);
             _bySlot[enemy.SlotId] = enemy;
             // Spread perception ticks evenly across the interval instead of all enemies thinking on one frame.
             enemy.NextPerception = now + (_perceptionSpread++ % 8) / (8f * PerceptionHz);

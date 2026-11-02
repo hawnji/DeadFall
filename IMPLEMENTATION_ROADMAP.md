@@ -42,7 +42,7 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 
 Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpolation buffers, Relay/Lobby, player-vs-player damage, reconnect (M11).
 
-## M2 – Zombie AI and combat 🔄 in progress
+## M2 – Zombie AI and combat ✅
 **Part 1 (offline)** ✅ merged as #14, checked in the editor 2026-11-02
 1. ✅ Rules: `EnemyBrain` (idle → chase → wind-up → strike → recover, charge wind-up → charge, stagger, death; time-driven so identical at any tick rate), `StaggerMeter` (decaying build-up, immunity window), `EnemyStats`. New `HitZone.Armor` for plating. 16 EditMode tests.
 2. ✅ `EnemyDefinition` asset type and three prototype enemies in code (`PrototypeEnemies`): **Husk** (baseline), **Bolter** (fast, weaving approach, lunge), **Bulwark** (650 HP, front armor plate ×0.25, weak-point growth on the back ×2.5, unstaggerable charge).
@@ -53,16 +53,27 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 7. ✅ Sandbox hotkeys F5–F8, F11, `[` `]`, enemy count and AI cost on the overlay.
 8. ✅ Feel check in the editor (`TESTING.md` §3.2). Number tuning continues with waves in M3.
 
-**Part 2 (co-op), in review**
+**Part 2 (co-op)** ✅ merged as #15, two-player check passed 2026-11-02
 1. ✅ `EnemyReplicator`: the host sends every enemy at 12 Hz in 12 bytes (slot id, type, position in 2 cm steps, yaw in 256 steps, state, health %), split into messages of at most 90 enemies so each fits one packet; despawns are sent reliably. About 7 KB/s per client at 48 enemies.
 2. ✅ `EnemyManager` mirror mode on clients: pooled copies created from snapshots, smoothed toward each update, wind-up and stagger poses replayed from the host's state, removed on despawn or after 3 s without news.
 3. ✅ Host enemies hunt remote players too (proxies register as combat targets); their hits are sent to that player's machine, which applies them with its own damage reduction.
 4. ✅ Client hits on enemies go through the host's hit validation (same path as dummies, with extra tolerance for enemy movement).
 5. ✅ The alive cap grows with connected players (D-19).
-6. ⬜ Two-player check (`TESTING.md` §3.3) and a 50 / 100 enemy profile in a Development Build.
+6. ✅ Two-player check (`TESTING.md` §3.3). The 50 / 100 enemy profile in a Development Build is still open and carries into M3 testing.
 
-## M3 – Wave management ⬜
-`DifficultyCurve`, `WavePlanner` threat budget, `WaveManager` states (Lull → Surge → Reward), `SpawnDirector` with concurrency cap, special surge types (Swarm, Siege), announcements, Field Credit rewards. Deadlock tests.
+## M3 – Wave management 🔄 in review
+1. ✅ Rules: `DifficultyCurve` (threat budget by surge, player count, difficulty and the ±10% adaptive factor from D-14; health scale capped at ×2.5 by surge 30; concurrency; arrival directions).
+2. ✅ Rules: `WavePlanner` spends the budget on unlocked enemy types by weight, with a per-type budget share cap, a hard cap of 400 spawns, at least one enemy, and the same plan for the same seed. Surge types: **Standard**, **Swarm** (×1.3 budget, cheap types only, ×1.5 at once), **Siege** (3+ directions, heavies 2 surges early). Rotation in T-23.
+3. ✅ Rules: `SurgeRun` state machine: Lull → Surge → Reward → Lull, Complete after the final surge (20), Failed when the whole squad is down. Lull ends on its timer or when every player is ready. Deadlock guards: stragglers are removed after 40 s without a kill, and a surge that cannot spawn ends after 10 min.
+4. ✅ Rules: Field Credits (T-24): kills pay 10 per threat point to the killer, clearing a surge pays every player 50 + 10 × surge. `CreditLedger` keeps them per player (D-13).
+5. ✅ `SpawnDirector`: spawns the plan over time under the surge's concurrency and the enemy cap, only from the surge's chosen directions, at least 15 m from every player and out of sight when possible; skips an enemy after 25 failed tries so a surge can't hang.
+6. ✅ `WaveManager`: runs the loop on the host, pays credits using the new `PlayerIdentity` component (local player and remote stand-ins), sends a small state message to clients (phase, surge, type, time left, enemies left, ready count, credits) twice a second and on every change, and takes ready votes from clients.
+7. ✅ Enemy data: `EnemyDefinition` gains unlock surge, spawn weight and budget share. Husk from surge 1, Bolter from 3, Bulwark from 6 (at most 40% of a budget). Enemies take a health scale when spawned.
+8. ✅ HUD: surge panel (surge, type, enemies left, lull timer, ready count), Field Credits, big announcements, credit pop-ups. Sandbox: N starts or stops a run, G toggles ready, spawn points along the four walls.
+9. ✅ 23 new EditMode tests (`WaveTests.cs`).
+10. ⬜ Play check in the editor and in co-op (`TESTING.md` §3.4).
+
+Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
 ## M4 – Class framework ⬜
 `ClassDefinition`, `AbilityDefinition`, `AbilityRunner`, passive modifiers, preferred-weapon bonuses, class select, five prototype abilities, Squad Doctrine resolver (data only, placeholder magnitudes).

@@ -30,7 +30,7 @@ namespace Deadfall.Enemies
                 AttackRange = 1.6f, AttackDamage = 18f, AttackWindupSeconds = 0.55f, AttackRecoverSeconds = 0.8f,
                 StaggerThreshold = 55f, StaggerSeconds = 0.6f,
             },
-            EnemyBodyType.Standard, 1.8f, 0.35f, new Color(0.45f, 0.52f, 0.4f), threatCost: 1f);
+            EnemyBodyType.Standard, 1.8f, 0.35f, new Color(0.45f, 0.52f, 0.4f), threatCost: 1f, unlockSurge: 1, spawnWeight: 10f);
 
         /// <summary>Fast and fragile: weaves while sprinting, then lunges. Punishes ignoring the flanks.</summary>
         public static EnemyDefinition Bolter => _bolter != null ? _bolter : _bolter = EnemyDefinition.CreateRuntime(
@@ -44,7 +44,7 @@ namespace Deadfall.Enemies
                 CanCharge = true, ChargeMinRange = 4f, ChargeMaxRange = 8f, ChargeWindupSeconds = 0.3f,
                 ChargeSpeed = 11f, ChargeSeconds = 0.55f, ChargeCooldownSeconds = 5f, ChargeDamage = 16f,
             },
-            EnemyBodyType.Lean, 1.65f, 0.3f, new Color(0.62f, 0.32f, 0.28f), threatCost: 1.5f);
+            EnemyBodyType.Lean, 1.65f, 0.3f, new Color(0.62f, 0.32f, 0.28f), threatCost: 1.5f, unlockSurge: 3, spawnWeight: 4f);
 
         /// <summary>Armored brute: slow, plated front, telegraphed charge. Flank it and hit the pack on its back.</summary>
         public static EnemyDefinition Bulwark => _bulwark != null ? _bulwark : _bulwark = EnemyDefinition.CreateRuntime(
@@ -59,7 +59,7 @@ namespace Deadfall.Enemies
                 ChargeSpeed = 8.5f, ChargeSeconds = 1.6f, ChargeCooldownSeconds = 9f, ChargeDamage = 45f,
                 ChargeCanBeStaggered = false,
             },
-            EnemyBodyType.Plated, 2.3f, 0.6f, new Color(0.38f, 0.36f, 0.42f), threatCost: 6f);
+            EnemyBodyType.Plated, 2.3f, 0.6f, new Color(0.38f, 0.36f, 0.42f), threatCost: 6f, unlockSurge: 6, spawnWeight: 1f, maxBudgetShare: 0.4f);
 
         /// <summary>Fixed order: the network numbers enemy types by position here (EnemyCatalog). Append only.</summary>
         public static IReadOnlyList<EnemyDefinition> All

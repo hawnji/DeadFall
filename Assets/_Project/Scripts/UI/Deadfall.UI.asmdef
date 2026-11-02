@@ -12,6 +12,7 @@
         "Deadfall.Net",
         "Deadfall.Core",
         "Deadfall.Rules.Common",
+        "Deadfall.Rules.Encounters",
         "Unity.Netcode.Runtime",
         "Unity.InputSystem"
     ],

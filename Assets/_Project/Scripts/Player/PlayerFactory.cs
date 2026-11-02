@@ -41,6 +41,7 @@ namespace Deadfall.Player
             vm.transform.SetParent(camGo.transform, false);
             vm.AddComponent<WeaponViewmodel>();
 
+            root.AddComponent<PlayerIdentity>();
             root.AddComponent<PlayerStatus>();
             root.AddComponent<PlayerInputReader>();
             root.AddComponent<PlayerLook>();

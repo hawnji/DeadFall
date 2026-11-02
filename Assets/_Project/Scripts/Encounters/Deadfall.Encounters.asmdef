@@ -9,8 +9,7 @@
         "Deadfall.Core",
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Encounters",
-        "Unity.Netcode.Runtime",
-        "Unity.AI.Navigation"
+        "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

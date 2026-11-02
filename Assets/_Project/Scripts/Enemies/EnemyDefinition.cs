@@ -27,6 +27,12 @@ namespace Deadfall.Enemies
         [SerializeField] private EnemyStats _stats = new EnemyStats();
         [Tooltip("Cost against a wave's threat budget (M3).")]
         [SerializeField] private float _threatCost = 1f;
+        [Tooltip("First surge this enemy can appear in (M3).")]
+        [SerializeField] private int _unlockSurge = 1;
+        [Tooltip("Relative chance to be picked among affordable enemies when a surge is planned.")]
+        [SerializeField] private float _spawnWeight = 1f;
+        [Tooltip("At most this fraction of a surge's threat budget goes to this enemy (keeps heavies rare).")]
+        [Range(0f, 1f)] [SerializeField] private float _maxBudgetShare = 1f;
 
         [Header("Body")]
         [SerializeField] private EnemyBodyType _bodyType = EnemyBodyType.Standard;
@@ -42,6 +48,9 @@ namespace Deadfall.Enemies
         public string DisplayName => _displayName;
         public EnemyStats Stats => _stats;
         public float ThreatCost => _threatCost;
+        public int UnlockSurge => _unlockSurge;
+        public float SpawnWeight => _spawnWeight;
+        public float MaxBudgetShare => _maxBudgetShare;
         public EnemyBodyType BodyType => _bodyType;
         public float Height => _height;
         public float Radius => _radius;
@@ -51,7 +60,7 @@ namespace Deadfall.Enemies
 
         /// <summary>Builds an in-memory definition (prototype content and tests) without an asset file.</summary>
         public static EnemyDefinition CreateRuntime(string contentId, string displayName, EnemyStats stats, EnemyBodyType body,
-            float height, float radius, Color color, float threatCost = 1f)
+            float height, float radius, Color color, float threatCost = 1f, int unlockSurge = 1, float spawnWeight = 1f, float maxBudgetShare = 1f)
         {
             var def = CreateInstance<EnemyDefinition>();
             def.name = displayName;
@@ -63,6 +72,9 @@ namespace Deadfall.Enemies
             def._radius = radius;
             def._color = color;
             def._threatCost = threatCost;
+            def._unlockSurge = unlockSurge;
+            def._spawnWeight = spawnWeight;
+            def._maxBudgetShare = maxBudgetShare;
             return def;
         }
     }

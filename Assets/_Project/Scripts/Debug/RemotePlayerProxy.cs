@@ -97,6 +97,7 @@ namespace Deadfall.DebugTools
 
             var proxy = root.AddComponent<RemotePlayerProxy>();
             proxy.ClientId = clientId;
+            root.AddComponent<PlayerIdentity>().SetRemote(clientId);
             proxy._body = body.transform;
             proxy._aim = aim;
             proxy._renderers = root.GetComponentsInChildren<Renderer>();
