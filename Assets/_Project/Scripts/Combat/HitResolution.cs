@@ -6,7 +6,7 @@ namespace Deadfall.Combat
 {
     /// <summary>
     /// What an attacker claims it hit. In single player the local resolver applies it directly; in
-    /// multiplayer (M11) the claim is sent to the host, which validates and resolves it. Weapons
+    /// multiplayer the claim is sent to the host, which validates and resolves it. Weapons
     /// only ever produce claims, so the networking swap does not touch weapon code.
     /// </summary>
     public struct HitClaim
@@ -27,15 +27,45 @@ namespace Deadfall.Combat
         void Submit(in HitClaim claim);
     }
 
-    /// <summary>Authority for offline play: validates basic sanity, computes damage, applies it, raises events.</summary>
+    /// <summary>What happened when a claim was resolved.</summary>
+    public struct HitOutcome
+    {
+        public bool Applied;
+        public float Amount;
+        public bool IsCritical;
+        public bool Killed;
+    }
+
+    /// <summary>
+    /// Authority for offline play and for the host: validates basic sanity, computes damage, applies it,
+    /// raises events. The host also uses <see cref="Apply"/> for claims that arrive from remote players.
+    /// </summary>
     public sealed class LocalHitResolver : IHitResolver
     {
         public void Submit(in HitClaim claim)
         {
-            if (claim.Target == null || !claim.Target.IsAlive) return;
+            HitOutcome outcome = Apply(claim);
+            if (!outcome.Applied) return;
+            EventBus<HitConfirmed>.Publish(new HitConfirmed
+            {
+                Attacker = claim.Attacker,
+                Amount = outcome.Amount,
+                IsCritical = outcome.IsCritical,
+                Killed = outcome.Killed,
+                Point = claim.Point,
+            });
+        }
+
+        /// <summary>
+        /// Validates and applies a claim and raises <see cref="DamageableKilled"/>, but not
+        /// <see cref="HitConfirmed"/>: that belongs to whichever machine the attacker plays on.
+        /// </summary>
+        public static HitOutcome Apply(in HitClaim claim)
+        {
+            if (claim.Target == null || !claim.Target.IsAlive) return default;
 
             float distance = Vector3.Distance(claim.Origin, claim.Point);
-            if (distance > claim.Request.MaxRange + 1f) return; // reject impossible claims
+            if (distance > claim.Request.MaxRange + 1f) return default; // reject impossible claims
 
             DamageRequest request = new DamageRequest(
                 claim.Request.BaseDamage, claim.Zone, distance, claim.Request.HeadMultiplier, claim.Request.LimbMultiplier,
@@ -54,19 +84,12 @@ namespace Deadfall.Combat
                 WeaponId = claim.WeaponId,
             };
             float applied = claim.Target.ApplyDamage(info);
-            if (applied <= 0f) return;
+            if (applied <= 0f) return default;
 
             bool killed = !claim.Target.IsAlive;
-            EventBus<HitConfirmed>.Publish(new HitConfirmed
-            {
-                Attacker = claim.Attacker,
-                Amount = applied,
-                IsCritical = result.IsCritical,
-                Killed = killed,
-                Point = claim.Point,
-            });
             if (killed && claim.Target is Component c)
                 EventBus<DamageableKilled>.Publish(new DamageableKilled { Victim = c.gameObject, Killer = claim.Attacker });
+            return new HitOutcome { Applied = true, Amount = applied, IsCritical = result.IsCritical, Killed = killed };
         }
     }
 

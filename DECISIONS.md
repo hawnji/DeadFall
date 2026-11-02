@@ -43,6 +43,8 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-15 | **Input actions defined in code for M1** | Works without asset authoring; the same actions move into an `.inputactions` asset when the rebinding menu is built. |
 | T-16 | **IMGUI placeholder HUD for M1** | Zero asset setup; the real HUD uses UI Toolkit and only reads the same state and events. |
 | T-18 | **Editor pinned to 6000.6.6f1**; packages added from Package Manager as milestones need them | The user's installed editor. Adding packages through Package Manager picks versions that match it instead of guessed versions. |
+| T-19 | **M1.5 spike syncs with named messages, not NetworkObjects** | Players and dummies are built from code with no prefabs yet, and NGO needs registered prefabs for NetworkObjects. Named messages through `SessionService` prove the authority model (owner movement, host-validated hits) with no asset setup. Players move to NetworkObject prefabs with owner-authoritative NetworkTransform when the player prefab exists (M4/M11); enemies keep a custom snapshot channel (T-08). |
+| T-20 | **Netcode for GameObjects 2.13.3** pinned in the manifest | Latest 2.x release whose changelog lists Unity 6 support at the time of M1.5. If Package Manager offers a newer verified version for 6000.6, take it. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -91,3 +93,4 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-01: M0 created. Technical decisions T-01 to T-12 recorded. D-01 to D-21 proposed.
 - 2026-11-01: D-01 to D-21 approved as recommended.
 - 2026-11-01: T-13 to T-17 recorded during M1.
+- 2026-11-02: T-18 recorded (editor pin). T-19 and T-20 recorded for the M1.5 networking spike.
