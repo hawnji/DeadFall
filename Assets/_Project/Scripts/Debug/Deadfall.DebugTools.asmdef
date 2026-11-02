@@ -29,7 +29,7 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [
-        "UNITY_EDITOR || DEVELOPMENT_BUILD"
+        "UNITY_EDITOR || DEBUG"
     ],
     "versionDefines": [],
     "noEngineReferences": false
