@@ -38,7 +38,7 @@ namespace Deadfall.DebugTools
 
         private static void DisableSceneCameras()
         {
-            foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            foreach (Camera cam in Camera.allCameras)
                 cam.gameObject.SetActive(false);
         }
 
@@ -46,7 +46,7 @@ namespace Deadfall.DebugTools
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.32f, 0.34f, 0.38f);
-            if (Object.FindObjectsByType<Light>(FindObjectsSortMode.None).Length > 0) return;
+            if (RenderSettings.sun != null || Object.FindAnyObjectByType<Light>() != null) return;
             var go = new GameObject("Sun");
             go.transform.SetParent(_world, false);
             go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
