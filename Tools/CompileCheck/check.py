@@ -18,10 +18,13 @@ CSC = ["mono", f"{C}/microsoft.net.compilers.toolset/tasks/net472/csc.exe", "-no
 UNITY = [f"-r:{f}" for f in sorted(glob.glob(f"{C}/unityengine.modules/lib/net35/*.dll"))]
 NUNIT = [f"-r:{C}/nunit/lib/net45/nunit.framework.dll"]
 # Each package assembly name maps to the stub source that stands in for it.
+# Built in this order; a stub may reference the stubs listed in STUB_REFS (built before it).
 STUBS = {
     "Unity.InputSystem": glob.glob(f"{HERE}/stubs/InputSystemStubs.cs"),
+    "Unity.Networking.Transport": glob.glob(f"{HERE}/stubs/TransportStubs.cs"),
     "Unity.Netcode.Runtime": glob.glob(f"{HERE}/stubs/NetcodeStubs.cs"),
 }
+STUB_REFS = {"Unity.Netcode.Runtime": ["Unity.Networking.Transport"]}
 # Package assemblies whose types live inside another stub.
 STUB_ALIASES = {}
 
@@ -32,7 +35,8 @@ def run(args):
 stub_dlls = {}
 for name, srcs in STUBS.items():
     out = f"{B}/{name}.dll"
-    code, log = run(CSC + ["-t:library", f"-out:{out}"] + UNITY + srcs)
+    deps = [f"-r:{stub_dlls[d]}" for d in STUB_REFS.get(name, [])]
+    code, log = run(CSC + ["-t:library", f"-out:{out}"] + UNITY + deps + srcs)
     if code: print(log); sys.exit(1)
     stub_dlls[name] = out
 
