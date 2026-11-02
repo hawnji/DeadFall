@@ -107,6 +107,20 @@ namespace Deadfall.Rules.Encounters
             Surge = 0;
         }
 
+        /// <summary>Ends the run as a win now (Operations: extraction held). No effect unless running.</summary>
+        public SurgeRunEvents Complete()
+        {
+            if (!IsRunning) return SurgeRunEvents.None;
+            Phase = RunPhase.Complete;
+            return SurgeRunEvents.RunCompleted;
+        }
+
+        /// <summary>Shortens the current lull so it ends within <paramref name="seconds"/>.</summary>
+        public void ShortenLull(double now, float seconds)
+        {
+            if (Phase == RunPhase.Lull) PhaseEndsAt = Math.Min(PhaseEndsAt, now + Math.Max(0f, seconds));
+        }
+
         /// <summary>Ends the lull now (all players ready, or debug). No effect outside a lull.</summary>
         public void SkipLull(double now)
         {

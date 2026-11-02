@@ -61,6 +61,8 @@ namespace Deadfall.DebugTools
             ui.AddComponent<FieldModPanel>();
             ui.AddComponent<WeaponXpTracker>().Bind(player);
             ui.AddComponent<BossHud>();
+            ui.AddComponent<ObjectiveHud>();
+            ui.AddComponent<BlackoutLighting>();
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -79,6 +81,8 @@ namespace Deadfall.DebugTools
             // M7: enemy attack visuals for clients; supply surge crates.
             net.AddComponent<Deadfall.Enemies.EnemyFxRelay>();
             net.AddComponent<SupplyDrops>();
+            // M8: objectives, Operations and random events (host-run, synced as one state message).
+            net.AddComponent<ObjectiveDirector>();
 
             // M3: survival waves. Press N to start a run.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();

@@ -210,6 +210,22 @@ namespace Deadfall.Game
             if (_session.IsHost) SendDrop(_drops[id], ulong.MaxValue);
         }
 
+        /// <summary>Host/offline: a reward weapon anyone can take (keycard locker, Stalker event) of at least <paramref name="minTier"/>.</summary>
+        public void SpawnRewardDrop(Vector3 position, WeaponTier minTier)
+        {
+            if (!IsAuthority) return;
+            IReadOnlyList<WeaponDefinition> all = WeaponCatalog.All;
+            WeaponDefinition def = all[_dropRng.Range(0, all.Count)];
+            WaveManager waves = Waves;
+            WeaponTier tier = LootRules.RollTier(_dropRng, waves != null ? waves.Surge : 1);
+            if (tier < minTier) tier = minTier;
+            WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category);
+            ushort id = _nextDropId++;
+            if (_nextDropId == 0) _nextDropId = 1;
+            SpawnDrop(id, def, mods, position, ulong.MaxValue, 0);
+            if (_session.IsHost && _drops.TryGetValue(id, out WeaponDrop d)) SendDrop(d, ulong.MaxValue);
+        }
+
         private void SpawnDrop(ushort id, WeaponDefinition def, WeaponMods mods, Vector3 position, ulong finder, double finderUntil)
         {
             if (_drops.ContainsKey(id) || def == null) return;

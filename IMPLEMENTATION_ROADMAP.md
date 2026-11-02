@@ -132,8 +132,17 @@ Not in scope yet: ~~Elite, Hunt, Supply and Specimen surges~~ (done in M7), ambu
 
 Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs NavMesh links), arena hazards for Specimens, damage-type armor, ambushes during lulls.
 
-## M8 – Objectives, events, environment ⬜
-Objective framework, generators/power grid, samples, keycards, nests, data cores, extraction defense, random events (Blackout and The Stalker first), lockdowns.
+## M8 – Objectives, events, environment ✅ (editor check held until M10)
+1. ✅ Objective framework (`Deadfall.Rules.Encounters`): `ObjectiveTracker` (progress, complete once, fail, expiry by surge, required-complete check), `ChannelProgress` (stand-near channels that drain at half speed when left), `HoldTimer` (extraction pauses when the zone is empty), `ObjectiveRules` (counts, timings, rewards, side-objective schedule), `MissionTemplate`.
+2. ✅ Objective types: restart 3 generators, recover 3 sample cases, destroy a nest (births Creepers during surges), download a data core, keycard plus security locker (reward weapon), hack the lockdown terminal, hold extraction.
+3. ✅ Survival: an optional side objective in the lull before surges 3, 7, 11... lasting two surges, credits for everyone on completion (GAME_DESIGN §3.1).
+4. ✅ Operations (first mission **Operation Cold Start**): pause-screen button on a generated map. All sectors open, required and optional objectives run together, surges come on a 35 s timer, and once the required ones are done a 150 s extraction defense starts at the airlock (4 s lulls). Holding it completes the run with a 1500-credit bonus (GAME_DESIGN §3.2).
+5. ✅ Random events (`EventScheduler`): at most one, from surge 4, 30% chance, 3-surge cooldown, never on Specimen or Hunt surges, warned a lull ahead. **Blackout** (lights to a glimmer, auto flashlight, L toggles it; restarting the generators restores power early), **The Stalker** (joins the surge; Prototype drop when killed), **Emergency Lockdown** (sector doors seal; a terminal appears where the squad is).
+6. ✅ Co-op: one host state message (`df.obj`) carries objectives, props, nests, events, extraction and announcements; props are used through the host (`df.objuse`); nests take client hits by id (T-34).
+7. ✅ HUD: objective list, event line, extraction bar, objective banners. The boss bar moved below the wave panel.
+8. ✅ 10 new EditMode tests (`ObjectiveTests.cs`).
+
+Not in scope yet: the power grid feeding doors and turrets (generators only end Blackouts for now), Red Sky and Containment Breach events, objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
 
 ## M9 – Engineering ⬜
 Scrap, placement validator, Sentry, Drone, Arc Fence, Barricade, upgrades, repair, destruction, perf caps.
