@@ -67,6 +67,19 @@ namespace Deadfall.Game
         public float ExtractionDuration => _hold != null ? _hold.Duration : 0f;
         public bool ExtractionOccupied { get; private set; }
 
+        /// <summary>Host/offline: an objective was completed (Scrap bonus, stats).</summary>
+        public event Action<Objective> ObjectiveCompleted;
+
+        /// <summary>Distance from <paramref name="p"/> to the nearest objective prop, nest or extraction zone (placement checks).</summary>
+        public float NearestObjectiveDistance(Vector3 p)
+        {
+            float best = float.MaxValue;
+            foreach (ObjectiveProp prop in _props.Values) if (prop != null) best = Mathf.Min(best, Vector3.Distance(p, prop.transform.position));
+            foreach (ObjectiveNest n in _nests.Values) if (n != null && n.IsAlive) best = Mathf.Min(best, Vector3.Distance(p, n.transform.position) - 1f);
+            if (_zone != null) best = Mathf.Min(best, Vector3.Distance(p, _zone.transform.position) - ExtractionZone.Radius);
+            return best;
+        }
+
         /// <summary>Every machine: a line the HUD shows big (title, subtitle).</summary>
         public event Action<string, string> Announced;
 
@@ -413,6 +426,7 @@ namespace Deadfall.Game
             if (!IsAuthority) return;
             if (o.Status == ObjectiveStatus.Complete)
             {
+                ObjectiveCompleted?.Invoke(o);
                 if (o.RewardCredits > 0) Pay(o.RewardCredits, o.Title);
                 if (o.Kind != ObjectiveKind.Extraction) Say("OBJECTIVE COMPLETE", o.RewardCredits > 0 ? $"{o.Title} · +{o.RewardCredits} Field Credits each" : o.Title);
                 if (o.Kind == ObjectiveKind.RestorePower && ActiveEvent == RunEventKind.Blackout) EndEvent();

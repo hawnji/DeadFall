@@ -43,6 +43,12 @@ namespace Deadfall.Player
         /// <summary>When false (menus open, cursor free), gameplay input reads as idle.</summary>
         public bool GameplayEnabled { get; set; } = true;
 
+        /// <summary>
+        /// When true (Engineering build mode), weapon and interact input read as idle while movement and look still work;
+        /// the build tool reads the mouse buttons, wheel and number keys itself.
+        /// </summary>
+        public bool WeaponsBlocked { get; set; }
+
         private void Awake()
         {
             _map = new InputActionMap("Player");
@@ -126,6 +132,12 @@ namespace Deadfall.Player
                         break;
                     }
                 }
+            }
+            if (WeaponsBlocked)
+            {
+                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.AbilityPressed = false;
+                f.WeaponScroll = 0;
+                f.WeaponSlotPressed = -1;
             }
             Current = f;
         }

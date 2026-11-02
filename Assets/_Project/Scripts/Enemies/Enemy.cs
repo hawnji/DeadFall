@@ -26,6 +26,7 @@ namespace Deadfall.Enemies
         private const float CorpseSeconds = 4f;
         private const float StrikeRangeSlack = 0.5f;
         private const float ChargeContactSlack = 0.9f;
+        private const float BlockerSearchRange = 25f;
 
         private static readonly Dictionary<Color, Material> SharedMaterials = new Dictionary<Color, Material>();
 
@@ -40,6 +41,9 @@ namespace Deadfall.Enemies
         private double _nextSummonAt;
         private double _lastDamagedAt;
         private bool _hasLineOfSight;
+        private double _blockerUntil;
+        private double _slowUntil;
+        private float _slow;
         private bool _exploded;
         private bool _explodePending;
         private GameObject _explodeCredit;
@@ -479,6 +483,18 @@ namespace Deadfall.Enemies
             return applied;
         }
 
+        /// <summary>Host: slows movement by <paramref name="fraction"/> (0..0.9) for a moment (Arc Fence).</summary>
+        public void ApplySlow(float fraction, float seconds)
+        {
+            if (!IsAlive || _mirrored) return;
+            double until = Time.timeAsDouble + seconds;
+            if (fraction >= _slow || until > _slowUntil)
+            {
+                _slow = Mathf.Clamp(Mathf.Max(fraction, Time.timeAsDouble < _slowUntil ? _slow : 0f), 0f, 0.9f);
+                _slowUntil = until;
+            }
+        }
+
         /// <summary>Hunts the nearest player from any distance instead of waiting for one to come within detect range.</summary>
         public void Alert()
         {
@@ -539,12 +555,24 @@ namespace Deadfall.Enemies
                 return;
             }
 
-            if (perceive || (_target != null && !_target.IsTargetable))
+            bool stickToBlocker = _target is IBlocker && _target.IsTargetable && now < _blockerUntil;
+            if ((perceive && !stickToBlocker) || (_target != null && !_target.IsTargetable))
                 _target = _stats.CanExplode ? EnemyAttacks.BiggestCluster(transform.position, out _targetDistance)
                                             : CombatTargets.Nearest(transform.position, out _targetDistance);
+            // A barricade has cut the path to the player: tear down the nearest blocker instead (never stuck for good).
+            if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.hasPath
+                && _agent.pathStatus == NavMeshPathStatus.PathPartial)
+            {
+                IBlocker blocker = Blockers.Nearest(transform.position, BlockerSearchRange);
+                if (blocker != null)
+                {
+                    _target = blocker;
+                    _blockerUntil = now + 2.5; // keep at it a while before checking for a way round again
+                }
+            }
             bool hasTarget = _target != null && _target.IsTargetable;
             Vector3 targetPos = hasTarget ? _target.TargetTransform.position : transform.position;
-            if (hasTarget) _targetDistance = Vector3.Distance(transform.position, targetPos);
+            if (hasTarget) _targetDistance = _target is IBlocker blk ? blk.DistanceFrom(transform.position) : Vector3.Distance(transform.position, targetPos);
             if (perceive && _stats.CanShoot)
                 _hasLineOfSight = hasTarget && Explosions.HasLineOfSight(MouthPoint, targetPos + Vector3.up * 1.2f, null);
 
@@ -585,7 +613,7 @@ namespace Deadfall.Enemies
             }
             if (o.Shoot && hasTarget)
                 EnemyAttacks.Spit(this, MouthPoint, Lead(targetPos), s);
-            float speedScale = 1f + AuraSpeedBonus;
+            float speedScale = (1f + AuraSpeedBonus) * (now < _slowUntil ? 1f - _slow : 1f);
             // Off the NavMesh (e.g. spawned in a bad spot): think and attack, but don't drive the agent.
             bool onMesh = _agent.isOnNavMesh;
 
@@ -594,7 +622,7 @@ namespace Deadfall.Enemies
                 Vector3 dir = Flat(targetPos - transform.position);
                 _chargeDirection = dir.sqrMagnitude > 0.001f ? dir.normalized : transform.forward;
                 _chargeLanded = false;
-                Move(s.ChargeSpeed, s.Acceleration * 4f);
+                Move(s.ChargeSpeed * (now < _slowUntil ? 1f - _slow : 1f), s.Acceleration * 4f);
                 _agent.SetDestination(transform.position + _chargeDirection * s.ChargeSpeed * s.ChargeSeconds);
             }
 
@@ -623,7 +651,7 @@ namespace Deadfall.Enemies
             }
 
             if (o.Strike && hasTarget && _targetDistance <= s.AttackRange + StrikeRangeSlack
-                && Vector3.Angle(transform.forward, Flat(targetPos - transform.position)) <= s.AttackArcDegrees * 0.5f)
+                && (_target is IBlocker || Vector3.Angle(transform.forward, Flat(targetPos - transform.position)) <= s.AttackArcDegrees * 0.5f))
                 DealDamage(s.AttackDamage, targetPos);
 
             Face(o, hasTarget, targetPos, dt, s);

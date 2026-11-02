@@ -73,6 +73,9 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-46 | **Objective numbers (placeholder)**: 3 generators (5 s each), 3 samples, data core 8 s, lockdown hack 6 s, channel range 3.5 m, nest 1500 HP × surge health scale and a Creeper every 6 s (5 alive max); rewards 400 / 350 / 500 / 450 / 300 / 200 credits each; side objectives before surges 3, 7, 11... for two surges | First pass, all in `ObjectiveRules`. Channels drain at half speed so stepping away to fight costs a little, not everything. |
 | T-47 | **Operations open the whole map at mission start** and run surges on a timer; extraction (150 s, airlock) starts when the required objectives are done and pauses while nobody is inside | Objective-gated sectors need more mission content; this gets the full mission loop playable. D-08's objective unlocks come with more templates. |
 | T-48 | **Events (placeholder)**: from surge 4, 30% per lull, 3-surge cooldown, weights Blackout 3 / Stalker 2 / Lockdown 2 (Lockdown only on a map with two sectors open), never on Specimen or Hunt surges; an event lasts one surge | GAME_DESIGN §12: weighted, at most one, cooldown. Warning a lull ahead gives the squad time to prepare. |
+| T-49 | **Structure numbers (placeholder)**: Sentry 120 Scrap, 300/420/560 HP, 9/12/15 dmg at 6/7/8 shots/s, 300/400/500 rounds; Drone 150, 12/18/24 dps or 15/22/30 HP/s repair; Arc Fence 90, 20/28/36 dps, 50–60% slow, 30/40/50 s charge; Barricade 40 (60 for other classes), 500/800/1100 HP. Upgrades 80–180. Scrap: 3 per threat point (×1.5 for Engineers), 20 per surge, 40 per objective, 60 to start, 2000 max | First pass for feel; all in `StructureCatalog` and `ScrapRules`. |
+| T-50 | **Barricades carve the NavMesh; enemies whose path to a player comes back partial attack the nearest barricade** (sticky for 2.5 s) | Lets barricades really block without ever trapping enemies or making players unreachable, which GAME_DESIGN §11 requires. Cheaper than validating every placement against every spawn-to-player path. |
+| T-51 | **Building is free outside runs** | The user tests in the sandbox without a run; structures there shouldn't need Scrap. Inside runs every cost applies. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -130,3 +133,4 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-02: T-36 to T-39 recorded for M6. The user is holding editor testing until M10 and asked for M5–M10 to be merged as each passes the compile check.
 - 2026-11-02: T-40 to T-44 recorded for M7.
 - 2026-11-02: T-45 to T-48 recorded for M8.
+- 2026-11-02: T-49 to T-51 recorded for M9.
