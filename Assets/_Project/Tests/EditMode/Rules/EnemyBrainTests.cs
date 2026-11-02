@@ -17,6 +17,18 @@ namespace Deadfall.Tests.EditMode.Rules
             b.Tick(new BrainInput { Now = now, HasTarget = hasTarget, TargetDistance = distance });
 
         [Test]
+        public void AlertedEnemyChasesFromBeyondDetectRange()
+        {
+            var b = new EnemyBrain(Stats());
+            b.Reset(0);
+            b.Alert();
+            Assert.AreEqual(EnemyState.Chase, Tick(b, 0.1, 80f).State);
+            // Losing the target (player dead) idles it; it resumes the hunt when a target is back.
+            Assert.AreEqual(EnemyState.Idle, Tick(b, 0.2, 0f, hasTarget: false).State);
+            Assert.AreEqual(EnemyState.Chase, Tick(b, 0.3, 80f).State);
+        }
+
+        [Test]
         public void IdleUntilTargetInDetectRange()
         {
             var b = new EnemyBrain(Stats());

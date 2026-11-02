@@ -277,6 +277,12 @@ namespace Deadfall.Enemies
             return applied;
         }
 
+        /// <summary>Hunts the nearest player from any distance instead of waiting for one to come within detect range.</summary>
+        public void Alert()
+        {
+            if (IsAlive && !_mirrored) _brain.Alert();
+        }
+
         /// <summary>Kills instantly (debug and scripted events).</summary>
         public void Kill(GameObject killer = null)
         {
