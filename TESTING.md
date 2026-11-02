@@ -136,6 +136,24 @@ In the sandbox, Esc shows the class list on the left. The class name, ability ba
 - [ ] Switching class during Overdrive or with a shield up ends the effect cleanly (shield disappears, fire rate back to normal).
 - [ ] Co-op (as §3.1): a client Warrior's Lunge strike staggers and does triple damage to host enemies; a client Gunner's Overdrive fires faster with no rejected-claim warnings on the host. Known gap: a client's Tank shield doesn't pull host enemies yet (part 2).
 
+### 3.6 Manual checklist: M4 classes (part 2)
+
+Solo:
+
+- [ ] **Demolitionist**: Q throws a purple charge along your aim. It bursts on hitting something (or after about 1 s) and scatters 5 small bomblets that pop a moment later. Husks in the main blast die; ones at the edge take less. Enemies get pushed a little. Standing in your own blast hurts, but only half as much as it would for another class (Blast Padding). 25 s cooldown.
+- [ ] **Engineer**: Q places a green turret in front of you (only on the ground). It turns and shoots the nearest enemy in range it can see, with tracers. Enemies sometimes attack it; it darkens and breaks after enough hits, which starts the 35 s cooldown early. It disappears after 60 s. Kills by the sentry give you credits in a survival run.
+- [ ] **Tank**: melee pushes Husks back a couple of metres (a Bulwark less).
+- [ ] The HUD no longer says "soon" for the Engineer and Demolitionist abilities (Salvager, Handy and Bandolier still say soon).
+
+Two players (as §3.1):
+
+- [ ] Each player's label above their head shows their class, and changes when they switch.
+- [ ] Tank + Gunner: both HUDs show "Doctrine: Covering Fire (effect after playtests)". Tank + Warrior: Vanguard, and the Warrior's Lunge goes visibly further.
+- [ ] A client Tank's shield appears on both screens and host enemies attack it. When it breaks, it disappears for both and the client's cooldown starts.
+- [ ] A client Engineer's sentry appears for both, kills enemies (the kill credits go to the client), and disappears for both after 60 s.
+- [ ] A client Demolitionist's charge and bomblets are seen by both; enemies die on both screens. The client is hurt by their own blast; the host is not hurt by it.
+- [ ] Client Tank melee pushes host enemies.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -189,7 +207,7 @@ Status 2026-11-02: 95/95 EditMode tests pass in the compile-check runner. PlayMo
 - No audio yet.
 - M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
 - M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Solo death ends the run right away because there are no revives yet (M11). Credits cannot be spent until Supply Caches (M6).
-- M4 part 1: classes are local only. Other players don't see your class, and a client's Tank shield is invisible to the host's enemies. Lunge and Overdrive work for clients. Tank Shove and the Engineer and Demolitionist kits come in part 2.
+- M4: a client's shield copy doesn't darken with damage (only the host's copy tracks health). Explosions ignore walls (no line-of-sight check yet). Bomblet copies on clients may land slightly differently from the host's; the damage follows the host's.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

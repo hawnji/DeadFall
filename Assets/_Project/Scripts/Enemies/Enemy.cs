@@ -21,7 +21,7 @@ namespace Deadfall.Enemies
     /// It has no Update of its own; EnemyManager ticks every enemy from one loop and time-slices perception.
     /// Placeholder visuals are built from primitives; the real models replace the Visual child only.
     /// </summary>
-    public sealed class Enemy : MonoBehaviour, IDamageable
+    public sealed class Enemy : MonoBehaviour, IDamageable, IHostile
     {
         private const float CorpseSeconds = 4f;
         private const float StrikeRangeSlack = 0.5f;
@@ -41,6 +41,9 @@ namespace Deadfall.Enemies
         private float _weavePhase;
         private float _health;
         private float _maxHealth = 1f;
+        private Vector3 _knockDirection;
+        private float _knockRemaining;
+        private const float KnockSpeed = 14f;
         private double _diedAt;
         private bool _mirrored;
         private Vector3 _mirrorPos;
@@ -56,6 +59,8 @@ namespace Deadfall.Enemies
         public float MaxHealth => _maxHealth;
         public bool IsAlive => _health > 0f;
         public float DamageReduction => _definition.Stats.DamageReduction;
+        public Vector3 AimPoint => transform.position + Vector3.up * (_definition.Height * 0.6f);
+        public IDamageable Damageable => this;
         /// <summary>Per-session slot id used by the snapshot channel (assigned by EnemyManager).</summary>
         public ushort SlotId { get; internal set; }
         internal double NextPerception { get; set; }
@@ -192,12 +197,14 @@ namespace Deadfall.Enemies
             _agent.isStopped = true;
             _moving = false;
             _health = _maxHealth;
+            _knockRemaining = 0f;
             _target = null;
             _targetDistance = 0f;
             foreach (Collider c in _hurtColliders) c.enabled = true;
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = Vector3.one;
             _brain.Reset(now);
+            Hostiles.Register(this);
         }
 
         /// <summary>Activates as a client-side copy of a host enemy: no agent, no AI, health from snapshots.</summary>
@@ -218,6 +225,7 @@ namespace Deadfall.Enemies
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = Vector3.one;
             _brain.Reset(now);
+            Hostiles.Register(this);
         }
 
         /// <summary>Applies one snapshot entry from the host.</summary>
@@ -259,6 +267,7 @@ namespace Deadfall.Enemies
 
         internal void Deactivate()
         {
+            Hostiles.Unregister(this);
             if (_agent.enabled && _agent.isOnNavMesh) _agent.ResetPath();
             gameObject.SetActive(false);
         }
@@ -274,6 +283,16 @@ namespace Deadfall.Enemies
             double now = Time.timeAsDouble;
             _brain.OnDamaged(applied, now);
             if (info.ForceStagger) _brain.ForceStagger(now);
+            if (info.Knockback > 0f)
+            {
+                Vector3 dir = Flat(info.Direction);
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    // Heavier bodies move less (Bulwark about 60% of a Husk).
+                    _knockDirection = dir.normalized;
+                    _knockRemaining = Mathf.Min(6f, info.Knockback * Mathf.Clamp(0.35f / Mathf.Max(0.1f, _definition.Radius), 0.3f, 1.2f));
+                }
+            }
             if (_health <= 0f) Die(info.Source, now);
             return applied;
         }
@@ -322,6 +341,14 @@ namespace Deadfall.Enemies
             bool hasTarget = _target != null && _target.IsTargetable;
             Vector3 targetPos = hasTarget ? _target.TargetTransform.position : transform.position;
             if (hasTarget) _targetDistance = Vector3.Distance(transform.position, targetPos);
+
+            if (_knockRemaining > 0f && _agent.enabled && _agent.isOnNavMesh)
+            {
+                float step = Mathf.Min(_knockRemaining, KnockSpeed * dt);
+                _knockRemaining -= step;
+                _agent.Move(_knockDirection * step);
+            }
+            else _knockRemaining = 0f;
 
             BrainOutput o = _brain.Tick(new BrainInput { Now = now, HasTarget = hasTarget, TargetDistance = _targetDistance });
             EnemyStats s = _definition.Stats;

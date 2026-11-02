@@ -71,7 +71,9 @@ namespace Deadfall.Classes
                 case "overdrive": return new OverdriveAbility();
                 case "bulwark_shield": return new BulwarkShieldAbility();
                 case "lunge": return new LungeAbility();
-                default: return null; // not built yet (Engineer and Demolitionist arrive in M4 part 2)
+                case "deploy_sentry": return new DeploySentryAbility();
+                case "cluster_charge": return new ClusterChargeAbility();
+                default: return null; // no code for this id yet
             }
         }
 
@@ -84,6 +86,8 @@ namespace Deadfall.Classes
                 case "guard": return new GuardPassive();
                 case "bloodlust": return new BloodlustPassive();
                 case "combo_cleave": return new ComboCleavePassive();
+                case "melee_knockback": return new ShovePassive();
+                case "self_blast_reduction": return new HostAppliedPassive();
                 default: return new PendingPassive();
             }
         }
@@ -104,42 +108,67 @@ namespace Deadfall.Classes
         }
     }
 
-    /// <summary>Tank. Magnitude: shield health. Range: aggro radius. Secondary: shield width in metres.</summary>
+    /// <summary>
+    /// Tank. Plants the shield 2 m ahead. The shield's numbers (Magnitude: health, Range: aggro radius, Secondary:
+    /// width) are read where it is created, on the host. It removes itself when its time is up or it breaks, which
+    /// ends the effect early (see ClassNetwork.NotifyGone).
+    /// </summary>
     public sealed class BulwarkShieldAbility : AbilityBehaviour
     {
-        private ShieldWall _shield;
-
         public override bool CanActivate() => Ctx.Motor == null || Ctx.Motor.IsGrounded;
 
         public override void OnActivate(double now)
         {
-            Transform t = Ctx.Player.transform;
-            Vector3 forward = t.forward;
-            forward.y = 0f;
-            forward = forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
-            Vector3 pos = t.position + forward * 2f;
-            _shield = ShieldWall.Create(pos, Quaternion.LookRotation(forward), Def.Magnitude, Def.Range,
-                Def.Secondary > 0f ? Def.Secondary : 3f, Ctx.Player);
-            _shield.Broken += OnBroken;
+            Vector3 forward = FlatForward(Ctx.Player.transform);
+            ClassNetwork.RequestSpawn(SpawnKind.Shield, Ctx.Player.transform.position + forward * 2f, forward);
         }
 
-        private void OnBroken(ShieldWall s)
+        internal static Vector3 FlatForward(Transform t)
         {
-            s.Broken -= OnBroken;
-            if (_shield == s) _shield = null;
-            Ctx.Owner.EndAbilityEarly();
+            Vector3 f = t.forward;
+            f.y = 0f;
+            return f.sqrMagnitude > 0.001f ? f.normalized : Vector3.forward;
+        }
+    }
+
+    /// <summary>
+    /// Engineer. Places the sentry on the ground 1.6 m ahead. Its numbers (Magnitude: damage per shot, Secondary:
+    /// shots per second, Range: range, duration: lifetime) are read where it is created.
+    /// </summary>
+    public sealed class DeploySentryAbility : AbilityBehaviour
+    {
+        public override bool CanActivate() => (Ctx.Motor == null || Ctx.Motor.IsGrounded) && FindSpot(out _);
+
+        public override void OnActivate(double now)
+        {
+            if (FindSpot(out Vector3 spot))
+                ClassNetwork.RequestSpawn(SpawnKind.Sentry, spot, BulwarkShieldAbility.FlatForward(Ctx.Player.transform));
         }
 
-        public override void OnEnd(double now) => Remove();
-
-        public override void Detach() => Remove();
-
-        private void Remove()
+        private bool FindSpot(out Vector3 spot)
         {
-            if (_shield == null) return;
-            _shield.Broken -= OnBroken;
-            Object.Destroy(_shield.gameObject);
-            _shield = null;
+            Vector3 forward = BulwarkShieldAbility.FlatForward(Ctx.Player.transform);
+            Vector3 from = Ctx.Player.transform.position + forward * 1.6f + Vector3.up * 1.5f;
+            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, 4f, CombatQueries.HitMask, QueryTriggerInteraction.Ignore))
+            {
+                spot = hit.point;
+                return true;
+            }
+            spot = default;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Demolitionist. Throws the charge from the eye along the aim. Its numbers (Magnitude: bomblets, Secondary:
+    /// main blast damage, Range: main blast radius) are read where it is created.
+    /// </summary>
+    public sealed class ClusterChargeAbility : AbilityBehaviour
+    {
+        public override void OnActivate(double now)
+        {
+            Transform eye = Ctx.Look != null && Ctx.Look.Camera != null ? Ctx.Look.Camera.transform : Ctx.Player.transform;
+            ClassNetwork.RequestSpawn(SpawnKind.ClusterCharge, eye.position + eye.forward * 0.6f, eye.forward);
         }
     }
 
@@ -166,7 +195,9 @@ namespace Deadfall.Classes
             {
                 Ctx.Motor.DashEnded -= OnDashEnded;
                 Ctx.Motor.DashEnded += OnDashEnded;
-                Ctx.Motor.Dash(Ctx.Player.transform.forward, Def.Range, DashSeconds);
+                // Vanguard doctrine (with a Tank in the squad): a longer lunge.
+                float range = Def.Range * (Ctx.Owner.HasDoctrine(PrototypeClasses.Vanguard) ? 1.25f : 1f);
+                Ctx.Motor.Dash(Ctx.Player.transform.forward, range, DashSeconds);
                 _dashing = true;
             }
             else
@@ -301,6 +332,18 @@ namespace Deadfall.Classes
         {
             if (now > _finisherUntil) Ctx.Weapons.ClearMeleeBonus(BonusTag);
         }
+    }
+
+    /// <summary>Tank. Magnitude: metres melee hits push enemies back.</summary>
+    public sealed class ShovePassive : PassiveBehaviour
+    {
+        public override void ModifyHandling(WeaponDefinition weapon, bool preferred, ref WeaponHandling h) =>
+            h.MeleeKnockback = Mathf.Max(h.MeleeKnockback, Def.Magnitude);
+    }
+
+    /// <summary>A passive the host applies from the class roster (Blast Padding); nothing to do on the player.</summary>
+    public sealed class HostAppliedPassive : PassiveBehaviour
+    {
     }
 
     /// <summary>A passive whose game system arrives in a later milestone (Scrap, grenades, structures).</summary>

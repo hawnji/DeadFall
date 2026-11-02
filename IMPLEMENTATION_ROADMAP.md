@@ -75,8 +75,8 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 
 Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
-## M4 – Class framework 🔄 in progress
-**Part 1 (framework, Gunner, Tank, Warrior), in review**
+## M4 – Class framework 🔄 in review
+**Part 1 (framework, Gunner, Tank, Warrior)** ✅ merged as #19
 1. ✅ Rules (`Deadfall.Rules.Classes`): `AbilityTimer` (ready → active → cooldown, cooldown starts when the effect ends per T-26, early end, cooldown rate and refunds), `ClassRules` (Guard reduction, sustained-fire recoil, combining reductions), `MeleeCombo`, `DoctrineResolver` (pairs on different players, 4 distinct classes, at most 2 per player in list order).
 2. ✅ `WeaponStateMachine` handling modifiers: fire rate, reload speed, equip speed, free reloads, reserve capacity.
 3. ✅ Player hooks: `WeaponHandling` / `IWeaponHandlingSource` (fire rate, reload, swap, recoil, bullet and melee damage), one-shot `MeleeBonus` (damage, stagger, wider arc, extra targets), sustained-fire time, `PlayerMotor.Dash`, `PlayerHealth.BonusDamageReduction`, forced stagger on enemies. Client hit claims now carry the melee flag, stagger flag and a class damage bonus capped at ×3 (T-28).
@@ -85,9 +85,16 @@ Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during 
 6. ✅ Passives: Deep Pockets, Steady Hands, Guard, Bloodlust, Combo. The rest are listed and marked "soon" until their systems exist.
 7. ✅ Class select on the pause screen (remembered), class and ability HUD, Squad Doctrine table in data.
 8. ✅ 17 new EditMode tests (`ClassRulesTests.cs`).
-9. ⬜ Feel check in the editor (`TESTING.md` §3.5).
+9. ✅ Approved by the user after their check, 2026-11-02 (`TESTING.md` §3.5).
 
-**Part 2 (next)**: Engineer **Deploy Sentry**, Demolitionist **Cluster Charge** (first explosives), Tank Shove, classes shown to other players and abilities that spawn things (shield, sentry) working for clients, doctrine effects with placeholder magnitudes.
+**Part 2 (Engineer, Demolitionist, co-op), in review**
+1. ✅ `Explosions.Detonate` in Combat: shared area damage (full at the centre to 30% at the edge), knockback, never hurts other players, the thrower takes a share (T-30).
+2. ✅ **Cluster Charge** (Demolitionist): thrown, bursts on impact (90 damage, 4.5 m), scatters 5 bomblets (45 damage, 3 m each). **Blast Padding** halves self damage.
+3. ✅ **Deploy Sentry** (Engineer): turret for 60 s, 22 m range, 6 shots/s at 9 damage, line of fire required, 300 HP, enemies can attack it. New `Hostiles` registry so turrets never search the scene.
+4. ✅ **Shove** (Tank): melee pushes enemies back about 2.5 m (heavier enemies less), also for clients (claims carry knockback, capped at 4 m).
+5. ✅ `ClassNetwork` (T-29): class roster shared through the host (remote players' labels show their class); shields, sentries and charges are created by the host, which deals the damage and holds the aggro, and clients get look-alike copies that vanish with the host's. Losing a shield or sentry starts its cooldown.
+6. ✅ Squad Doctrines resolved from the roster and shown on the HUD. Effects with placeholder numbers (D-17): **Vanguard** +25% Lunge distance, **Combined Arms** cooldowns 15% faster. Covering Fire, Overwatch and Demolition Crew are listed until the systems they modify exist.
+7. ⬜ Feel check in the editor and in co-op (`TESTING.md` §3.6).
 
 ## M5 – Procedural map generation ⬜
 Room kit for Cinder Ridge (greybox), sockets, `LayoutGenerator` + `LayoutValidator` (Rules, tested on thousands of seeds), runtime builder, NavMesh baking per sector, locked doors, sector unlocks, loot and secret placement, debug overlay, seed reproduction.

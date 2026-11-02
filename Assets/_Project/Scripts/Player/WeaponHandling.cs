@@ -18,6 +18,8 @@ namespace Deadfall.Player
         public float MeleeDamage;
         /// <summary>Reloads don't use reserve ammo.</summary>
         public bool FreeReloads;
+        /// <summary>Metres melee hits push enemies back (Tank Shove). 0 = none.</summary>
+        public float MeleeKnockback;
 
         public static WeaponHandling Default => new WeaponHandling
         {

@@ -10,11 +10,44 @@ namespace Deadfall.Combat
     /// </summary>
     public sealed class PlayerIdentity : MonoBehaviour
     {
+        private static readonly System.Collections.Generic.List<PlayerIdentity> Registry = new System.Collections.Generic.List<PlayerIdentity>(4);
         private ulong _remoteId;
+
+        /// <summary>Every player body in the scene (local player and remote stand-ins).</summary>
+        public static System.Collections.Generic.IReadOnlyList<PlayerIdentity> All => Registry;
+
+        /// <summary>The body of player <paramref name="clientId"/>, or null.</summary>
+        public static PlayerIdentity Find(ulong clientId)
+        {
+            for (int i = 0; i < Registry.Count; i++)
+                if (Registry[i] != null && Registry[i].ClientId == clientId) return Registry[i];
+            return null;
+        }
+
+        /// <summary>The local player's body, or null.</summary>
+        public static PlayerIdentity Local
+        {
+            get
+            {
+                for (int i = 0; i < Registry.Count; i++)
+                    if (Registry[i] != null && Registry[i].IsLocal) return Registry[i];
+                return null;
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (!Registry.Contains(this)) Registry.Add(this);
+        }
+
+        private void OnDisable() => Registry.Remove(this);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => Registry.Clear();
 
         public bool IsLocal { get; private set; } = true;
 
-        public ulong ClientId => IsLocal ? SessionService.Instance.LocalClientId : _remoteId;
+        public ulong ClientId => IsLocal ? (SessionService.Current != null ? SessionService.Current.LocalClientId : 0UL) : _remoteId;
 
         public void SetRemote(ulong clientId)
         {

@@ -53,6 +53,9 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-26 | **Ability cooldowns start when the effect ends** | Overdrive (8 s) then 45 s of cooldown, not 37 s. Lengthening an effect (mods, doctrines) can never make it overlap the next use, and the HUD reads simply: effect time, then cooldown. |
 | T-27 | **Preferred-weapon handling (placeholder)**: reload ×1.15, swap ×1.25, recoil ×0.85; no damage bonus | "Handling bonus" per GAME_DESIGN §5 without making off-class weapons feel weak (C-05). Per-class numbers in `ClassDefinition`. |
 | T-28 | **Client hit claims carry a class damage bonus, capped at ×3, plus melee and stagger flags** | The host still uses its own weapon stats for everything else. The cap matches the biggest class bonus (Lunge); a modified client could at most always hit like a Lunge, acceptable for PvE co-op until abilities are host-validated in M11. |
+| T-29 | **Ability spawns are host-authoritative**: the owner asks, the host creates the shield, sentry or charge and deals its damage; clients get visual copies; each spawn expires by itself | One owner for damage and aggro, so enemies (which run on the host) react to it and nothing is applied twice. Requests are checked to be within a few metres of the asking player. Same named-message pattern as T-19. |
+| T-30 | **Explosions**: damage falls off linearly to 30% at the edge, no line-of-sight check yet, never hurts other players, the thrower takes full damage unless a passive reduces it | PvE co-op (C-02) without friendly fire keeps explosives fun; self damage keeps them from being free. Line of sight comes with real maps (M5). |
+| T-31 | **Part 2 numbers (placeholder)**: Sentry 9 dmg × 6/s, 22 m, 300 HP, 60 s, 35 s cooldown; Cluster Charge 90 dmg / 4.5 m + 5 × 45 dmg / 3 m, 25 s; Shove 2.5 m; Vanguard +25% Lunge; Combined Arms ×1.15 cooldown speed | First pass to feel out the kits. All live in the class data (`PrototypeClasses`) and `PlayerClass`. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -105,3 +108,4 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-02: T-21 and T-22 recorded for M2 enemies.
 - 2026-11-02: T-23 to T-25 recorded for M3 waves.
 - 2026-11-02: T-26 to T-28 recorded for M4 classes.
+- 2026-11-02: T-29 to T-31 recorded for M4 part 2.

@@ -399,6 +399,7 @@ namespace Deadfall.Player
                     Request = DamageRequest.FromMelee(_activeMelee, t.Zone, t.WeakPointMultiplier, outgoing),
                     IsMelee = true,
                     ForceStagger = stagger,
+                    Knockback = _handling.MeleeKnockback,
                 });
             }
             MeleeResolved?.Invoke(_meleeTargets.Count);
