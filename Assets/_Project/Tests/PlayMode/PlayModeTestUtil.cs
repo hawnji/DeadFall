@@ -7,9 +7,10 @@ namespace Deadfall.Tests.PlayMode
     /// <summary>Simple damageable used by integration tests.</summary>
     public sealed class TestTarget : MonoBehaviour, IDamageable
     {
-        public float Health = 100f;
-        public float LastDamage;
-        public HitZoneRecord LastZone;
+        // Properties, not fields: test-only state that Unity shouldn't try to serialize.
+        public float Health { get; set; } = 100f;
+        public float LastDamage { get; private set; }
+        public HitZoneRecord LastZone { get; private set; }
         public bool IsAlive => Health > 0f;
         public float DamageReduction { get; set; }
 
