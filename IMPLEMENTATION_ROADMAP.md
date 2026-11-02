@@ -15,7 +15,7 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 - ⬜ User creates the Unity project per `README.md` (requires the Unity editor)
 - ✅ Approval of open decisions (`DECISIONS.md`, 2026-11-01)
 
-## M1 – Playable first-person foundation 🔄 in review
+## M1 – Playable first-person foundation ✅
 1. ✅ Rules: `WeaponStateMachine` (semi/auto, exact fire rate at any FPS, mag/reserve, tactical/empty reload, commit point for interruption), `DamageCalculator` (range falloff, zones, crits, reduction), `SpreadModel`, `HealthModel` (segmented regen), `MotionMath`, `ModifierStack`, `DeterministicRandom`. 38 EditMode tests.
 2. ✅ Core: `GameBootstrap`, `ServiceRegistry`, `EventBus<T>`, `GameLog`, `GameSettings` + PlayerPrefs settings service. Fast enter-play-mode safe.
 3. ✅ Input: actions defined in code in `PlayerInputReader` (keyboard/mouse + gamepad bindings). An `.inputactions` asset with rebinding comes with the settings menu.
@@ -26,12 +26,21 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 8. ✅ Runtime-built sandbox (`SandboxBootstrap`): range with distance markers and strafing target, melee pit with a target behind the player, ramps 15–50°, stairs 0.2/0.3/0.45 m, jump boxes, crouch tunnel, corridor, pads; debug overlay with FPS, frame cap hotkeys, damage numbers.
 9. ⬜ Net spike: host + one client see each other move and shoot. **Moved to M1.5** so the feel pass happens first and NGO code can be compiled in the editor (packages aren't reachable from the cloud environment).
 10. ✅ PlayMode tests: walk distance equal at 30/60/144 FPS, sprint vs strafe, stopping distance, headshot multiplier, self-ignore raycast, melee arc front/back, one hit per target, dead targets.
-11. ⬜ In-editor feel check against `TESTING.md` §3, then tune numbers.
+11. ✅ In-editor feel check against `TESTING.md` §3 (2026-11-02, "looks good for now"). Number tuning continues as later milestones land.
 
 **Acceptance**: brief's M1 criteria, verified in the editor.
 
-## M1.5 – Networking spike ⬜
-NGO host/join via direct IP and Multiplayer Play Mode; owner-authoritative player transform; hit claims sent to a host `IHitResolver`; two players shooting the same dummy see the same health.
+## M1.5 – Networking spike 🔄 in review
+1. ✅ Netcode for GameObjects 2.13.3 added to `Packages/manifest.json`.
+2. ✅ `Deadfall.Net/SessionService`: creates the NetworkManager and Unity Transport from code; host, join by IP, leave; peer joined/left events; named-message helpers (send to host, to one client, to all remote clients). Connection failures and host loss end the session with a readable reason.
+3. ✅ Sandbox spike (`NetSpikeSync`, `RemotePlayerProxy`, `NetSpikePanel`): each player sends its own position, view, crouch, death and health at 20 Hz (owner-authoritative); others see a smoothed capsule with a name and health label; tracers are relayed.
+4. ✅ Hits: clients swap the hit resolver for one that sends claims to the host. The host checks rate (60 claims/s), shooter origin, hit point near the target, a known weapon id, and range, then applies damage with **its own** weapon stats, confirms the hit to the shooter (hit marker) and broadcasts dummy health to everyone, including a full sync on join.
+5. ✅ Host/Join/Leave panel on the pause screen, status line in the corner, command-line flags for builds.
+6. ⬜ Two-player check in the editor + a Development Build (`TESTING.md` §3.1).
+
+**Acceptance**: host and client see each other move and shoot; both see the same dummy health after either one shoots it; a client leaving or the host closing is handled without errors.
+
+Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpolation buffers, Relay/Lobby, player-vs-player damage, reconnect (M11).
 
 ## M2 – Zombie AI and combat ⬜
 Enemy definition + Husk, NavMesh on sandbox, perception at 5–10 Hz, `EnemyManager` time-slicing, attacks, hurtbox zones/crits, stagger, death, pooling, 2nd and 3rd enemy types (Bolter, Bulwark). Enemy snapshot channel prototype. Profile 50 / 100 enemies in a build.

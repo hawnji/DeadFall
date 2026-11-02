@@ -46,6 +46,28 @@ Testing runs from M1 onward. Nothing is called done until it is verified in the 
 - [ ] Stairs, ramps, and small ledges do not snag
 - [ ] Host + client: both see each other move and shoot; client hits register on host
 
+### 3.1 Two-player test (M1.5)
+
+You need two copies of the game running. Easiest is the editor plus a Development Build:
+
+1. **File → Build Profiles** (or Build Settings): add `Assets/_Project/Scenes/Sandbox/Sandbox_M1.unity` to the scene list, tick **Development Build**, and build to a folder outside `Assets` (for example `Builds/`, which git ignores).
+2. **Project Settings → Player → Resolution and Presentation**: set Fullscreen Mode to **Windowed** so both fit on screen (optional but easier).
+3. Run the build. Press Esc and click **Host**. Windows may ask to allow network access: allow it on private networks.
+4. Press Play in the editor. Press Esc and click **Join** with address `127.0.0.1`, port `7777`. The corner should show `CLIENT (player 1) · connected`, and the host's corner `1 other player connected`.
+5. Press Esc on each to resume. Check:
+   - [ ] Each player sees the other as a coloured capsule with a "Player N" label that moves, turns, looks up and down, and crouches smoothly.
+   - [ ] Each sees the other's tracers when they shoot.
+   - [ ] Client shoots a dummy: client gets a hit marker and damage number; the dummy falls on **both** screens at the same time.
+   - [ ] Host shoots a dummy: same result, and the client sees it fall.
+   - [ ] Shoot the 1000 HP dummy from both players at once: it dies once, on both screens.
+   - [ ] Client melee (V) on a melee-pit dummy registers.
+   - [ ] Client clicks **Leave**: the capsule disappears on the host; the client's dummies work offline again.
+   - [ ] Host clicks **Close session** while the client is connected: client shows "The host closed the session..." and keeps playing offline.
+   - [ ] Join with no host running: after a few seconds the panel says it could not reach a host.
+6. The Console should show no errors on either side. Rejected hit claims appear as `[NetSpike] Rejected hit claim` warnings; there should be none in normal play.
+
+Alternative without a build: install **Multiplayer Play Mode** from Package Manager, open **Window → Multiplayer → Multiplayer Play Mode**, enable Player 2, and use the panel in both windows. Two PCs on the same network also work: join with the host PC's local IP and allow port 7777 through the firewall.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -58,7 +80,7 @@ When you change the left column, retest the right.
 | Map generation | NavMesh, objectives, spawning, sectors, multiplayer seed sync, fuzz test |
 | Wave/difficulty data | Deadlock tests, rewards, endless curve |
 | Save schema | Migrations, round-trip, corrupted-file recovery |
-| Network messages | MP smoke test (2 and 4 players), duplication checks |
+| Network messages | MP smoke test (2 and 4 players, `TESTING.md` §3.1), duplication checks |
 
 ## 5. Performance targets (draft, confirm at M2)
 
@@ -94,3 +116,6 @@ Status 2026-11-01: 38/38 EditMode tests pass in the compile-check runner. PlayMo
 - Viewmodel is primitive boxes rendered by the world camera, so it can clip into walls when pressed against them.
 - Melee hits use the camera position; a target directly overlapping the player's camera may be missed.
 - No audio yet.
+- M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
+- M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.
+- The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.

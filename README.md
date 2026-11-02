@@ -9,7 +9,8 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | Milestone | State |
 |---|---|
 | M0 – Inspection and technical plan | **Done** |
-| M1 – Playable first-person foundation | **In review**: code complete and compile-checked; needs in-editor feel check |
+| M1 – Playable first-person foundation | **Done** (feel pass checked in the editor 2026-11-02; tuning continues) |
+| M1.5 – Networking spike (host and join) | **In review**: two-player test in the editor and a build |
 | M2–M13 | Not started. See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
@@ -50,7 +51,9 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 |---|---|
 | Universal RP (then **Assets → Create → Rendering → URP Asset (with Universal Renderer)** and assign it in **Project Settings → Graphics**) | Art and lighting work; optional for M1, the sandbox renders with either pipeline |
 | Test Framework | Running the EditMode/PlayMode tests. The test assemblies are skipped until it is installed |
-| Netcode for GameObjects, Multiplayer Services, Multiplayer Play Mode | M1.5 networking spike |
+| Netcode for GameObjects | **Already in `manifest.json`** (2.13.3) from M1.5 |
+| Multiplayer Play Mode (optional) | Testing two players inside one editor instead of editor + build |
+| Multiplayer Services (Relay + Lobby) | M11 online sessions |
 | AI Navigation | M2 zombie AI |
 | Newtonsoft Json (`com.unity.nuget.newtonsoft-json`) | M10 save system |
 
@@ -64,6 +67,8 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 
 Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, 1–4 or wheel to swap, Esc pause.
 Debug: F1/F2/F3/F4 cap 30/60/144/unlimited FPS, F9 respawn, F10 god mode, H toggle help.
+
+**Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
 
 **Tests**: **Window → General → Test Runner**, run EditMode (Rules unit tests) then PlayMode (movement and combat integration).
 

@@ -17,7 +17,13 @@ CSC = ["mono", f"{C}/microsoft.net.compilers.toolset/tasks/net472/csc.exe", "-no
        f"-r:{FW}/System.dll", f"-r:{FW}/System.Core.dll"]
 UNITY = [f"-r:{f}" for f in sorted(glob.glob(f"{C}/unityengine.modules/lib/net35/*.dll"))]
 NUNIT = [f"-r:{C}/nunit/lib/net45/nunit.framework.dll"]
-STUBS = {"Unity.InputSystem": glob.glob(f"{HERE}/stubs/InputSystemStubs.cs")}
+# Each package assembly name maps to the stub source that stands in for it.
+STUBS = {
+    "Unity.InputSystem": glob.glob(f"{HERE}/stubs/InputSystemStubs.cs"),
+    "Unity.Netcode.Runtime": glob.glob(f"{HERE}/stubs/NetcodeStubs.cs"),
+}
+# Package assemblies whose types live inside another stub.
+STUB_ALIASES = {}
 
 def run(args):
     r = subprocess.run(args, capture_output=True, text=True)
@@ -48,6 +54,9 @@ def build(name):
             o = build(r)
             if o: refs.append(f"-r:{o}")
         elif r in stub_dlls: refs.append(f"-r:{stub_dlls[r]}")
+        elif r in STUB_ALIASES:
+            o = f"-r:{stub_dlls[STUB_ALIASES[r]]}"
+            if o not in refs: refs.append(o)
     if not srcs: built[name] = None; return None
     out = f"{B}/{name}.dll"
     extra = [] if j.get("noEngineReferences") else UNITY

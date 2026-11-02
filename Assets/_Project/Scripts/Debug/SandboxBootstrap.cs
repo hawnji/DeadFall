@@ -8,7 +8,7 @@ namespace Deadfall.DebugTools
     /// Builds the Milestone 1 movement and combat sandbox from primitives at runtime, so it needs no
     /// scene authoring: add this component to an empty GameObject in any scene and press Play.
     /// Areas: shooting range with distance markers, melee pit, movement course (ramps, stairs, jump
-    /// boxes, crouch tunnel), and hazard/heal/ammo pads.
+    /// boxes, crouch tunnel), and hazard/heal/ammo pads. Esc opens the co-op test panel (host / join).
     /// </summary>
     public sealed class SandboxBootstrap : MonoBehaviour
     {
@@ -34,6 +34,12 @@ namespace Deadfall.DebugTools
             var ui = new GameObject("[SandboxUI]");
             ui.AddComponent<PrototypeHud>().Bind(player);
             ui.AddComponent<SandboxDebugOverlay>().Bind(player, _spawnPosition, _spawnYaw);
+
+            // M1.5 networking spike: host/join from the pause screen.
+            var net = new GameObject("[NetSpike]");
+            var sync = net.AddComponent<NetSpikeSync>();
+            sync.Bind(player);
+            net.AddComponent<NetSpikePanel>().Bind(sync, player);
         }
 
         private static void DisableSceneCameras()

@@ -15,6 +15,14 @@ namespace Deadfall.Player
         public int Shots;
     }
 
+    /// <summary>One visible bullet path (per pellet), for tracers on other players' screens.</summary>
+    public struct ShotTraced
+    {
+        public GameObject Owner;
+        public Vector3 From;
+        public Vector3 To;
+    }
+
     /// <summary>
     /// The player's loadout and everything they do with it: swap, aim, fire, reload, melee.
     /// Numbers come from WeaponDefinition assets; rules come from the engine-free WeaponStateMachine.
@@ -268,6 +276,7 @@ namespace Deadfall.Player
                     }
                 }
                 TracerPool.Instance.Spawn(muzzle, end);
+                EventBus<ShotTraced>.Publish(new ShotTraced { Owner = gameObject, From = muzzle, To = end });
             }
 
             slot.Spread.OnShot();
