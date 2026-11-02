@@ -23,7 +23,7 @@ namespace Deadfall.Player
     /// Player health using the engine-free HealthModel. Downed and revive states arrive with
     /// multiplayer rules (D-01, D-02); in M1 death simply disables control until Revive is called.
     /// </summary>
-    public sealed class PlayerHealth : MonoBehaviour, IDamageable
+    public sealed class PlayerHealth : MonoBehaviour, IDamageable, ICombatTarget
     {
         [SerializeField] private HealthStats _stats = new HealthStats();
         [Tooltip("Class or difficulty damage reduction 0..1.")]
@@ -39,11 +39,18 @@ namespace Deadfall.Player
         public float DamageReduction => _damageReduction;
         public bool Invulnerable { get; set; }
 
+        public Transform TargetTransform => transform;
+        public bool IsTargetable => IsAlive && isActiveAndEnabled;
+        public IDamageable Damageable => this;
+
         private void Awake()
         {
             _model = new HealthModel(_stats);
             _status = GetComponent<PlayerStatus>();
         }
+
+        private void OnEnable() => CombatTargets.Register(this);
+        private void OnDisable() => CombatTargets.Unregister(this);
 
         private void Update() => _model.Tick(Time.timeAsDouble, Time.deltaTime);
 

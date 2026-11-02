@@ -356,14 +356,14 @@ namespace Deadfall.DebugTools
             TrainingDummy dummy = TrainingDummy.ByIndex(index);
             if (dummy == null || !dummy.IsAlive) return; // already dead on the host: a normal race, not cheating
             if (!_proxies.TryGetValue(sender, out RemotePlayerProxy shooter) || shooter == null) { Reject(sender, "unknown shooter"); return; }
-            if (zoneByte > (byte)HitZone.WeakPoint || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak)) { Reject(sender, "malformed"); return; }
+            if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak)) { Reject(sender, "malformed"); return; }
             if ((origin - shooter.EyePosition).sqrMagnitude > MaxOriginError * MaxOriginError) { Reject(sender, "origin"); return; }
             // Strafing dummies move on each peer's own clock, so allow for their travel.
             float pointTolerance = MaxPointError + dummy.StrafeDistance * 2f;
             if ((point - (dummy.transform.position + Vector3.up)).sqrMagnitude > pointTolerance * pointTolerance) { Reject(sender, "point"); return; }
 
             var zone = (HitZone)zoneByte;
-            weak = Mathf.Clamp(weak, 1f, 3f);
+            weak = Mathf.Clamp(weak, zone == HitZone.Armor ? 0f : 1f, 3f);
             if (!TryBuildRequest(weaponId, zone, weak, Vector3.Distance(origin, point), out DamageRequest request)) { Reject(sender, $"weapon '{weaponId}'"); return; }
 
             HitOutcome outcome = LocalHitResolver.Apply(new HitClaim

@@ -30,20 +30,30 @@ Legend: ✅ done · 🔄 in progress · ⬜ not started
 
 **Acceptance**: brief's M1 criteria, verified in the editor.
 
-## M1.5 – Networking spike 🔄 in review
+## M1.5 – Networking spike ✅
 1. ✅ Netcode for GameObjects 2.13.3 added to `Packages/manifest.json`.
 2. ✅ `Deadfall.Net/SessionService`: creates the NetworkManager and Unity Transport from code; host, join by IP, leave; peer joined/left events; named-message helpers (send to host, to one client, to all remote clients). Connection failures and host loss end the session with a readable reason.
 3. ✅ Sandbox spike (`NetSpikeSync`, `RemotePlayerProxy`, `NetSpikePanel`): each player sends its own position, view, crouch, death and health at 20 Hz (owner-authoritative); others see a smoothed capsule with a name and health label; tracers are relayed.
 4. ✅ Hits: clients swap the hit resolver for one that sends claims to the host. The host checks rate (60 claims/s), shooter origin, hit point near the target, a known weapon id, and range, then applies damage with **its own** weapon stats, confirms the hit to the shooter (hit marker) and broadcasts dummy health to everyone, including a full sync on join.
 5. ✅ Host/Join/Leave panel on the pause screen, status line in the corner, command-line flags for builds.
-6. ⬜ Two-player check in the editor + a Development Build (`TESTING.md` §3.1).
+6. ✅ Two-player check in the editor + a Development Build (`TESTING.md` §3.1), passed 2026-11-02.
 
 **Acceptance**: host and client see each other move and shoot; both see the same dummy health after either one shoots it; a client leaving or the host closing is handled without errors.
 
 Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpolation buffers, Relay/Lobby, player-vs-player damage, reconnect (M11).
 
-## M2 – Zombie AI and combat ⬜
-Enemy definition + Husk, NavMesh on sandbox, perception at 5–10 Hz, `EnemyManager` time-slicing, attacks, hurtbox zones/crits, stagger, death, pooling, 2nd and 3rd enemy types (Bolter, Bulwark). Enemy snapshot channel prototype. Profile 50 / 100 enemies in a build.
+## M2 – Zombie AI and combat 🔄 in progress
+**Part 1 (offline), in review**
+1. ✅ Rules: `EnemyBrain` (idle → chase → wind-up → strike → recover, charge wind-up → charge, stagger, death; time-driven so identical at any tick rate), `StaggerMeter` (decaying build-up, immunity window), `EnemyStats`. New `HitZone.Armor` for plating. 16 EditMode tests.
+2. ✅ `EnemyDefinition` asset type and three prototype enemies in code (`PrototypeEnemies`): **Husk** (baseline), **Bolter** (fast, weaving approach, lunge), **Bulwark** (650 HP, front armor plate ×0.25, weak-point growth on the back ×2.5, unstaggerable charge).
+3. ✅ `Enemy` body: health, head/body/armor/weak-point hurtboxes, NavMeshAgent movement, strike arc check, charge contact, placeholder poses for wind-ups and staggers, death and corpse timer.
+4. ✅ `EnemyManager`: per-type pools, alive cap from D-19 (24 + 8 per extra player), one update loop, perception (target + re-path) at 8 Hz spread across frames, smoothed AI cost in ms.
+5. ✅ `CombatTargets` registry (players register themselves) so AI never searches the scene.
+6. ✅ `RuntimeNavMesh` baking with Unity's built-in `NavMeshBuilder` (T-21); the sandbox bakes at startup.
+7. ✅ Sandbox hotkeys F5–F8, F11, `[` `]`, enemy count and AI cost on the overlay.
+8. ⬜ Feel check and first tuning pass in the editor (`TESTING.md` §3.2).
+
+**Part 2 (next)**: enemy snapshot channel so co-op clients see the host's enemies (slot id, quantised position, yaw, state, health %, 10–15 Hz), host enemies target remote players, client hits on enemies through the host resolver. Then profile 50 / 100 enemies in a build.
 
 ## M3 – Wave management ⬜
 `DifficultyCurve`, `WavePlanner` threat budget, `WaveManager` states (Lull → Surge → Reward), `SpawnDirector` with concurrency cap, special surge types (Swarm, Siege), announcements, Field Credit rewards. Deadlock tests.

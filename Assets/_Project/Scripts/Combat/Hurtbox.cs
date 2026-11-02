@@ -10,7 +10,7 @@ namespace Deadfall.Combat
     public sealed class Hurtbox : MonoBehaviour
     {
         [SerializeField] private HitZone _zone = HitZone.Body;
-        [Tooltip("Only used when Zone is WeakPoint.")]
+        [Tooltip("Used when Zone is WeakPoint (above 1) or Armor (below 1).")]
         [SerializeField] private float _weakPointMultiplier = 2.5f;
 
         private IDamageable _owner;

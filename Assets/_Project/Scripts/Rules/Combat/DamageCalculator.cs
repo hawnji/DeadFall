@@ -79,6 +79,7 @@ namespace Deadfall.Rules.Combat
                 case HitZone.Head: return r.HeadMultiplier;
                 case HitZone.Limb: return r.LimbMultiplier;
                 case HitZone.WeakPoint: return r.WeakPointMultiplier;
+                case HitZone.Armor: return Math.Min(1f, r.WeakPointMultiplier);
                 default: return 1f;
             }
         }

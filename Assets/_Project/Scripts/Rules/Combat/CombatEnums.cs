@@ -25,5 +25,7 @@ namespace Deadfall.Rules.Combat
         Limb,
         /// <summary>Enemy-specific weak point with its own multiplier (e.g. a growth or fuel tank).</summary>
         WeakPoint,
+        /// <summary>Plating that soaks damage; the hurtbox's multiplier (below 1) applies. Never a critical hit.</summary>
+        Armor,
     }
 }
