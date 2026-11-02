@@ -13,6 +13,8 @@ namespace Deadfall.Combat
         public Vector3 Direction;
         public GameObject Source;
         public string WeaponId;
+        /// <summary>Staggers the target if it can be staggered at all (Warrior Lunge strike).</summary>
+        public bool ForceStagger;
     }
 
     /// <summary>Anything that can take damage: players, enemies, structures, training dummies.</summary>
@@ -33,6 +35,8 @@ namespace Deadfall.Combat
         public bool IsCritical;
         public bool Killed;
         public Vector3 Point;
+        /// <summary>The hit came from a melee swing (Warrior passives react to these).</summary>
+        public bool IsMelee;
     }
 
     /// <summary>Raised when anything with an IDamageable dies.</summary>

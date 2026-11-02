@@ -5,6 +5,7 @@
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Combat",
         "Deadfall.Rules.Encounters",
+        "Deadfall.Rules.Classes",
         "Deadfall.Rules.World",
         "Deadfall.Rules.Progression",
         "Deadfall.Core",

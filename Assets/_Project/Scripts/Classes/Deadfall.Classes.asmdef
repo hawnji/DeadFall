@@ -8,6 +8,7 @@
         "Deadfall.Core",
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Combat",
+        "Deadfall.Rules.Classes",
         "Unity.Netcode.Runtime",
         "Unity.InputSystem"
     ],

@@ -273,6 +273,7 @@ namespace Deadfall.Enemies
             _health -= applied;
             double now = Time.timeAsDouble;
             _brain.OnDamaged(applied, now);
+            if (info.ForceStagger) _brain.ForceStagger(now);
             if (_health <= 0f) Die(info.Source, now);
             return applied;
         }

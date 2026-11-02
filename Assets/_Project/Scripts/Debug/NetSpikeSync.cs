@@ -41,6 +41,7 @@ namespace Deadfall.DebugTools
         private const float MaxOriginError = 4f;     // metres between claimed origin and the shooter's last known eye position
         private const float MaxPointError = 2.5f;    // metres between claimed hit point and the target's centre
         private const float ClaimsPerSecond = 60f;   // generous: 9-pellet shotgun or full-auto rifle plus melee
+        private const float MaxClaimedOutgoing = 3f; // largest class bonus a claim may carry (Warrior Lunge strike ×3)
 
         private sealed class ClaimBudget
         {
@@ -370,6 +371,11 @@ namespace Deadfall.DebugTools
                 w.WriteValueSafe(claim.Origin);
                 w.WriteValueSafe(claim.Point);
                 w.WriteValueSafe(claim.WeaponId ?? string.Empty);
+                byte claimFlags = 0;
+                if (claim.IsMelee) claimFlags |= 1;
+                if (claim.ForceStagger) claimFlags |= 2;
+                w.WriteValueSafe(claimFlags);
+                w.WriteValueSafe(claim.Request.OutgoingMultiplier);
                 _session.SendToServer(MsgHitClaim, w, NetworkDelivery.ReliableSequenced);
             }
         }
@@ -387,6 +393,7 @@ namespace Deadfall.DebugTools
                 IsCritical = (flags & 1) != 0,
                 Killed = (flags & 2) != 0,
                 Point = point,
+                IsMelee = (flags & 4) != 0,
             });
         }
 
@@ -402,6 +409,8 @@ namespace Deadfall.DebugTools
             r.ReadValueSafe(out Vector3 origin);
             r.ReadValueSafe(out Vector3 point);
             r.ReadValueSafe(out string weaponId);
+            r.ReadValueSafe(out byte claimFlags);
+            r.ReadValueSafe(out float outgoing);
 
             if (!ConsumeBudget(sender)) { Reject(sender, "rate"); return; }
             IDamageable target;
@@ -431,13 +440,15 @@ namespace Deadfall.DebugTools
             }
             if (!target.IsAlive) return; // already dead on the host: a normal race, not cheating
             if (!_proxies.TryGetValue(sender, out RemotePlayerProxy shooter) || shooter == null) { Reject(sender, "unknown shooter"); return; }
-            if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak)) { Reject(sender, "malformed"); return; }
+            if (zoneByte > (byte)HitZone.Armor || !IsFinite(origin) || !IsFinite(point) || !IsFinite(weak) || !IsFinite(outgoing)) { Reject(sender, "malformed"); return; }
             if ((origin - shooter.EyePosition).sqrMagnitude > MaxOriginError * MaxOriginError) { Reject(sender, "origin"); return; }
             if ((point - targetCenter).sqrMagnitude > pointTolerance * pointTolerance) { Reject(sender, "point"); return; }
 
             var zone = (HitZone)zoneByte;
             weak = Mathf.Clamp(weak, zone == HitZone.Armor ? 0f : 1f, 3f);
-            if (!TryBuildRequest(weaponId, zone, weak, Vector3.Distance(origin, point), out DamageRequest request)) { Reject(sender, $"weapon '{weaponId}'"); return; }
+            // Class bonuses (Lunge strike) ride on the claim, capped; everything else comes from the host's own weapon stats.
+            outgoing = Mathf.Clamp(outgoing, 0f, MaxClaimedOutgoing);
+            if (!TryBuildRequest(weaponId, zone, weak, Vector3.Distance(origin, point), outgoing, out DamageRequest request, out bool isMelee)) { Reject(sender, $"weapon '{weaponId}'"); return; }
 
             HitOutcome outcome = LocalHitResolver.Apply(new HitClaim
             {
@@ -449,6 +460,8 @@ namespace Deadfall.DebugTools
                 Point = point,
                 WeaponId = weaponId,
                 Request = request,
+                IsMelee = isMelee,
+                ForceStagger = isMelee && (claimFlags & 2) != 0,
             });
             if (!outcome.Applied) return;
 
@@ -457,6 +470,7 @@ namespace Deadfall.DebugTools
                 byte flags = 0;
                 if (outcome.IsCritical) flags |= 1;
                 if (outcome.Killed) flags |= 2;
+                if (isMelee) flags |= 4;
                 w.WriteValueSafe(outcome.Amount);
                 w.WriteValueSafe(flags);
                 w.WriteValueSafe(point);
@@ -464,20 +478,24 @@ namespace Deadfall.DebugTools
             }
         }
 
-        private bool TryBuildRequest(string weaponId, HitZone zone, float weak, float distance, out DamageRequest request)
+        private bool TryBuildRequest(string weaponId, HitZone zone, float weak, float distance, float outgoing,
+            out DamageRequest request, out bool isMelee)
         {
             if (weaponId == QuickMeleeId)
             {
-                request = DamageRequest.FromMelee(_quickMelee, zone, weak);
+                isMelee = true;
+                request = DamageRequest.FromMelee(_quickMelee, zone, weak, outgoing);
                 return true;
             }
             if (weaponId != null && _weapons.TryGetValue(weaponId, out WeaponDefinition def))
             {
-                request = def.Kind == WeaponKind.Melee
-                    ? DamageRequest.FromMelee(def.Melee, zone, weak)
-                    : DamageRequest.FromWeapon(def.Firearm, zone, distance, weak);
+                isMelee = def.Kind == WeaponKind.Melee;
+                request = isMelee
+                    ? DamageRequest.FromMelee(def.Melee, zone, weak, outgoing)
+                    : DamageRequest.FromWeapon(def.Firearm, zone, distance, weak, outgoing);
                 return true;
             }
+            isMelee = false;
             request = default;
             return false;
         }

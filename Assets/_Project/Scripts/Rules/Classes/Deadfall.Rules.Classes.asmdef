@@ -1,0 +1,16 @@
+{
+    "name": "Deadfall.Rules.Classes",
+    "rootNamespace": "Deadfall.Rules.Classes",
+    "references": [
+        "Deadfall.Rules.Common"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

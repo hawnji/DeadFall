@@ -61,7 +61,7 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 5. ✅ The alive cap grows with connected players (D-19).
 6. ✅ Two-player check (`TESTING.md` §3.3). The 50 / 100 enemy profile in a Development Build is still open and carries into M3 testing.
 
-## M3 – Wave management 🔄 in review
+## M3 – Wave management ✅
 1. ✅ Rules: `DifficultyCurve` (threat budget by surge, player count, difficulty and the ±10% adaptive factor from D-14; health scale capped at ×2.5 by surge 30; concurrency; arrival directions).
 2. ✅ Rules: `WavePlanner` spends the budget on unlocked enemy types by weight, with a per-type budget share cap, a hard cap of 400 spawns, at least one enemy, and the same plan for the same seed. Surge types: **Standard**, **Swarm** (×1.3 budget, cheap types only, ×1.5 at once), **Siege** (3+ directions, heavies 2 surges early). Rotation in T-23.
 3. ✅ Rules: `SurgeRun` state machine: Lull → Surge → Reward → Lull, Complete after the final surge (20), Failed when the whole squad is down. Lull ends on its timer or when every player is ready. Deadlock guards: stragglers are removed after 40 s without a kill, and a surge that cannot spawn ends after 10 min.
@@ -71,12 +71,23 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 7. ✅ Enemy data: `EnemyDefinition` gains unlock surge, spawn weight and budget share. Husk from surge 1, Bolter from 3, Bulwark from 6 (at most 40% of a budget). Enemies take a health scale when spawned.
 8. ✅ HUD: surge panel (surge, type, enemies left, lull timer, ready count), Field Credits, big announcements, credit pop-ups. Sandbox: N starts or stops a run, G toggles ready, spawn points along the four walls.
 9. ✅ 23 new EditMode tests (`WaveTests.cs`).
-10. ⬜ Play check in the editor and in co-op (`TESTING.md` §3.4).
+10. ✅ Play check in the editor (`TESTING.md` §3.4), passed 2026-11-02 after #18 (surge enemies now hunt from any distance).
 
 Not in scope yet: Elite, Hunt, Supply and Specimen surges (M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
-## M4 – Class framework ⬜
-`ClassDefinition`, `AbilityDefinition`, `AbilityRunner`, passive modifiers, preferred-weapon bonuses, class select, five prototype abilities, Squad Doctrine resolver (data only, placeholder magnitudes).
+## M4 – Class framework 🔄 in progress
+**Part 1 (framework, Gunner, Tank, Warrior), in review**
+1. ✅ Rules (`Deadfall.Rules.Classes`): `AbilityTimer` (ready → active → cooldown, cooldown starts when the effect ends per T-26, early end, cooldown rate and refunds), `ClassRules` (Guard reduction, sustained-fire recoil, combining reductions), `MeleeCombo`, `DoctrineResolver` (pairs on different players, 4 distinct classes, at most 2 per player in list order).
+2. ✅ `WeaponStateMachine` handling modifiers: fire rate, reload speed, equip speed, free reloads, reserve capacity.
+3. ✅ Player hooks: `WeaponHandling` / `IWeaponHandlingSource` (fire rate, reload, swap, recoil, bullet and melee damage), one-shot `MeleeBonus` (damage, stagger, wider arc, extra targets), sustained-fire time, `PlayerMotor.Dash`, `PlayerHealth.BonusDamageReduction`, forced stagger on enemies. Client hit claims now carry the melee flag, stagger flag and a class damage bonus capped at ×3 (T-28).
+4. ✅ `ClassDefinition`, `AbilityDefinition`, `PassiveDefinition` assets (numbers in data, behaviour picked by id), `PlayerClass` runner (Q, cooldowns, passives, preferred-weapon handling: reload ×1.15, swap ×1.25, recoil ×0.85 per T-27), `PrototypeClasses` with all five classes.
+5. ✅ Abilities: **Overdrive** (Gunner), **Bulwark Shield** (Tank: 600 HP wall that enemies within 12 m attack instead, via the new `IAggroTarget`), **Lunge** (Warrior: 8 m dash ending in a ×3 staggering strike).
+6. ✅ Passives: Deep Pockets, Steady Hands, Guard, Bloodlust, Combo. The rest are listed and marked "soon" until their systems exist.
+7. ✅ Class select on the pause screen (remembered), class and ability HUD, Squad Doctrine table in data.
+8. ✅ 17 new EditMode tests (`ClassRulesTests.cs`).
+9. ⬜ Feel check in the editor (`TESTING.md` §3.5).
+
+**Part 2 (next)**: Engineer **Deploy Sentry**, Demolitionist **Cluster Charge** (first explosives), Tank Shove, classes shown to other players and abilities that spawn things (shield, sentry) working for clients, doctrine effects with placeholder magnitudes.
 
 ## M5 – Procedural map generation ⬜
 Room kit for Cinder Ridge (greybox), sockets, `LayoutGenerator` + `LayoutValidator` (Rules, tested on thousands of seeds), runtime builder, NavMesh baking per sector, locked doors, sector unlocks, loot and secret placement, debug overlay, seed reproduction.

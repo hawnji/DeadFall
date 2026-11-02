@@ -50,6 +50,9 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-23 | **Surge rotation**: surges 1–3 Standard, then every 5th a Siege and every other 4th a Swarm; Standard otherwise | Teaches the basics first and gives a predictable rhythm. A rotation table in data replaces it when Elite, Hunt and Supply surges arrive (M7). |
 | T-24 | **Field Credit numbers (placeholder)**: kill = 10 × threat cost to the killer (Husk 10, Bolter 15, Bulwark 60); surge clear = 50 + 10 × surge to every player; no assist credit yet | Gives prices a scale for M6 Supply Caches. All numbers live in `SurgeRunSettings` and will be tuned with prices. Assists need damage tracking per player and come with M6/M11. |
 | T-25 | **Waves run on the host and reach clients as one small state message** ("df.wave", reliable, 2 Hz plus on change); clients send ready votes | Same named-message pattern as T-19. Clients never decide spawns or rewards, so there is nothing to duplicate or cheat. |
+| T-26 | **Ability cooldowns start when the effect ends** | Overdrive (8 s) then 45 s of cooldown, not 37 s. Lengthening an effect (mods, doctrines) can never make it overlap the next use, and the HUD reads simply: effect time, then cooldown. |
+| T-27 | **Preferred-weapon handling (placeholder)**: reload ×1.15, swap ×1.25, recoil ×0.85; no damage bonus | "Handling bonus" per GAME_DESIGN §5 without making off-class weapons feel weak (C-05). Per-class numbers in `ClassDefinition`. |
+| T-28 | **Client hit claims carry a class damage bonus, capped at ×3, plus melee and stagger flags** | The host still uses its own weapon stats for everything else. The cap matches the biggest class bonus (Lunge); a modified client could at most always hit like a Lunge, acceptable for PvE co-op until abilities are host-validated in M11. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -101,3 +104,4 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-02: T-18 recorded (editor pin). T-19 and T-20 recorded for the M1.5 networking spike.
 - 2026-11-02: T-21 and T-22 recorded for M2 enemies.
 - 2026-11-02: T-23 to T-25 recorded for M3 waves.
+- 2026-11-02: T-26 to T-28 recorded for M4 classes.
