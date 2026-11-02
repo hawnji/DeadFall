@@ -31,7 +31,18 @@ namespace Deadfall.Rules.Combat
         }
 
         public float Current { get; private set; }
-        public float Max => _stats.MaxHealth;
+        public float Max => _stats.MaxHealth + _bonusMax;
+        private float _bonusMax;
+
+        /// <summary>Extra max health (Field Mods, skills). Raising it heals by the same amount; lowering it clamps.</summary>
+        public void SetBonusMax(float bonus)
+        {
+            bonus = Math.Max(0f, bonus);
+            float delta = bonus - _bonusMax;
+            _bonusMax = bonus;
+            if (delta > 0f && Current > 0f) Current += delta;
+            if (Current > Max) Current = Max;
+        }
         public float Normalized => Max > 0f ? Current / Max : 0f;
         public bool IsDead => Current <= 0f;
 

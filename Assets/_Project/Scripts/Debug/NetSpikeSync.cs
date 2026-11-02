@@ -80,7 +80,7 @@ namespace Deadfall.DebugTools
 
         private void Awake()
         {
-            foreach (WeaponDefinition def in SandboxContent.DefaultLoadout()) _weapons[def.ContentId] = def;
+            foreach (WeaponDefinition def in WeaponCatalog.All) _weapons[def.ContentId] = def;
             _session = SessionService.Instance;
         }
 

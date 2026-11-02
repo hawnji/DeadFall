@@ -1,0 +1,84 @@
+using System.Collections.Generic;
+using Deadfall.Combat;
+using Deadfall.Core;
+using Deadfall.Rules.Combat;
+using Deadfall.Rules.Common;
+using UnityEngine;
+
+namespace Deadfall.Game
+{
+    /// <summary>
+    /// A Supply Cache on a map loot slot (D-05). Its stock (three weapons, better tiers in later sectors, plus an
+    /// ammo refill) is rolled from the map seed, so every peer sees the same offers. F opens the buy menu; the host
+    /// takes the Field Credits (<see cref="RunEconomy"/>).
+    /// </summary>
+    public sealed class SupplyCache : MonoBehaviour, IInteractable
+    {
+        public struct Offer
+        {
+            public WeaponDefinition Weapon;
+            public WeaponMods Mods;
+            public int Price;
+        }
+
+        private readonly List<Offer> _stock = new List<Offer>();
+        private readonly List<Material> _materials = new List<Material>();
+
+        public int Id { get; private set; }
+        public int Sector { get; private set; }
+        public IReadOnlyList<Offer> Stock => _stock;
+
+        public static SupplyCache Create(int id, int sector, ulong mapSeed, Vector3 position, float yaw, Transform parent)
+        {
+            var root = new GameObject($"SupplyCache #{id}");
+            root.transform.SetParent(parent, false);
+            root.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
+            var c = root.AddComponent<SupplyCache>();
+            c.Id = id;
+            c.Sector = sector;
+            c.Part(new Vector3(0f, 0.45f, 0f), new Vector3(1.6f, 0.9f, 0.8f), new Color(0.22f, 0.36f, 0.26f));
+            c.Part(new Vector3(0f, 0.92f, 0f), new Vector3(1.66f, 0.06f, 0.86f), new Color(0.75f, 0.62f, 0.2f));
+            c.Part(new Vector3(0f, 0.55f, -0.41f), new Vector3(0.5f, 0.18f, 0.02f), new Color(0.4f, 0.9f, 0.5f));
+            c.RollStock(mapSeed);
+            if (RunEconomy.Current != null) RunEconomy.Current.Register(c);
+            return c;
+        }
+
+        private void Part(Vector3 local, Vector3 size, Color color)
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = local;
+            go.transform.localScale = size;
+            Material m = RuntimeMaterials.CreateLit(color);
+            _materials.Add(m);
+            go.GetComponent<Renderer>().sharedMaterial = m;
+        }
+
+        private void RollStock(ulong mapSeed)
+        {
+            var rng = new DeterministicRandom(mapSeed * 31UL + (ulong)Id * 0x9E37UL + 7UL);
+            var pool = new List<WeaponDefinition>(WeaponCatalog.All);
+            int tierSurge = Sector * 4;
+            for (int i = 0; i < LootRules.CacheStock && pool.Count > 0; i++)
+            {
+                int k = rng.Range(0, pool.Count);
+                WeaponDefinition def = pool[k];
+                pool.RemoveAt(k);
+                WeaponTier tier = LootRules.RollTier(rng, tierSurge);
+                WeaponMods mods = LootRules.RollMods(rng, tier, def.Category);
+                _stock.Add(new Offer { Weapon = def, Mods = mods, Price = LootRules.Price(def.Category, tier) });
+            }
+        }
+
+        public string InteractPrompt(GameObject player) => "Open Supply Cache";
+        public bool CanInteract(GameObject player) => true;
+        public void Interact(GameObject player) => SupplyCacheMenu.Open(this);
+
+        private void OnDestroy()
+        {
+            if (RunEconomy.Current != null) RunEconomy.Current.Unregister(this);
+            foreach (Material m in _materials) if (m != null) Destroy(m);
+        }
+    }
+}

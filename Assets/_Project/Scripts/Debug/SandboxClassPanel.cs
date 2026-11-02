@@ -29,6 +29,7 @@ namespace Deadfall.DebugTools
             if (_class == null) return;
             bool paused = _cursor == null || !_cursor.IsLocked;
             if (!paused) return;
+            if (Deadfall.Core.UiModal.Active) return;
             if (_box == null)
             {
                 _box = new GUIStyle(GUI.skin.box);

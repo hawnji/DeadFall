@@ -60,6 +60,10 @@ Three lists: what the brief already confirmed, technical choices made in M0, and
 | T-33 | **Sector unlocks (placeholder)**: Survival opens sector 1 after surge 3, sector 2 after 7, sector 3 after 12, then every 5 surges; a new run closes them again | Matches "starts small and expands" (GAME_DESIGN §3.1) with a predictable rhythm. Buying a door early with credits and objective-driven unlocks (Operations) come with M8. |
 | T-34 | **Networked world objects by id** (`INetTarget`): pieces built from the seed or spawned by the host have the same id on every peer; client hits on them go to the host by id | Keeps the "no NetworkObjects" approach (T-19) for secret panels now and generators, nests and structures later. Id ranges: 0x1000 map, 0x2000 objectives, 0x4000 structures. |
 | T-35 | **Interact on F; pickups are host-authoritative** | One player gets each pickup; the host checks distance. Ammo crates, medkits and stashes are single use. |
+| T-36 | **Run economy numbers (placeholder)**: drop chance 1.2% × threat cost (max 20%), Refined 12% + 2%/surge (max 50%), Prototype from surge 5 (max 20%); prices Pistol 250 · SMG 600 · AR 800 · Shotgun 750 · LMG 1000 · Heavy 1300 · Melee 450, ×1.6 Refined, ×2.4 Prototype; ammo refill 200; cache tiers roll as if surge = sector × 4 | First pass so caches and drops matter without flooding the run. All in `LootRules`. |
+| T-37 | **Field Mods are rolled and applied on each player's own machine** | Picks are individual (D-13) and effects are local stats; damage bonuses already go through the host's ×3 cap on claims. Avoids a sync layer for something that can't affect other players. |
+| T-38 | **Projectile weapons go through the host** like hits: the client flies a harmless copy and sends origin, velocity and its damage multiplier; the host fires the real grenade from the client's body | Same trust model as hit claims (T-19/T-28); kill credit and self-damage work through the proxy. |
+| T-39 | **Weapon modifications change the client's local stats; damage changes ride the outgoing multiplier** | The host keeps computing damage from its own catalog (T-19); tier and attachment damage stay inside the existing ×3 claim cap. |
 | T-17 | **Players use the built-in Ignore Raycast layer** | Their own capsule never blocks their bullets or melee, with no custom layer setup. Replaced by dedicated layers when the physics layer matrix is defined. |
 
 ### T-03 detail: NGO vs FishNet
@@ -113,4 +117,5 @@ Approved by Hawnji on 2026-11-01 as recommended. All remain configurable data an
 - 2026-11-02: T-23 to T-25 recorded for M3 waves.
 - 2026-11-02: T-26 to T-28 recorded for M4 classes.
 - 2026-11-02: T-29 to T-31 recorded for M4 part 2.
-- 2026-11-02: T-32 to T-35 recorded for M5. The user is holding editor testing until M10 and asked for M5–M10 to be merged as each passes the compile check.
+- 2026-11-02: T-32 to T-35 recorded for M5.
+- 2026-11-02: T-36 to T-39 recorded for M6. The user is holding editor testing until M10 and asked for M5–M10 to be merged as each passes the compile check.

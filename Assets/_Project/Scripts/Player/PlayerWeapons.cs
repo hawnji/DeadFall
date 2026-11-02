@@ -35,12 +35,27 @@ namespace Deadfall.Player
         private sealed class Slot
         {
             public WeaponDefinition Definition;
+            public WeaponMods Mods;
+            /// <summary>Firearm stats after tier and attachments (a copy; the definition is shared).</summary>
+            public WeaponStats Stats;
+            public float DamageMultiplier = 1f;
             public WeaponStateMachine Firearm;
             public SpreadModel Spread;
             public bool IsMelee => Definition.Kind == WeaponKind.Melee;
         }
 
+        /// <summary>A weapon and its modifications, for loadouts and pickups.</summary>
+        public struct LoadoutEntry
+        {
+            public WeaponDefinition Definition;
+            public WeaponMods Mods;
+            public LoadoutEntry(WeaponDefinition definition, WeaponMods mods = null) { Definition = definition; Mods = mods; }
+        }
+
         [SerializeField] private List<WeaponDefinition> _loadout = new List<WeaponDefinition>();
+        private List<WeaponMods> _loadoutMods = new List<WeaponMods>();
+        private readonly List<IWeaponHandlingSource> _extraSources = new List<IWeaponHandlingSource>();
+        private readonly Dictionary<string, float> _reserveMultipliers = new Dictionary<string, float>();
         [Tooltip("Quick melee available with any weapon (rifle butt / knife).")]
         [SerializeField] private MeleeStats _quickMelee = new MeleeStats();
         [SerializeField] private float _meleeEquipSeconds = 0.35f;
@@ -109,10 +124,103 @@ namespace Deadfall.Player
         }
 
         /// <summary>Scales every firearm's reserve capacity (Gunner +25%). <paramref name="refill"/> fills to the new cap.</summary>
-        public void SetReserveCapacity(float multiplier, bool refill)
+        public void SetReserveCapacity(float multiplier, bool refill) => SetReserveCapacity("class", multiplier, refill);
+
+        /// <summary>Reserve capacity from several sources (class passive, Field Mods); they multiply.</summary>
+        public void SetReserveCapacity(string key, float multiplier, bool refill)
         {
+            _reserveMultipliers[key ?? string.Empty] = UnityEngine.Mathf.Max(0f, multiplier);
+            ApplyReserveCaps(refill);
+        }
+
+        private float ReserveMultiplier
+        {
+            get
+            {
+                float m = 1f;
+                foreach (float v in _reserveMultipliers.Values) m *= v;
+                return m;
+            }
+        }
+
+        private void ApplyReserveCaps(bool refill)
+        {
+            float mult = ReserveMultiplier;
             foreach (Slot s in _slots)
-                s.Firearm?.SetMaxReserve(UnityEngine.Mathf.RoundToInt(s.Definition.Firearm.MaxReserve * UnityEngine.Mathf.Max(0f, multiplier)), refill);
+                s.Firearm?.SetMaxReserve(UnityEngine.Mathf.RoundToInt(s.Stats.MaxReserve * mult), refill);
+        }
+
+        /// <summary>More handling modifiers on top of <see cref="HandlingSource"/> (Field Mods).</summary>
+        public void AddHandlingSource(IWeaponHandlingSource source)
+        {
+            if (source != null && !_extraSources.Contains(source)) _extraSources.Add(source);
+        }
+
+        public void RemoveHandlingSource(IWeaponHandlingSource source) => _extraSources.Remove(source);
+
+        /// <summary>Raised when a slot's weapon changes (pickups, purchases, loadout resets).</summary>
+        public event Action LoadoutChanged;
+
+        public WeaponDefinition DefinitionAt(int index) => index >= 0 && index < _slots.Count ? _slots[index].Definition : null;
+        public WeaponMods ModsAt(int index) => index >= 0 && index < _slots.Count ? _slots[index].Mods : null;
+        public WeaponMods CurrentMods => ModsAt(_current);
+        public WeaponStats CurrentStats => _current >= 0 ? _slots[_current].Stats : null;
+
+        /// <summary>
+        /// Which slot a new weapon goes in (D-07: two primaries, a sidearm, a melee weapon): pistols to the sidearm
+        /// slot, melee to the melee slot, anything else replaces the primary in hand (or the first primary).
+        /// </summary>
+        public int SlotFor(WeaponDefinition def)
+        {
+            if (def == null || _slots.Count == 0) return -1;
+            for (int i = 0; i < _slots.Count; i++) if (_slots[i].Definition == def) return i; // same weapon: upgrade in place
+            if (def.Category == WeaponCategory.Pistol || def.Category == WeaponCategory.Melee)
+            {
+                for (int i = 0; i < _slots.Count; i++) if (_slots[i].Definition.Category == def.Category) return i;
+            }
+            bool currentIsPrimary = _current >= 0 && _slots[_current].Definition.Category != WeaponCategory.Pistol && !_slots[_current].IsMelee;
+            if (currentIsPrimary) return _current;
+            for (int i = 0; i < _slots.Count; i++)
+                if (_slots[i].Definition.Category != WeaponCategory.Pistol && !_slots[i].IsMelee) return i;
+            return 0;
+        }
+
+        /// <summary>Puts a weapon in a slot (full ammo) and equips it.</summary>
+        public void ReplaceSlot(int index, WeaponDefinition def, WeaponMods mods)
+        {
+            if (def == null || index < 0 || index >= _slots.Count) return;
+            _slots[index] = MakeSlot(def, mods);
+            if (index < _loadout.Count) { _loadout[index] = def; while (_loadoutMods.Count <= index) _loadoutMods.Add(null); _loadoutMods[index] = mods; }
+            ApplyReserveCaps(true);
+            _current = -1;
+            Equip(index);
+            LoadoutChanged?.Invoke();
+        }
+
+        /// <summary>Replaces the whole loadout at runtime (run start, class change).</summary>
+        public void ResetLoadout(IList<LoadoutEntry> entries)
+        {
+            _loadout = new List<WeaponDefinition>();
+            _loadoutMods = new List<WeaponMods>();
+            foreach (LoadoutEntry e in entries) { _loadout.Add(e.Definition); _loadoutMods.Add(e.Mods); }
+            if (isActiveAndEnabled) BuildSlots();
+            LoadoutChanged?.Invoke();
+        }
+
+        private Slot MakeSlot(WeaponDefinition def, WeaponMods mods)
+        {
+            var slot = new Slot { Definition = def, Mods = mods ?? WeaponMods.Standard() };
+            if (def.Kind == WeaponKind.Firearm)
+            {
+                slot.Stats = WeaponModder.Apply(def.Firearm, slot.Mods, out slot.DamageMultiplier);
+                slot.Firearm = WeaponStateMachine.CreateFull(slot.Stats);
+                slot.Spread = new SpreadModel(slot.Stats);
+            }
+            else
+            {
+                slot.DamageMultiplier = WeaponModder.TierDamage(slot.Mods.Tier) * Mathf.Clamp(slot.Mods.DamageRoll, 0.9f, 1.15f);
+            }
+            return slot;
         }
 
         public int SlotCount => _slots.Count;
@@ -156,17 +264,13 @@ namespace Deadfall.Player
         private void BuildSlots()
         {
             _slots.Clear();
-            foreach (WeaponDefinition def in _loadout)
+            for (int i = 0; i < _loadout.Count; i++)
             {
+                WeaponDefinition def = _loadout[i];
                 if (def == null) continue;
-                var slot = new Slot { Definition = def };
-                if (def.Kind == WeaponKind.Firearm)
-                {
-                    slot.Firearm = WeaponStateMachine.CreateFull(def.Firearm);
-                    slot.Spread = new SpreadModel(def.Firearm);
-                }
-                _slots.Add(slot);
+                _slots.Add(MakeSlot(def, i < _loadoutMods.Count ? _loadoutMods[i] : null));
             }
+            ApplyReserveCaps(true);
             _current = -1;
             if (_slots.Count > 0) Equip(0);
             LoadoutBuilt?.Invoke();
@@ -184,9 +288,9 @@ namespace Deadfall.Player
             if (slot.Firearm != null)
             {
                 slot.Firearm.Equip(now);
-                _equipEnd = now + slot.Definition.Firearm.EquipSeconds / _handling.EquipSpeed;
+                _equipEnd = now + slot.Stats.EquipSeconds / _handling.EquipSpeed;
                 slot.Spread.Reset();
-                if (_look != null) _look.AimFovMultiplier = slot.Definition.Firearm.AimFovMultiplier;
+                if (_look != null) _look.AimFovMultiplier = slot.Stats.AimFovMultiplier;
             }
             else
             {
@@ -221,12 +325,12 @@ namespace Deadfall.Player
 
             // Sprint → fire delay: weapons need a moment to come up after sprinting.
             if (_motor != null && _motor.IsSprinting) _lastSprintTime = now;
-            float sprintToFire = slot.Firearm != null ? slot.Definition.Firearm.SprintToFireSeconds : 0.1f;
+            float sprintToFire = slot.Firearm != null ? slot.Stats.SprintToFireSeconds : 0.1f;
             bool sprintRecovered = now >= _lastSprintTime + sprintToFire;
 
             // Aim
             bool canAim = slot.Firearm != null && !IsMeleeing && !equipping;
-            float aimTime = slot.Firearm != null ? Mathf.Max(0.01f, slot.Definition.Firearm.AimInSeconds) : 0.2f;
+            float aimTime = slot.Firearm != null ? Mathf.Max(0.01f, slot.Stats.AimInSeconds) : 0.2f;
             _aimBlend = Mathf.MoveTowards(_aimBlend, canAim && f.AimHeld ? 1f : 0f, dt / aimTime);
 
             bool fireIntent = f.FireHeld || f.FirePressed;
@@ -269,7 +373,7 @@ namespace Deadfall.Player
                 CurrentSpread = slot.Spread.CurrentHalfAngle(_aimBlend, moveFactor, airborne);
 
                 if (shots == 0 && !f.FireHeld && _look != null)
-                    _look.RecoverRecoil(slot.Definition.Firearm.RecoilRecoveryPerSecond, dt);
+                    _look.RecoverRecoil(slot.Stats.RecoilRecoveryPerSecond, dt);
             }
             else
             {
@@ -280,7 +384,7 @@ namespace Deadfall.Player
             {
                 _status.AimBlend = _aimBlend;
                 _status.SprintBlocked = _aimBlend > 0.05f || fireIntent || IsMeleeing;
-                float weaponMove = slot.Firearm != null ? slot.Definition.Firearm.MoveSpeedMultiplier : slot.Definition.Melee.MoveSpeedMultiplier;
+                float weaponMove = slot.Firearm != null ? slot.Stats.MoveSpeedMultiplier : slot.Definition.Melee.MoveSpeedMultiplier;
                 _status.WeaponMoveMultiplier = weaponMove;
             }
 
@@ -307,11 +411,25 @@ namespace Deadfall.Player
 
         private void FireOneShot(Slot slot)
         {
-            WeaponStats w = slot.Definition.Firearm;
+            WeaponStats w = slot.Stats;
             Transform cam = _look != null && _look.Camera != null ? _look.Camera.transform : transform;
             Vector3 origin = cam.position;
             float spread = slot.Spread.CurrentHalfAngle(_aimBlend, _motor != null ? _motor.MoveFactor : 0f, _motor != null && !_motor.IsGrounded);
             Vector3 muzzle = _viewmodel != null ? _viewmodel.MuzzlePosition : origin + cam.forward * 0.5f;
+
+            if (w.IsProjectile)
+            {
+                // Launchers: one projectile per shot, exploding on impact (damage resolved where authoritative).
+                SpreadModel.SampleOffset(_rng, spread, out float yo, out float po);
+                Vector3 pdir = cam.rotation * (Quaternion.Euler(-po, yo, 0f) * Vector3.forward);
+                ProjectileServices.Current.Launch(gameObject, slot.Definition.ContentId, origin + pdir * 0.7f, pdir * w.ProjectileSpeed,
+                    w.Damage * _handling.Damage * slot.DamageMultiplier, w.ExplosionRadius);
+                slot.Spread.OnShot();
+                float pr = Mathf.Lerp(1f, w.AimRecoilMultiplier, _aimBlend) * _handling.Recoil;
+                if (_look != null) _look.AddRecoil(w.RecoilPitch * pr, _rng.Range(-w.RecoilYaw, w.RecoilYaw) * pr);
+                if (_viewmodel != null) _viewmodel.Kick(pr);
+                return;
+            }
 
             int pellets = Mathf.Max(1, w.PelletsPerShot);
             for (int p = 0; p < pellets; p++)
@@ -334,7 +452,7 @@ namespace Deadfall.Player
                             Origin = origin,
                             Point = hit.point,
                             WeaponId = slot.Definition.ContentId,
-                            Request = DamageRequest.FromWeapon(w, zone, hit.distance, weak, _handling.Damage),
+                            Request = DamageRequest.FromWeapon(w, zone, hit.distance, weak, _handling.Damage * slot.DamageMultiplier),
                         });
                     }
                 }
@@ -381,7 +499,8 @@ namespace Deadfall.Player
             Transform cam = _look != null && _look.Camera != null ? _look.Camera.transform : transform;
             CombatQueries.MeleeArc(cam.position, cam.forward, _activeMelee, transform, _meleeTargets);
             string weaponId = CurrentDefinition != null && CurrentDefinition.Kind == WeaponKind.Melee ? CurrentDefinition.ContentId : "melee.quick";
-            float outgoing = _handling.MeleeDamage * (_activeMeleeBonus.HasValue ? Mathf.Max(0f, _activeMeleeBonus.Value.DamageMultiplier) : 1f);
+            float tierMult = CurrentDefinition != null && CurrentDefinition.Kind == WeaponKind.Melee && _current >= 0 ? _slots[_current].DamageMultiplier : 1f;
+            float outgoing = tierMult * _handling.MeleeDamage * (_activeMeleeBonus.HasValue ? Mathf.Max(0f, _activeMeleeBonus.Value.DamageMultiplier) : 1f);
             bool stagger = _activeMeleeBonus.HasValue && _activeMeleeBonus.Value.Stagger;
             _activeMeleeBonus = null;
             for (int i = 0; i < _meleeTargets.Count; i++)
@@ -409,6 +528,7 @@ namespace Deadfall.Player
         {
             _handling = WeaponHandling.Default;
             HandlingSource?.ModifyHandling(slot.Definition, ref _handling);
+            for (int i = 0; i < _extraSources.Count; i++) _extraSources[i].ModifyHandling(slot.Definition, ref _handling);
             if (slot.Firearm == null) return;
             slot.Firearm.FireRateMultiplier = _handling.FireRate;
             slot.Firearm.ReloadSpeedMultiplier = _handling.ReloadSpeed;

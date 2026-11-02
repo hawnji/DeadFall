@@ -70,7 +70,7 @@ namespace Deadfall.DebugTools
                 GUI.Label(new Rect(Screen.width - 420f, 8f, 408f, 22f), line, _status);
 
             bool paused = _cursor == null || !_cursor.IsLocked;
-            if (!paused) return;
+            if (!paused || Deadfall.Core.UiModal.Active) return;
 
             float w = 340f, h = 210f;
             var area = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.4f + 50f, w, h);

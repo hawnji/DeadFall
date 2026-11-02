@@ -37,7 +37,9 @@ namespace Deadfall.Player
         public float Normalized => _model.Normalized;
         public bool IsAlive => !_model.IsDead;
         /// <summary>Base reduction combined with <see cref="BonusDamageReduction"/> (never reaches 100%).</summary>
-        public float DamageReduction => 1f - (1f - Mathf.Clamp01(_damageReduction)) * (1f - Mathf.Clamp01(BonusDamageReduction));
+        public float DamageReduction => 1f - (1f - Mathf.Clamp01(_damageReduction)) * (1f - Mathf.Clamp01(BonusDamageReduction)) * (1f - Mathf.Clamp(ModDamageReduction, 0f, 0.6f));
+        /// <summary>Damage reduction from Field Mods and skills (separate from class passives, capped at 60%).</summary>
+        public float ModDamageReduction { get; set; }
         /// <summary>Extra reduction from class passives and abilities, set by whoever owns it each frame.</summary>
         public float BonusDamageReduction { get; set; }
         public bool Invulnerable { get; set; }
@@ -87,6 +89,9 @@ namespace Deadfall.Player
         }
 
         public float Heal(float amount) => _model.Heal(amount);
+
+        /// <summary>Extra max health (Field Mods, skills).</summary>
+        public void SetBonusMaxHealth(float bonus) => _model?.SetBonusMax(bonus);
 
         public void Revive()
         {

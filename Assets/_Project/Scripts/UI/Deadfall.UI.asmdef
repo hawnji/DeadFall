@@ -15,7 +15,8 @@
         "Deadfall.Rules.Encounters",
         "Deadfall.Rules.Classes",
         "Unity.Netcode.Runtime",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Deadfall.Rules.Combat"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

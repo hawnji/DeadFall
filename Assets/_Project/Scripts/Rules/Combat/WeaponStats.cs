@@ -63,6 +63,16 @@ namespace Deadfall.Rules.Combat
 
         public string AmmoTypeId = "ammo.rifle";
 
+        /// <summary>0 = hitscan. Above 0, each shot launches a projectile at this speed (m/s) that explodes on impact.</summary>
+        public float ProjectileSpeed;
+        /// <summary>Blast radius for projectile weapons (damage uses <see cref="Damage"/> with explosion falloff).</summary>
+        public float ExplosionRadius;
+
+        public bool IsProjectile => ProjectileSpeed > 0f;
+
+        /// <summary>A separate copy, for applying tiers and attachments without touching the shared definition.</summary>
+        public WeaponStats Clone() => (WeaponStats)MemberwiseClone();
+
         public float SecondsBetweenShots => RoundsPerMinute > 0f ? 60f / RoundsPerMinute : float.MaxValue;
     }
 
