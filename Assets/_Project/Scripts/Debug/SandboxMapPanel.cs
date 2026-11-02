@@ -31,7 +31,7 @@ namespace Deadfall.DebugTools
                 _small = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
             }
             GUI.depth = -10;
-            const float w = 280f, h = 250f;
+            const float w = 280f, h = 290f;
             var area = new Rect(Screen.width - w - 24f, Screen.height * 0.5f - h * 0.5f, w, h);
             GUI.Box(area, GUIContent.none);
             GUILayout.BeginArea(new Rect(area.x + 12f, area.y + 10f, w - 24f, h - 20f));
@@ -64,9 +64,11 @@ namespace Deadfall.DebugTools
             if (boot.InMap)
             {
                 if (map.OpenSectors < map.SectorCount && GUILayout.Button("Open next sector (debug)", GUILayout.Height(24f))) map.OpenNextSector();
+                ObjectiveDirector objectives = ObjectiveDirector.Current;
+                if (objectives != null && GUILayout.Button("Start Operation Cold Start", GUILayout.Height(24f))) objectives.StartOperation();
                 if (GUILayout.Button("Back to sandbox", GUILayout.Height(24f))) boot.EnterSandbox();
             }
-            GUILayout.Label("Press N to start a Survival run. Sectors open after surges 3, 7 and 12.", _small);
+            GUILayout.Label("Press N to start a Survival run (sectors open after surges 3, 7 and 12), or start an Operation on a map.", _small);
             GUILayout.EndArea();
         }
 

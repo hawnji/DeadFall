@@ -36,6 +36,9 @@ namespace Deadfall.Encounters
         private static WaveManager _current;
 
         private SurgeRun _run;
+        private int _defaultFinalSurge;
+        private float _defaultLullSeconds;
+        private bool _operation;
         private WavePlanner _planner;
         private SpawnDirector _director;
         private readonly CreditLedger _credits = new CreditLedger();
@@ -65,6 +68,8 @@ namespace Deadfall.Encounters
         public SurgeType SurgeType => _type;
         public int Directions => _directions;
         public int FinalSurge => _runSettings.FinalSurge;
+        /// <summary>Host/offline: true while an Operations mission runs (no final surge; objectives end it).</summary>
+        public bool IsOperation => _operation;
         public float TimeLeft => Mathf.Max(0f, (float)(_phaseEndsAt - Time.timeAsDouble));
         public int EnemiesRemaining => _remaining;
         public int ReadyCount => _readyCount;
@@ -78,6 +83,15 @@ namespace Deadfall.Encounters
         public SurgePlan CurrentPlan => _plan;
         public int LocalCredits => _credits.Get(LocalId);
         public int CreditsOf(ulong clientId) => _credits.Get(clientId);
+        /// <summary>Host/offline: client ids of the players in the run (local first).</summary>
+        public IReadOnlyList<ulong> Players
+        {
+            get
+            {
+                if (IsAuthority) RefreshPlayers();
+                return _players;
+            }
+        }
 
         /// <summary>Phase changes, raised on every machine (clients derive them from host messages).</summary>
         public event Action<RunPhase, RunPhase> PhaseChanged;
@@ -95,6 +109,8 @@ namespace Deadfall.Encounters
         {
             _current = this;
             _run = new SurgeRun(_runSettings);
+            _defaultFinalSurge = _runSettings.FinalSurge;
+            _defaultLullSeconds = _runSettings.LullSeconds;
             _planner = new WavePlanner(new DifficultyCurve(_difficulty), BuildOptions(PrototypeEnemies.All));
             _director = new SpawnDirector(PrototypeEnemies.All);
         }
@@ -167,11 +183,50 @@ namespace Deadfall.Encounters
 
         // ---------------------------------------------------------------- commands
 
+        /// <summary>
+        /// Host/offline: starts an Operations run: no final surge, lulls on a timer, and the objective director ends it
+        /// with <see cref="CompleteRun"/> when extraction is held.
+        /// </summary>
+        public bool StartOperation(ulong seed, float lullSeconds)
+        {
+            if (!StartRun(seed)) return false;
+            _operation = true;
+            _runSettings.FinalSurge = 0;
+            _runSettings.LullSeconds = Mathf.Max(3f, lullSeconds);
+            GameLog.Info("Waves", "Operations run: surges continue until extraction.");
+            return true;
+        }
+
+        /// <summary>Host/offline: lull length for the rest of the run (extraction pressure).</summary>
+        public void SetLullSeconds(float seconds)
+        {
+            if (!IsAuthority) return;
+            _runSettings.LullSeconds = Mathf.Max(1f, seconds);
+            _run.ShortenLull(Time.timeAsDouble, _runSettings.LullSeconds);
+        }
+
+        /// <summary>Host/offline: ends the run as a win now (Operations extraction).</summary>
+        public void CompleteRun(string subtitle = null)
+        {
+            if (!IsAuthority || !_run.IsRunning) return;
+            _director.Stop();
+            _director.KillAll();
+            _run.Complete();
+            _completeSubtitle = subtitle;
+            SyncFromRun();
+        }
+
+        private string _completeSubtitle;
+
         /// <summary>Host/offline: starts a new run (ending any current one). Seed 0 picks a random seed.</summary>
         public bool StartRun(ulong seed = 0)
         {
             if (!IsAuthority) return false;
             StopRun();
+            _operation = false;
+            _completeSubtitle = null;
+            _runSettings.FinalSurge = _defaultFinalSurge;
+            _runSettings.LullSeconds = _defaultLullSeconds;
             _seed = seed != 0 ? seed : (ulong)DateTime.UtcNow.Ticks;
             _credits.Clear();
             RefreshPlayers();
@@ -189,6 +244,9 @@ namespace Deadfall.Encounters
             _director.KillAll();
             EnemyAttacks.ClearAll();
             _run.Abort();
+            _operation = false;
+            _runSettings.FinalSurge = _defaultFinalSurge;
+            _runSettings.LullSeconds = _defaultLullSeconds;
             _plan = null;
             _ready.Clear();
             SyncFromRun();
@@ -397,8 +455,9 @@ namespace Deadfall.Encounters
             switch (phase)
             {
                 case RunPhase.Lull:
-                    title = _surge == 1 ? "DEPLOYMENT STARTED" : "LULL";
-                    subtitle = $"Surge {_surge} incoming · press G when ready";
+                    title = _surge == 1 ? (_operation ? "OPERATION STARTED" : "DEPLOYMENT STARTED") : "LULL";
+                    subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives"
+                                          : $"Surge {_surge} incoming · press G when ready";
                     break;
                 case RunPhase.Surge:
                     title = $"SURGE {_surge}";
@@ -418,8 +477,8 @@ namespace Deadfall.Encounters
                     subtitle = $"+{_run.ClearBonus(_surge)} Field Credits";
                     break;
                 case RunPhase.Complete:
-                    title = "DEPLOYMENT COMPLETE";
-                    subtitle = $"All {_surge} surges cleared";
+                    title = _completeSubtitle != null ? "OPERATION COMPLETE" : "DEPLOYMENT COMPLETE";
+                    subtitle = _completeSubtitle ?? $"All {_surge} surges cleared";
                     break;
                 case RunPhase.Failed:
                     title = "SQUAD WIPED";

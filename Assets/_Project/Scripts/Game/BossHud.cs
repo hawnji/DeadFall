@@ -63,7 +63,7 @@ namespace Deadfall.Game
             Enemy b = _boss;
             if (b == null || !b.IsAlive) return;
             float w = Mathf.Min(560f, Screen.width - 80f);
-            float x = (Screen.width - w) * 0.5f, y = 54f;
+            float x = (Screen.width - w) * 0.5f, y = 130f;
             GUI.Label(new Rect(x, y - 26f, w, 24f), b.Definition.DisplayName.ToUpperInvariant(), _name);
             GUI.color = new Color(0f, 0f, 0f, 0.6f);
             GUI.DrawTexture(new Rect(x, y, w, 12f), _white);

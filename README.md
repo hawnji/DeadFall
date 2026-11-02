@@ -17,7 +17,8 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M5 – Procedural maps | Done (editor check held until M10): Cinder Ridge greybox kit, seeded layouts, sectors, loot, secrets |
 | M6 – Weapons and run progression | Done (editor check held until M10): 8 weapons, tiers and attachments, Supply Caches, drops, Field Mods, weapon XP |
 | M7 – Advanced enemies and encounters | Done (editor check held until M10): Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, Specimen Zero, variants, Elite/Hunt/Supply/Specimen surges |
-| M8–M13 | See `IMPLEMENTATION_ROADMAP.md` |
+| M8 – Objectives, events, environment | Done (editor check held until M10): side objectives, Operation Cold Start with extraction, Blackout / Stalker / Lockdown events |
+| M9–M13 | See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -82,6 +83,8 @@ Maps (M5): Esc shows the map panel on the right: type a seed and press Generate 
 Run economy (M6): F opens Supply Caches and takes weapon drops; T picks a Field Mod when one is offered (every third surge, and after a Specimen).
 
 Enemies (M7): F12 spawns the next advanced enemy in the sandbox (hold Ctrl for a mutation variant).
+
+Objectives (M8): F uses objective props; L toggles the flashlight. On a map, Esc → Start Operation Cold Start plays a mission that ends in an extraction defense.
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
 

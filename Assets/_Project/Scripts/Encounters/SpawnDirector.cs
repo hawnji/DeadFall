@@ -186,7 +186,8 @@ namespace Deadfall.Encounters
         /// Spawns extra enemies around <paramref name="center"/> that count toward the surge (Specimen summons,
         /// Splitting variants). Ignores the surge's concurrency but not the global cap. Returns how many spawned.
         /// </summary>
-        public int SpawnNear(EnemyDefinition def, Vector3 center, int count, float minRadius = 1f, float maxRadius = 4f)
+        public int SpawnNear(EnemyDefinition def, Vector3 center, int count, float minRadius = 1f, float maxRadius = 4f,
+            List<Enemy> spawnedInto = null)
         {
             EnemyManager manager = EnemyManager.Current;
             if (manager == null || def == null) return 0;
@@ -201,6 +202,7 @@ namespace Deadfall.Encounters
                 if (e == null) continue;
                 e.Alert();
                 _alive.Add(e);
+                spawnedInto?.Add(e);
                 spawned++;
             }
             return spawned;

@@ -165,6 +165,7 @@ namespace Deadfall.Game
             bool had = Map != null;
             if (Map != null) _builder.Clear(Map);
             Map = null;
+            Sealed = false;
             _navMesh.Clear();
             LootNetwork.ClearAll();
             Deadfall.Enemies.EnemyAttacks.ClearAll();
@@ -195,6 +196,13 @@ namespace Deadfall.Game
 
         // ---------------------------------------------------------------- sectors
 
+        /// <summary>Host/offline: opens every sector (Operations runs, T-47).</summary>
+        public void OpenAllSectors()
+        {
+            if (!IsAuthority || Map == null || OpenSectors >= SectorCount) return;
+            SetOpen(SectorCount, true);
+        }
+
         /// <summary>Host/offline: opens the next sector now (debug panel).</summary>
         public void OpenNextSector()
         {
@@ -210,7 +218,7 @@ namespace Deadfall.Game
             OpenSectors = open;
             foreach (SectorDoor d in Map.Doors)
             {
-                if (d.Sector < open) d.Open();
+                if (d.Sector < open && !Sealed) d.Open();
                 else if (reset) d.CloseImmediate();
             }
             ApplySpawnPoints();
@@ -251,6 +259,53 @@ namespace Deadfall.Game
             {
                 int open = SectorSchedule.OpenSectors(_waves.Surge, SectorCount);
                 if (open > OpenSectors) SetOpen(open, true);
+            }
+        }
+
+        /// <summary>True during an Emergency Lockdown: every sector door is shut until the terminal is hacked.</summary>
+        public bool Sealed { get; private set; }
+
+        /// <summary>
+        /// Seals or unseals every sector door on this machine (each peer calls it from the synced event state). Sealing
+        /// closes open doors at once; unsealing reopens the ones whose sector is open.
+        /// </summary>
+        public void SetSealed(bool sealedDoors)
+        {
+            if (Map == null || Sealed == sealedDoors) return;
+            Sealed = sealedDoors;
+            foreach (SectorDoor d in Map.Doors)
+            {
+                if (sealedDoors) d.CloseImmediate();
+                else if (d.Sector < OpenSectors) d.Open();
+            }
+        }
+
+        /// <summary>Rooms in open sectors that suit objective props (not the airlock, corridors or secret rooms).</summary>
+        public void OpenObjectiveRooms(System.Collections.Generic.List<int> into, bool includeSpawn = false)
+        {
+            into.Clear();
+            if (Map == null) return;
+            var rooms = Map.Layout.Rooms;
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                PlacedRoom r = rooms[i];
+                if (r.Sector >= OpenSectors) continue;
+                RoomRole role = r.Template.Role;
+                if (role == RoomRole.Corridor || role == RoomRole.Secret) continue;
+                if (role == RoomRole.Spawn && !includeSpawn) continue;
+                into.Add(i);
+            }
+        }
+
+        /// <summary>The airlock (spawn room) index, or -1.</summary>
+        public int SpawnRoom
+        {
+            get
+            {
+                if (Map == null) return -1;
+                var rooms = Map.Layout.Rooms;
+                for (int i = 0; i < rooms.Count; i++) if (rooms[i].Template.Role == RoomRole.Spawn) return i;
+                return -1;
             }
         }
 
