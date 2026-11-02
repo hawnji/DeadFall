@@ -3,13 +3,16 @@ using UnityEngine;
 namespace Deadfall.Core
 {
     /// <summary>
-    /// Placeholder materials created from code. Builds strip any shader that no asset references, so
-    /// <c>Shader.Find("Universal Render Pipeline/Lit")</c> works in the editor but returns null in a build
-    /// (everything turns pink). Instead this copies the render pipeline's default material, the one Unity
-    /// gives new primitives, which is always included because the pipeline asset references it.
+    /// Placeholder materials created from code. Builds strip any shader that no asset references, and in a
+    /// URP player build primitives made at runtime get a material URP can't draw, so both
+    /// <c>Shader.Find("Universal Render Pipeline/Lit")</c> and the primitive's own material render pink.
+    /// The fix is a real material asset in Resources (<c>Resources/Materials/RuntimeLit.mat</c>, URP Lit):
+    /// everything in Resources ships with the build, so its shader does too. The other paths are fallbacks
+    /// for the editor and for the built-in pipeline.
     /// </summary>
     public static class RuntimeMaterials
     {
+        private const string ResourcePath = "Materials/RuntimeLit";
         private static Material _base;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -34,6 +37,13 @@ namespace Deadfall.Core
             get
             {
                 if (_base != null) return _base;
+                bool srpActive = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+                Material asset = srpActive ? Resources.Load<Material>(ResourcePath) : null;
+                if (asset != null)
+                {
+                    _base = new Material(asset) { name = "RuntimeLit" };
+                    return _base;
+                }
                 GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Material pipelineDefault = probe.GetComponent<Renderer>().sharedMaterial;
                 Object.Destroy(probe);
