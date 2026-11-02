@@ -45,8 +45,10 @@ namespace Deadfall.Combat
                 return;
             }
             _instance = this;
+            // Sprites/Default is in Unity's "Always Included Shaders" list, so it survives builds. If a project
+            // removes it, fall back to the pipeline's lit material rather than drawing pink.
             Shader shader = Shader.Find("Sprites/Default");
-            _material = shader != null ? new Material(shader) : null;
+            _material = shader != null ? new Material(shader) : Deadfall.Core.RuntimeMaterials.CreateLit(_color);
             for (int i = 0; i < _capacity; i++) _free.Push(Create());
         }
 

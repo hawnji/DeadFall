@@ -1,4 +1,5 @@
 using Deadfall.Combat;
+using Deadfall.Core;
 using Deadfall.Rules.Combat;
 using Deadfall.Rules.Common;
 using UnityEngine;
@@ -24,7 +25,6 @@ namespace Deadfall.Player
         private float _kick;
         private Vector3 _currentPos;
         private Quaternion _currentRot = Quaternion.identity;
-        private Material _material;
 
         private float _aim, _equip = 1f, _reload, _melee = 1f, _move;
         private bool _meleeing, _sprinting;
@@ -34,10 +34,6 @@ namespace Deadfall.Player
         private void Awake()
         {
             _currentPos = _hipPosition;
-            bool srp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
-            Shader shader = Shader.Find(srp ? "Universal Render Pipeline/Lit" : "Standard");
-            if (shader == null) shader = Shader.Find("Standard");
-            if (shader != null) _material = new Material(shader);
         }
 
         public void Show(WeaponDefinition def)
@@ -81,13 +77,7 @@ namespace Deadfall.Player
             var r = part.GetComponent<Renderer>();
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
-            if (_material != null)
-            {
-                var m = new Material(_material);
-                if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
-                else m.color = color;
-                r.sharedMaterial = m;
-            }
+            r.sharedMaterial = RuntimeMaterials.CreateLit(color);
         }
 
         public void Kick(float multiplier) => _kick = Mathf.Min(1.5f, _kick + multiplier);
