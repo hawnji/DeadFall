@@ -1,3 +1,4 @@
+using Deadfall.Core;
 using Deadfall.Player;
 using Deadfall.UI;
 using UnityEngine;
@@ -15,7 +16,6 @@ namespace Deadfall.DebugTools
         [SerializeField] private Vector3 _spawnPosition = new Vector3(0f, 0.05f, 0f);
         [SerializeField] private float _spawnYaw;
 
-        private static Material _baseMaterial;
         private Transform _world;
 
         private void Awake()
@@ -175,22 +175,11 @@ namespace Deadfall.DebugTools
             return go;
         }
 
-        /// <summary>Applies a flat URP Lit color (falls back to the default material's color).</summary>
+        /// <summary>Applies a flat lit color that also works in builds (see RuntimeMaterials).</summary>
         public static void Tint(GameObject go, Color color)
         {
             var r = go.GetComponent<Renderer>();
-            if (r == null) return;
-            if (_baseMaterial == null)
-            {
-                // Works with or without URP set up: URP Lit when a render pipeline asset is active, Standard otherwise.
-                bool srp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
-                Shader shader = Shader.Find(srp ? "Universal Render Pipeline/Lit" : "Standard");
-                _baseMaterial = shader != null ? new Material(shader) : new Material(r.sharedMaterial);
-            }
-            var m = new Material(_baseMaterial);
-            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
-            if (m.HasProperty("_Color")) m.color = color;
-            r.sharedMaterial = m;
+            if (r != null) r.sharedMaterial = RuntimeMaterials.CreateLit(color);
         }
     }
 }
