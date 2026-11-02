@@ -23,6 +23,7 @@ namespace Deadfall.Combat
         public const float EdgeDamageFraction = 0.3f;
         private static readonly Collider[] Overlap = new Collider[64];
         private static readonly HashSet<IDamageable> Seen = new HashSet<IDamageable>();
+        private static readonly RaycastHit[] LosHits = new RaycastHit[16];
 
         /// <summary>Returns how many targets took damage.</summary>
         public static int Detonate(Vector3 center, float radius, float damage, GameObject source, string weaponId,
@@ -38,6 +39,7 @@ namespace Deadfall.Combat
                 if (target == null || !target.IsAlive || !Seen.Add(target)) continue;
                 if (target is Component c && PlayerIdentity.Of(c.gameObject) != null) continue; // players handled below
                 Vector3 point = Overlap[i].ClosestPoint(center);
+                if (!HasLineOfSight(center, Overlap[i].bounds.center, Overlap[i])) continue;
                 if (Apply(target, center, point, radius, damage, source, weaponId, knockback, attacker)) hits++;
             }
 
@@ -45,12 +47,35 @@ namespace Deadfall.Combat
             if (selfDamageMultiplier > 0f && source != null && source.TryGetComponent(out IDamageable self) && self.IsAlive && Seen.Add(self))
             {
                 Vector3 p = source.transform.position + Vector3.up;
-                if ((p - center).sqrMagnitude <= radius * radius)
+                if ((p - center).sqrMagnitude <= radius * radius && HasLineOfSight(center, p, null))
                     Apply(self, center, p, radius, damage * selfDamageMultiplier, source, weaponId, 0f, null);
             }
 
             EventBus<ExplosionHappened>.Publish(new ExplosionHappened { Position = center, Radius = radius, Source = source });
             return hits;
+        }
+
+        /// <summary>
+        /// True unless level geometry sits between the blast and the target (T-30 follow-up, M5). Other damageable
+        /// things (enemies, dummies) don't shield what's behind them. The start is lifted off the floor so a blast
+        /// on the ground isn't blocked by the floor it sits on.
+        /// </summary>
+        public static bool HasLineOfSight(Vector3 center, Vector3 target, Collider targetCollider)
+        {
+            Vector3 from = center + Vector3.up * 0.2f;
+            Vector3 delta = target - from;
+            float distance = delta.magnitude;
+            if (distance < 0.05f) return true;
+            int n = Physics.RaycastNonAlloc(from, delta / distance, LosHits, distance, CombatQueries.HitMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                Collider col = LosHits[i].collider;
+                if (col == null || col == targetCollider) continue;
+                if (Hurtbox.TryResolve(col, out IDamageable d, out _, out _) && d != null) continue;
+                if (col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic) continue; // loose props
+                return false;
+            }
+            return true;
         }
 
         /// <summary>Damage at <paramref name="distance"/> from the centre.</summary>

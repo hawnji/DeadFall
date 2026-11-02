@@ -9,7 +9,9 @@
         "Deadfall.Core",
         "Deadfall.Rules.Common",
         "Deadfall.Rules.Progression",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Deadfall.Rules.World",
+        "Deadfall.Rules.Combat"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

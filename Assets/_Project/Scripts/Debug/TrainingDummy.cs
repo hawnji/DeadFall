@@ -85,6 +85,9 @@ namespace Deadfall.DebugTools
             _origin = transform.position;
         }
 
+        /// <summary>Forget every dummy now (the sandbox is being torn down), so a rebuild numbers them from 0 on every peer.</summary>
+        public static void ClearRegistry() => Registry.Clear();
+
         private void Start() => _origin = transform.position;
 
         private void OnDestroy()

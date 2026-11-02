@@ -33,6 +33,7 @@ namespace Deadfall.DebugTools
         private const string MsgPlayerDamage = "df.pdmg";
         private const byte TargetDummy = 0;
         private const byte TargetEnemy = 1;
+        private const byte TargetWorld = 2;
         private const float EnemyPointSlack = 3f; // enemy copies trail the host's by up to ~150 ms
         private const string QuickMeleeId = "melee.quick";
 
@@ -359,6 +360,11 @@ namespace Deadfall.DebugTools
                 kind = TargetEnemy;
                 id = enemy.SlotId;
             }
+            else if (claim.Target is INetTarget world)
+            {
+                kind = TargetWorld;
+                id = world.NetTargetId;
+            }
             else
             {
                 return;
@@ -435,6 +441,14 @@ namespace Deadfall.DebugTools
                 target = enemy;
                 targetCenter = enemy.transform.position + Vector3.up * (enemy.Definition.Height * 0.5f);
                 pointTolerance = MaxPointError + EnemyPointSlack;
+            }
+            else if (kind == TargetWorld)
+            {
+                INetTarget world = NetTargets.Find(index);
+                if (world == null) return; // already gone on the host
+                target = world;
+                targetCenter = world.NetTargetCenter;
+                pointTolerance = MaxPointError + world.NetTargetRadius;
             }
             else
             {

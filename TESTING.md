@@ -154,6 +154,26 @@ Two players (as §3.1):
 - [ ] A client Demolitionist's charge and bomblets are seen by both; enemies die on both screens. The client is hurt by their own blast; the host is not hurt by it.
 - [ ] Client Tank melee pushes host enemies.
 
+### 3.7 Manual checklist: M5 maps
+
+Solo:
+
+- [ ] Esc, then on the right **Generate** (seed 1): the sandbox is replaced by a grey underground facility and you stand in the airlock. **Random** gives a different layout each time; the same seed always gives the same one (compare the hash in the F9 overlay).
+- [ ] Walls have doorways only where rooms connect. Rooms have a light, a few crates, and a coloured square showing their sector.
+- [ ] Doors to later sectors are closed and tinted. **Open next sector (debug)** slides the next set open.
+- [ ] F9 shows the minimap: rooms in sector colours (faded while locked), red/green door dots, orange spawn points, yellow loot, you in green, enemies in red. It says "Validation: OK".
+- [ ] Press N: enemies spawn only in open sectors and path to you around closed doors. After surge 3 a "SECTOR 1 UNLOCKED" banner shows and those doors open; later surges also spawn there.
+- [ ] Look at an ammo crate or medkit: "[F] Take ammo" / "[F] Take medkit". F uses it once.
+- [ ] Find the cyan dot on the F9 map (a vent cover low on a wall). Shoot it; crouch through into the vent crawl and open the gold stash (full refill, +250 credits during a run).
+- [ ] A Cluster Charge thrown on the other side of a wall doesn't hurt enemies behind it.
+- [ ] **Back to sandbox** restores the M1 sandbox with its dummies.
+
+Two players (as §3.1):
+
+- [ ] The host generates a map: the client switches to the same layout and appears in the airlock. A client joining later gets the same map with the same doors open.
+- [ ] Only one player can take each pickup. A vent broken by either player opens for both.
+- [ ] Sector unlocks happen on both screens at once.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -196,7 +216,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 95/95 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-02: 105/105 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 

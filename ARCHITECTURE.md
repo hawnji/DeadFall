@@ -62,6 +62,7 @@ Assets/_Project/
     Base/         Deadfall.Base           FOB stations
     UI/           Deadfall.UI             screens, HUD, view models
     Audio/        Deadfall.Audio          audio service, pooled emitters
+    Game/         Deadfall.Game           deployment flow: map session, map HUD, debug overlay (FOB flow in M10)
     Debug/        Deadfall.DebugTools     cheats, overlays, gizmos (excluded from release)
   Tests/
     EditMode/     Deadfall.Tests.EditMode (Rules + Core logic)
@@ -77,7 +78,7 @@ Assets/_Project/
 | **Rules.Combat** | Damage formula, crits, weak points, armor, ammo/reload state machine, recoil/spread curves | `DamageCalculator`, `DamageRequest`, `DamageResult`, `AmmoState`, `WeaponStateMachine` |
 | **Rules.Encounters** | Wave composition planning, threat budgets, difficulty curves, event weighting | `WavePlanner`, `ThreatBudget`, `DifficultyCurve`, `WeightedTable<T>` |
 | **Rules.Classes** | Ability timing, passive math, melee combo chain, Squad Doctrine resolution | `AbilityTimer`, `ClassRules`, `MeleeCombo`, `DoctrineResolver` |
-| **Rules.World** | Map graph generation and validation (abstract sockets, bounds, connectivity) | `LayoutGenerator`, `LayoutGraph`, `LayoutValidator` |
+| **Rules.World** | Map graph generation and validation (abstract sockets, bounds, connectivity) | `LayoutGenerator`, `LayoutValidator`, `CinderRidgeKit`, `SectorSchedule` |
 | **Rules.Progression** | Upgrade rolling, stacking rules, economy, reward retention, save model and migrations | `UpgradeRoller`, `RewardCalculator`, `ProfileData`, `SaveMigrator` |
 | **Core** | Bootstrap, `ServiceRegistry`, `EventBus`, game state machine, scene loading, save IO, logging, config | `GameBootstrap`, `GameStateMachine`, `SceneService`, `SaveService` |
 | **Net** | NGO lifecycle, host/join, Relay/Lobby, `IAuthority`, request validation, compact snapshot channels | `SessionService`, `NetAuthority`, `EnemySnapshotChannel` |

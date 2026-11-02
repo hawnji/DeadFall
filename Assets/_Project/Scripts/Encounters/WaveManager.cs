@@ -137,6 +137,25 @@ namespace Deadfall.Encounters
 
         public void AddSpawnPoint(Vector3 position, int group) => _director.AddPoint(position, group);
 
+        /// <summary>Host/offline: gives Field Credits to a player (secret stashes, objectives). Synced to clients.</summary>
+        public void AwardCredits(ulong clientId, int amount, string reason)
+        {
+            if (!IsAuthority || amount <= 0) return;
+            _credits.Add(clientId, amount);
+            if (clientId == LocalId) LocalCreditsEarned?.Invoke(amount, reason);
+            _stateDirty = true;
+        }
+
+        /// <summary>Host/offline: spends a player's Field Credits (Supply Caches, sector doors, structures). False if short.</summary>
+        public bool TrySpendCredits(ulong clientId, int amount)
+        {
+            if (!IsAuthority) return false;
+            if (amount <= 0) return true;
+            if (!_credits.TrySpend(clientId, amount)) return false;
+            _stateDirty = true;
+            return true;
+        }
+
         public void ClearSpawnPoints() => _director.ClearPoints();
 
         // ---------------------------------------------------------------- commands

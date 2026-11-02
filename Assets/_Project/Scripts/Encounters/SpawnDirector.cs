@@ -23,6 +23,8 @@ namespace Deadfall.Encounters
     public sealed class SpawnDirector
     {
         public const float MinPlayerDistance = 15f;
+        /// <summary>Fallback when no point is 15 m away (small open areas): still never right next to a player.</summary>
+        public const float CloseMinPlayerDistance = 7f;
         public const float SpawnInterval = 0.4f;
         /// <summary>When far below concurrency, up to this many spawn per interval.</summary>
         public const int MaxBurst = 3;
@@ -147,8 +149,10 @@ namespace Deadfall.Encounters
             }
 
             int group = _activeGroups.Count > 0 ? _activeGroups[_groupCursor++ % _activeGroups.Count] : int.MinValue;
-            int point = PickPoint(group);
-            if (point < 0) point = PickPoint(int.MinValue); // this direction has nothing usable; try any
+            int point = PickPoint(group, MinPlayerDistance);
+            if (point < 0) point = PickPoint(int.MinValue, MinPlayerDistance); // this direction has nothing usable; try any
+            // Small maps (the first sector of a generated map): accept closer points rather than skipping enemies.
+            if (point < 0) point = PickPoint(int.MinValue, CloseMinPlayerDistance);
             Enemy enemy = null;
             if (point >= 0)
             {
@@ -185,11 +189,11 @@ namespace Deadfall.Encounters
         /// hidden from them if possible, and otherwise as close to the action as allowed. A little randomness
         /// among the top three keeps enemies from queueing on a single spot.
         /// </summary>
-        private int PickPoint(int group)
+        private int PickPoint(int group, float minDistance)
         {
             _candidates.Clear();
             _scores.Clear();
-            float minSq = MinPlayerDistance * MinPlayerDistance;
+            float minSq = minDistance * minDistance;
             for (int i = 0; i < _points.Count; i++)
             {
                 SpawnPoint p = _points[i];

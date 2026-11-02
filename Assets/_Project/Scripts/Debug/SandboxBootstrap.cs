@@ -1,5 +1,7 @@
 using Deadfall.Core;
 using Deadfall.Encounters;
+using Deadfall.Enemies;
+using Deadfall.Game;
 using Deadfall.Player;
 using Deadfall.UI;
 using Deadfall.World;
@@ -13,6 +15,8 @@ namespace Deadfall.DebugTools
     /// Areas: shooting range with distance markers, melee pit, movement course (ramps, stairs, jump
     /// boxes, crouch tunnel), and hazard/heal/ammo pads. Esc opens the co-op test panel (host / join).
     /// A NavMesh is baked at startup so enemies (F5-F8) can path anywhere on the ground.
+    /// M5: the pause screen can swap the sandbox for a generated Cinder Ridge map (seed field) and back; in co-op
+    /// the host's choice is mirrored on every client.
     /// </summary>
     public sealed class SandboxBootstrap : MonoBehaviour
     {
@@ -22,21 +26,22 @@ namespace Deadfall.DebugTools
         private Transform _world;
         private readonly RuntimeNavMesh _navMesh = new RuntimeNavMesh();
 
+        private MapSession _map;
+        private GameObject _player;
+        private WaveManager _waves;
+
+        public static SandboxBootstrap Current { get; private set; }
+        public bool InMap => _map != null && _map.HasMap;
+        public MapSession MapSession => _map;
+
         private void Awake()
         {
+            Current = this;
             DisableSceneCameras();
-            _world = new GameObject("[SandboxWorld]").transform;
-            EnsureLight();
-            BuildGround();
-            BuildShootingRange();
-            BuildMeleePit();
-            BuildMovementCourse();
-            BuildZones();
-            // Bake after all geometry exists. Layer 2 (Ignore Raycast) holds players, so they don't carve holes.
-            Physics.SyncTransforms();
-            _navMesh.Build(new Bounds(new Vector3(0f, 3f, 20f), new Vector3(92f, 12f, 132f)), ~(1 << PlayerFactory.PlayerLayer));
+            BuildSandbox();
 
-            GameObject player = PlayerFactory.CreateLocalPlayer(_spawnPosition, _spawnYaw, SandboxContent.DefaultLoadout());
+            _player = PlayerFactory.CreateLocalPlayer(_spawnPosition, _spawnYaw, SandboxContent.DefaultLoadout());
+            GameObject player = _player;
 
             var ui = new GameObject("[SandboxUI]");
             ui.AddComponent<PrototypeHud>().Bind(player);
@@ -46,6 +51,10 @@ namespace Deadfall.DebugTools
             // M4: classes. Pick one on the pause screen; Q uses the ability.
             ui.AddComponent<SandboxClassPanel>().Bind(player);
             ui.AddComponent<ClassHud>().Bind(player);
+            // M5: generated maps. Seed field on the pause screen, F9 map overlay.
+            ui.AddComponent<SandboxMapPanel>();
+            ui.AddComponent<MapHud>();
+            ui.AddComponent<MapDebugOverlay>();
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -56,10 +65,90 @@ namespace Deadfall.DebugTools
             net.AddComponent<Deadfall.Enemies.EnemyReplicator>();
             // M4: classes in co-op (roster, host-run shields, sentries and charges).
             net.AddComponent<Deadfall.Classes.ClassNetwork>().Bind(player.GetComponent<Deadfall.Classes.PlayerClass>());
+            // M5: host-authoritative pickups.
+            net.AddComponent<Deadfall.RunSystems.LootNetwork>();
 
             // M3: survival waves. Press N to start a run.
-            var waves = new GameObject("[Waves]").AddComponent<WaveManager>();
-            AddPerimeterSpawnPoints(waves);
+            _waves = new GameObject("[Waves]").AddComponent<WaveManager>();
+            AddPerimeterSpawnPoints(_waves);
+
+            // M5: the generated map lives here when active.
+            _map = new GameObject("[Map]").AddComponent<MapSession>();
+            _map.RemoteWorldRequested += OnRemoteWorldRequested;
+        }
+
+        private void OnDestroy()
+        {
+            if (Current == this) Current = null;
+            if (_map != null) _map.RemoteWorldRequested -= OnRemoteWorldRequested;
+        }
+
+        private void OnRemoteWorldRequested(ulong seed)
+        {
+            if (seed == 0) EnterSandbox();
+            else EnterMap(seed);
+        }
+
+        /// <summary>Swaps the sandbox (or the current map) for the generated map of <paramref name="seed"/>.</summary>
+        public bool EnterMap(ulong seed)
+        {
+            if (seed == 0) seed = 1;
+            PrepareSwitch();
+            ClearSandbox();
+            if (_map.Build(seed) == null)
+            {
+                EnterSandbox();
+                return false;
+            }
+            if (RenderSettings.sun != null) RenderSettings.sun.enabled = false;
+            _map.MoveLocalPlayerToSpawn();
+            return true;
+        }
+
+        /// <summary>Back to the M1 sandbox.</summary>
+        public void EnterSandbox()
+        {
+            PrepareSwitch();
+            _map.Clear();
+            if (_world == null) BuildSandbox();
+            if (_waves != null)
+            {
+                _waves.ClearSpawnPoints();
+                AddPerimeterSpawnPoints(_waves);
+            }
+            var motor = _player != null ? _player.GetComponent<PlayerMotor>() : null;
+            if (motor != null) motor.Teleport(_spawnPosition, _spawnYaw);
+        }
+
+        private void PrepareSwitch()
+        {
+            if (_waves != null) _waves.StopRun();
+            if (EnemyManager.Current != null) EnemyManager.Current.DespawnAll();
+        }
+
+        private void BuildSandbox()
+        {
+            _world = new GameObject("[SandboxWorld]").transform;
+            EnsureLight();
+            BuildGround();
+            BuildShootingRange();
+            BuildMeleePit();
+            BuildMovementCourse();
+            BuildZones();
+            // Bake after all geometry exists. Layer 2 (Ignore Raycast) holds players, so they don't carve holes.
+            Physics.SyncTransforms();
+            _navMesh.Build(new Bounds(new Vector3(0f, 3f, 20f), new Vector3(92f, 12f, 132f)), ~(1 << PlayerFactory.PlayerLayer));
+        }
+
+        private void ClearSandbox()
+        {
+            if (_world == null) return;
+            TrainingDummy.ClearRegistry();
+            _navMesh.Clear();
+            // Out of the way at once (the bake for the map happens this frame), destroyed at the end of it.
+            _world.gameObject.SetActive(false);
+            Destroy(_world.gameObject);
+            _world = null;
         }
 
         /// <summary>
@@ -92,7 +181,8 @@ namespace Deadfall.DebugTools
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.32f, 0.34f, 0.38f);
-            if (RenderSettings.sun != null || Object.FindAnyObjectByType<Light>() != null) return;
+            if (RenderSettings.sun != null) { RenderSettings.sun.enabled = true; return; }
+            if (Object.FindAnyObjectByType<Light>() != null && Object.FindAnyObjectByType<Light>().type == LightType.Directional) return;
             var go = new GameObject("Sun");
             go.transform.SetParent(_world, false);
             go.transform.rotation = Quaternion.Euler(50f, -30f, 0f);

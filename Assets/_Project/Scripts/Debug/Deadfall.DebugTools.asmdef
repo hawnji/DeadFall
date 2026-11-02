@@ -22,7 +22,9 @@
         "Deadfall.UI",
         "Deadfall.Audio",
         "Unity.Netcode.Runtime",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Deadfall.Game",
+        "Deadfall.Rules.World"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
