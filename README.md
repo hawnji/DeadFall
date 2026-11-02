@@ -19,7 +19,8 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M7 – Advanced enemies and encounters | Done (editor check held until M10): Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, Specimen Zero, variants, Elite/Hunt/Supply/Specimen surges |
 | M8 – Objectives, events, environment | Done (editor check held until M10): side objectives, Operation Cold Start with extraction, Blackout / Stalker / Lockdown events |
 | M9 – Engineering | Done (editor check held until M10): Scrap, build mode, Sentry, Drone, Arc Fence, Barricade, upgrades, repairs |
-| M10–M13 | See `IMPLEMENTATION_ROADMAP.md` |
+| M10 – FOB and permanent progression | Done (editor check: `TESTING.md` §3.12): FOB Halcyon with seven facilities, loadouts, skill trees, research, challenges, achievements, prestige, versioned saves |
+| M11–M13 | See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -63,7 +64,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 | Multiplayer Play Mode (optional) | Testing two players inside one editor instead of editor + build |
 | Multiplayer Services (Relay + Lobby) | M11 online sessions |
 | AI Navigation | Not needed so far: the NavMesh is baked at runtime with Unity's built-in API (`DECISIONS.md` T-21) |
-| Newtonsoft Json (`com.unity.nuget.newtonsoft-json`) | M10 save system |
+| Newtonsoft Json (`com.unity.nuget.newtonsoft-json`) | Not needed yet: the M10 save is plain text (T-54) |
 
 ## Running
 
@@ -71,7 +72,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 
 1. **File → New Scene** (Basic), save it as `Assets/_Project/Scenes/Sandbox/Sandbox_M1.unity`.
 2. **GameObject → Create Empty**, then **Add Component → Sandbox Bootstrap**.
-3. Press Play. The range, melee pit, movement course, and pads build themselves; the scene's own camera is switched off.
+3. Press Play. FOB Halcyon (M10), the range, melee pit, movement course, and pads build themselves; the scene's own camera is switched off. You start in the FOB; the Training Range console (or its "Go to the firing range" button) takes you to the range.
 
 Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, 1–4 or wheel to swap, Esc pause.
 Debug: F1/F2/F3/F4 cap 30/60/144/unlimited FPS, F9 respawn, F10 god mode, H toggle help.
@@ -88,6 +89,8 @@ Enemies (M7): F12 spawns the next advanced enemy in the sandbox (hold Ctrl for a
 Objectives (M8): F uses objective props; L toggles the flashlight. On a map, Esc → Start Operation Cold Start plays a mission that ends in an extraction defense.
 
 Engineering (M9): B build mode (1-4 pick, R turn, click place), F repair/refill, U upgrade, X dismantle, Z drone mode. Free outside runs.
+
+FOB and progression (M10): F at a facility console opens it. Command Center deploys (Operation or Survival) and has a dev button that grants currency and levels; Armory sets class and loadout; Training Range holds skill trees and prestige; Research Lab, Engineering Workshop and Intelligence Center sell research; Trophy Room shows challenges. Runs end on a results screen with "Return to FOB".
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
 

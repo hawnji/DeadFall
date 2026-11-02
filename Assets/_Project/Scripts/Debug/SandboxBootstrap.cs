@@ -17,6 +17,8 @@ namespace Deadfall.DebugTools
     /// A NavMesh is baked at startup so enemies (F5-F8) can path anywhere on the ground.
     /// M5: the pause screen can swap the sandbox for a generated Cinder Ridge map (seed field) and back; in co-op
     /// the host's choice is mirrored on every client.
+    /// M10: FOB Halcyon is built next to the range and is where the player starts and returns after a run. The
+    /// Command Center console deploys (map + Operation or Survival); the Training Range console leads to the range.
     /// </summary>
     public sealed class SandboxBootstrap : MonoBehaviour
     {
@@ -25,6 +27,10 @@ namespace Deadfall.DebugTools
 
         private Transform _world;
         private readonly RuntimeNavMesh _navMesh = new RuntimeNavMesh();
+
+        public static readonly Vector3 FobOrigin = new Vector3(0f, 0f, -120f);
+        private Vector3 _fobSpawn;
+        private float _fobYaw;
 
         private MapSession _map;
         private GameObject _player;
@@ -38,9 +44,11 @@ namespace Deadfall.DebugTools
         {
             Current = this;
             DisableSceneCameras();
+            // M10: the permanent profile loads before anything reads weapon XP or loadouts.
+            new GameObject("[Profile]").AddComponent<ProfileService>();
             BuildSandbox();
 
-            _player = PlayerFactory.CreateLocalPlayer(_spawnPosition, _spawnYaw, SandboxContent.DefaultLoadout());
+            _player = PlayerFactory.CreateLocalPlayer(_fobSpawn, _fobYaw, SandboxContent.DefaultLoadout());
             GameObject player = _player;
 
             var ui = new GameObject("[SandboxUI]");
@@ -66,6 +74,11 @@ namespace Deadfall.DebugTools
             var build = ui.AddComponent<BuildTool>();
             build.Bind(player);
             ui.AddComponent<EngineeringHud>().Bind(build);
+            // M10: FOB screens, end-of-run results, and the profile fed from play.
+            ui.AddComponent<FobPanel>();
+            ui.AddComponent<FobLabels>();
+            ui.AddComponent<RunResultsPanel>();
+            ui.AddComponent<ProgressionTracker>().Bind(player);
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -101,6 +114,23 @@ namespace Deadfall.DebugTools
             var run = new GameObject("[Run]").AddComponent<RunDirector>();
             run.Bind(player);
             run.ResetRunState();
+
+            WorldControl.EnterMap = EnterMap;
+            WorldControl.ReturnToFob = EnterSandbox;
+            WorldControl.EnterTrainingRange = GoToRange;
+            WorldControl.AtBase = () => !InMap;
+        }
+
+        private void GoToRange()
+        {
+            var motor = _player != null ? _player.GetComponent<PlayerMotor>() : null;
+            if (motor != null) motor.Teleport(_spawnPosition, _spawnYaw);
+        }
+
+        private void GoToFob()
+        {
+            var motor = _player != null ? _player.GetComponent<PlayerMotor>() : null;
+            if (motor != null) motor.Teleport(_fobSpawn, _fobYaw);
         }
 
         private void OnDestroy()
@@ -131,7 +161,7 @@ namespace Deadfall.DebugTools
             return true;
         }
 
-        /// <summary>Back to the M1 sandbox.</summary>
+        /// <summary>Back to base: the M1 sandbox world with FOB Halcyon, player at the FOB.</summary>
         public void EnterSandbox()
         {
             PrepareSwitch();
@@ -142,8 +172,7 @@ namespace Deadfall.DebugTools
                 _waves.ClearSpawnPoints();
                 AddPerimeterSpawnPoints(_waves);
             }
-            var motor = _player != null ? _player.GetComponent<PlayerMotor>() : null;
-            if (motor != null) motor.Teleport(_spawnPosition, _spawnYaw);
+            GoToFob();
         }
 
         private void PrepareSwitch()
@@ -161,9 +190,23 @@ namespace Deadfall.DebugTools
             BuildMeleePit();
             BuildMovementCourse();
             BuildZones();
+            BuildFob();
             // Bake after all geometry exists. Layer 2 (Ignore Raycast) holds players, so they don't carve holes.
             Physics.SyncTransforms();
             _navMesh.Build(new Bounds(new Vector3(0f, 3f, 20f), new Vector3(92f, 12f, 132f)), ~(1 << PlayerFactory.PlayerLayer));
+        }
+
+        private void BuildFob()
+        {
+            FobBuilder.Built fob = FobBuilder.Build(_world, FobOrigin);
+            _fobSpawn = fob.Spawn;
+            _fobYaw = fob.SpawnYaw;
+            FobLabels.Register(fob.Terminals);
+            // A console at the range leads back.
+            GameObject back = Box("FobReturnConsole", new Vector3(8f, 0.55f, -3f), new Vector3(1.6f, 1.1f, 0.8f), new Color(0.85f, 0.65f, 0.2f));
+            var tp = back.AddComponent<FobTeleporter>();
+            tp.Prompt = "Return to FOB Halcyon";
+            tp.Action = GoToFob;
         }
 
         private void ClearSandbox()
