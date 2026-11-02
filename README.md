@@ -40,7 +40,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 2. Clone the repo, then in Unity Hub: **Add → Add project from disk** and pick the repo folder. Run `git lfs install` once.
 3. Open it. Unity generates the rest of `ProjectSettings/`, `Packages/packages-lock.json`, and `.meta` files on first open (this takes a few minutes).
 4. When the Input System asks to enable the new input backends, click **Yes** and let the editor restart.
-5. If Package Manager reports that `com.unity.inputsystem` 1.11.2 isn't available for this editor, open **Window → Package Manager**, select Input System, and install the version it offers.
+5. If Package Manager reports that `com.unity.inputsystem` 1.20.1 isn't available for this editor, open **Window → Package Manager**, select Input System, and install the version it offers.
 6. **Project Settings → Editor → Enter Play Mode Settings**: choose "Do not reload Domain or Scene" (our code is written to be safe with this).
 7. Commit the generated `ProjectSettings/`, `Packages/packages-lock.json`, and every `.meta` file.
 
