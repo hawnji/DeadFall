@@ -43,6 +43,15 @@ namespace Deadfall.Player
             _model.SetParent(transform, false);
 
             bool melee = def.Kind == WeaponKind.Melee;
+            Vector3 muzzleAt;
+            if (TryShowModel(def, melee, out muzzleAt))
+            {
+                _muzzle = new GameObject("Muzzle").transform;
+                _muzzle.SetParent(_model, false);
+                _muzzle.localPosition = muzzleAt;
+                _renderers = _model.GetComponentsInChildren<Renderer>();
+                return;
+            }
             Vector3 bodySize;
             Vector3 barrelSize;
             switch (def.Category)
@@ -64,6 +73,39 @@ namespace Deadfall.Player
             _muzzle.localPosition = new Vector3(0f, melee ? 0f : 0.02f, bodySize.z + barrelSize.z);
             _renderers = _model.GetComponentsInChildren<Renderer>();
         }
+
+        /// <summary>
+        /// The weapon's Blender model (T-58), named after its content id ("weapon.halberd_ar" -> "weapon_halberd_ar").
+        /// Models put their muzzle tip where the placeholder's was, so the muzzle point is the same.
+        /// </summary>
+        private bool TryShowModel(WeaponDefinition def, bool melee, out Vector3 muzzle)
+        {
+            muzzle = Vector3.zero;
+            GameObject model = ModelLibrary.Spawn(ModelId(def), _model, slot => ModelLibrary.SlotFromAccent(slot, def.PlaceholderColor));
+            if (model == null) return false;
+            foreach (Transform t in model.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;
+            foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+            }
+            muzzle = new Vector3(0f, melee ? 0f : 0.02f, MuzzleDistance(def.Category));
+            return true;
+        }
+
+        /// <summary>Model id for a weapon: its content id with the dot replaced.</summary>
+        public static string ModelId(WeaponDefinition def) => def != null && def.ContentId != null ? def.ContentId.Replace('.', '_') : null;
+
+        /// <summary>Placeholder body + barrel length per category (the models' muzzle tips match these).</summary>
+        private static float MuzzleDistance(WeaponCategory c) => c switch
+        {
+            WeaponCategory.Pistol => 0.24f,
+            WeaponCategory.Shotgun => 0.8f,
+            WeaponCategory.LightMachineGun => 0.9f,
+            WeaponCategory.SubmachineGun => 0.42f,
+            WeaponCategory.Melee => 0.8f,
+            _ => 0.65f,
+        };
 
         private void CreatePart(string partName, Vector3 size, Vector3 localPos, Color color)
         {

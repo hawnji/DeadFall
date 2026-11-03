@@ -10,7 +10,7 @@ to the primitive placeholders when a file is missing.
 blender -b --factory-startup --python Tools/Blender/build_models.py -- --preview /tmp/model_previews
 ```
 
-- `--preview <folder>` also renders contact sheets (`models_characters.png`, `models_fob.png`, `models_map.png`).
+- `--preview <folder>` also renders contact sheets (`models_characters.png`, `models_fob.png`, `models_map.png`, `models_weapons.png`).
   On a headless Linux box the Workbench renderer needs EGL (`apt install libegl1 libgl1-mesa-dri`), and the FBX
   exporter needs `python3-numpy`.
 - `--only enemy_lean,prop_door` rebuilds just those models.
@@ -43,3 +43,4 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
 | `prop_door` | `SectorDoor` slab |
 | `prop_relay`, `prop_switch` | `DoorSwitch` bodies (the lamp and lever stay game-built) |
 | `supply_cache` | `SupplyCache` |
+| `weapon_halberd_ar`, `weapon_breacher_12`, `weapon_ranger_9`, `weapon_saber_7`, `weapon_wasp_smg`, `weapon_anvil_lmg`, `weapon_tether_cleaver`, `weapon_mule_launcher` | `WeaponViewmodel` (first person) and `WeaponDrop` (pickups). Named after the weapon's content id; origin at the rear of the receiver, barrel along +Z, muzzle tip where the placeholder muzzle was |

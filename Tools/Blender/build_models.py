@@ -612,11 +612,162 @@ def supply_cache():
     return m
 
 
+
+# ----------------------------------------------------------------------------------------------- weapons
+# First-person and pickup models. Origin = the viewmodel's model origin (rear of the receiver, at the grip line);
+# the barrel runs along +Z and the muzzle tip sits exactly where WeaponViewmodel put the placeholder muzzle
+# (y 0.02, z = body + barrel length for the category), so muzzle flashes and tracers line up unchanged.
+# "Accent" is the weapon's placeholder colour (its furniture), so each gun keeps its identity.
+
+GUN = "C_23252A"
+GUN_LIGHT = "C_4A4E56"
+STEEL = "C_9AA0A8"
+
+
+def tube(m, z0, z1, d, mat, y=0.02, x=0.0, segments=10):
+    """A cylinder along +Z from z0 to z1 with diameter d."""
+    return m.cyl((x, y, (z0 + z1) / 2), (d, z1 - z0, d), mat, rot=(90, 0, 0), segments=segments)
+
+
+def weapon_halberd_ar():
+    m = Model("weapon_halberd_ar")
+    m.box((0, 0.0, 0.2), (0.06, 0.09, 0.4), GUN, bevel=0.008)  # receiver
+    m.box((0, 0.055, 0.2), (0.03, 0.02, 0.42), GUN_LIGHT, bevel=0.0)  # top rail
+    m.box((0, 0.01, 0.47), (0.065, 0.075, 0.18), "Accent", bevel=0.01)  # handguard
+    for z in (0.41, 0.45, 0.49, 0.53):
+        m.box((0.034, 0.01, z), (0.004, 0.04, 0.015), DARK, bevel=0.0)  # vents
+    tube(m, 0.55, 0.65, 0.024, GUN_LIGHT)
+    tube(m, 0.62, 0.65, 0.034, DARK)  # flash hider
+    m.box((0, -0.1, 0.2), (0.04, 0.13, 0.07), DARK, rot=(-12, 0, 0), bevel=0.006)  # magazine
+    m.box((0, -0.08, 0.04), (0.04, 0.1, 0.05), "Accent", rot=(15, 0, 0), bevel=0.008)  # grip
+    m.box((0, -0.03, 0.09), (0.012, 0.03, 0.05), DARK, bevel=0.0)  # trigger guard
+    m.box((0, 0.0, -0.09), (0.045, 0.07, 0.18), "Accent", bevel=0.01)  # stock
+    m.box((0, -0.01, -0.19), (0.05, 0.1, 0.03), RUBBER, bevel=0.005)  # butt pad
+    # Red-dot sight.
+    m.box((0, 0.085, 0.2), (0.04, 0.035, 0.07), GUN_LIGHT, bevel=0.006)
+    m.box((0, 0.088, 0.237), (0.03, 0.025, 0.004), "G_E04030", bevel=0.0)
+    return m
+
+
+def weapon_breacher_12():
+    m = Model("weapon_breacher_12")
+    m.box((0, 0.0, 0.15), (0.065, 0.085, 0.3), GUN, bevel=0.008)  # receiver
+    tube(m, 0.28, 0.8, 0.032, GUN_LIGHT, y=0.025)  # barrel
+    tube(m, 0.28, 0.7, 0.03, GUN, y=-0.012)  # magazine tube
+    m.box((0, -0.01, 0.52), (0.06, 0.055, 0.17), "Accent", bevel=0.01)  # pump
+    for z in (0.46, 0.5, 0.54, 0.58):
+        m.box((0, -0.01, z), (0.064, 0.058, 0.008), DARK, bevel=0.0)
+    m.box((0, 0.045, 0.79), (0.008, 0.01, 0.008), STEEL, bevel=0.0)  # bead
+    m.box((0, -0.08, 0.04), (0.042, 0.1, 0.05), "Accent", rot=(15, 0, 0), bevel=0.008)
+    m.box((0, -0.02, -0.12), (0.05, 0.08, 0.24), "Accent", rot=(6, 0, 0), bevel=0.012)  # stock
+    m.box((0, -0.035, -0.245), (0.055, 0.1, 0.025), RUBBER, bevel=0.005)
+    for i in range(4):  # shell holder
+        m.cyl((0.036, 0.0, 0.06 + i * 0.03), (0.018, 0.02, 0.018), "C_B03A2E", rot=(0, 0, 90), segments=6)
+    return m
+
+
+def weapon_ranger_9():
+    m = Model("weapon_ranger_9")
+    m.box((0, 0.02, 0.11), (0.032, 0.035, 0.26), GUN_LIGHT, bevel=0.005)  # slide (muzzle at 0.24)
+    for z in (0.0, 0.015, 0.03):
+        m.box((0.017, 0.022, z), (0.003, 0.025, 0.006), DARK, bevel=0.0)  # serrations
+    m.box((0, -0.005, 0.09), (0.03, 0.025, 0.2), GUN, bevel=0.004)  # frame
+    m.box((0, -0.065, 0.0), (0.032, 0.1, 0.045), "Accent", rot=(18, 0, 0), bevel=0.006)  # grip
+    m.box((0, -0.03, 0.06), (0.008, 0.025, 0.04), DARK, bevel=0.0)  # trigger guard
+    m.box((0, 0.04, 0.22), (0.006, 0.008, 0.006), STEEL, bevel=0.0)  # front sight
+    m.box((0, 0.04, -0.005), (0.02, 0.008, 0.008), STEEL, bevel=0.0)  # rear sight
+    tube(m, 0.235, 0.241, 0.012, DARK)
+    return m
+
+
+def weapon_saber_7():
+    m = Model("weapon_saber_7")
+    m.box((0, 0.0, 0.11), (0.03, 0.035, 0.22), "Accent", bevel=0.008)  # grip
+    for z in (0.03, 0.07, 0.11, 0.15, 0.19):
+        m.box((0, 0.0, z), (0.033, 0.038, 0.012), DARK, bevel=0.0)  # wrap
+    m.box((0, 0.0, 0.0), (0.035, 0.04, 0.02), STEEL, bevel=0.005)  # pommel
+    m.box((0, 0.0, 0.24), (0.04, 0.11, 0.025), GUN_LIGHT, bevel=0.005)  # guard
+    m.box((0, 0.005, 0.49), (0.008, 0.075, 0.5), STEEL, bevel=0.002)  # blade
+    m.box((0, -0.03, 0.49), (0.004, 0.012, 0.48), "C_D8DDE2", bevel=0.0)  # edge
+    m.cone((0, 0.005, 0.77), (0.008, 0.06, 0.075), STEEL, rot=(90, 0, 0), segments=4)  # tip
+    return m
+
+
+def weapon_wasp_smg():
+    m = Model("weapon_wasp_smg")
+    m.box((0, 0.0, 0.15), (0.055, 0.085, 0.3), GUN, bevel=0.008)
+    m.box((0, 0.05, 0.15), (0.025, 0.015, 0.28), GUN_LIGHT, bevel=0.0)
+    tube(m, 0.3, 0.42, 0.04, "Accent")  # suppressor (muzzle at 0.42)
+    m.box((0, -0.11, 0.17), (0.032, 0.16, 0.045), DARK, rot=(-4, 0, 0), bevel=0.005)  # long mag
+    m.box((0, -0.07, 0.04), (0.038, 0.09, 0.045), "Accent", rot=(15, 0, 0), bevel=0.008)
+    m.box((0, -0.04, 0.27), (0.03, 0.06, 0.03), GUN, rot=(-10, 0, 0), bevel=0.005)  # front grip
+    for s in (-1, 1):  # wire stock
+        m.box((s * 0.018, 0.0, -0.1), (0.008, 0.008, 0.2), GUN_LIGHT, bevel=0.0)
+    m.box((0, -0.01, -0.2), (0.045, 0.07, 0.012), RUBBER, bevel=0.0)
+    m.box((0, 0.075, 0.14), (0.03, 0.03, 0.05), GUN_LIGHT, bevel=0.005)  # holo sight
+    m.box((0, 0.078, 0.166), (0.022, 0.02, 0.003), "G_40E0A0", bevel=0.0)
+    return m
+
+
+def weapon_anvil_lmg():
+    m = Model("weapon_anvil_lmg")
+    m.box((0, 0.0, 0.25), (0.09, 0.12, 0.5), GUN, bevel=0.01)  # receiver
+    m.box((0, 0.075, 0.25), (0.08, 0.03, 0.36), GUN_LIGHT, bevel=0.005)  # feed cover
+    m.box((0, 0.02, 0.62), (0.075, 0.08, 0.24), "Accent", bevel=0.01)  # heat shield
+    for z in (0.53, 0.58, 0.63, 0.68):
+        tube(m, z, z + 0.015, 0.082, DARK)
+    tube(m, 0.74, 0.9, 0.032, GUN_LIGHT)
+    tube(m, 0.86, 0.9, 0.044, DARK)
+    m.box((-0.09, -0.06, 0.28), (0.1, 0.14, 0.16), "Accent", bevel=0.015)  # ammo box on the left
+    m.box((-0.045, 0.02, 0.28), (0.012, 0.03, 0.12), "C_B08A35", bevel=0.0)  # belt
+    m.box((0, 0.13, 0.3), (0.02, 0.05, 0.14), GUN_LIGHT, bevel=0.004)  # carry handle
+    m.box((0, -0.09, 0.06), (0.045, 0.11, 0.055), "Accent", rot=(15, 0, 0), bevel=0.008)
+    m.box((0, -0.01, -0.12), (0.06, 0.1, 0.24), "Accent", bevel=0.012)  # stock
+    for s in (-1, 1):  # folded bipod
+        m.box((s * 0.025, -0.04, 0.66), (0.012, 0.012, 0.2), GUN_LIGHT, bevel=0.0)
+    return m
+
+
+def weapon_tether_cleaver():
+    m = Model("weapon_tether_cleaver")
+    m.box((0, 0.0, 0.14), (0.035, 0.04, 0.28), "Accent", bevel=0.01)  # haft
+    for z in (0.04, 0.1, 0.16):
+        m.box((0, 0.0, z), (0.038, 0.044, 0.02), "C_8A7A5A", bevel=0.0)  # cord wrap
+    m.box((0, 0.0, 0.29), (0.05, 0.05, 0.04), GUN_LIGHT, bevel=0.006)  # collar
+    m.box((0, 0.04, 0.53), (0.014, 0.19, 0.46), STEEL, bevel=0.004)  # wide blade
+    m.box((0, -0.055, 0.53), (0.006, 0.02, 0.44), "C_D8DDE2", bevel=0.0)  # edge
+    m.box((0, 0.12, 0.53), (0.02, 0.03, 0.46), GUN, bevel=0.003)  # spine
+    m.cyl((0, 0.08, 0.36), (0.035, 0.02, 0.035), DARK, rot=(0, 0, 90), segments=8)  # tether ring
+    for i in range(4):  # chain links trailing back
+        m.box((0.0, 0.08 - i * 0.02, 0.33 - i * 0.05), (0.01, 0.025, 0.04), STEEL, rot=(30 * (i % 2), 0, 0), bevel=0.0)
+    return m
+
+
+def weapon_mule_launcher():
+    m = Model("weapon_mule_launcher")
+    tube(m, 0.2, 0.65, 0.07, "Accent", y=0.02, segments=12)  # barrel
+    tube(m, 0.6, 0.65, 0.08, DARK, y=0.02, segments=12)
+    tube(m, 0.03, 0.22, 0.16, GUN, y=0.0, segments=8)  # revolving drum
+    for a in range(6):
+        ang = math.radians(a * 60)
+        tube(m, 0.025, 0.225, 0.035, DARK, y=0.0 + math.sin(ang) * 0.05, x=math.cos(ang) * 0.05, segments=6)
+    m.box((0, -0.1, 0.06), (0.045, 0.11, 0.055), "Accent", rot=(15, 0, 0), bevel=0.008)
+    m.box((0, -0.06, 0.4), (0.035, 0.09, 0.04), GUN, bevel=0.006)  # front grip
+    m.box((0, 0.0, -0.09), (0.05, 0.08, 0.26), GUN_LIGHT, bevel=0.01)  # stock
+    m.box((0, 0.075, 0.32), (0.04, 0.05, 0.01), HAZARD, bevel=0.0)  # ladder sight
+    for s in (-1, 1):
+        m.box((s * 0.018, 0.06, 0.32), (0.006, 0.035, 0.012), GUN_LIGHT, bevel=0.0)
+    m.box((0.04, 0.02, 0.45), (0.004, 0.03, 0.1), HAZARD, bevel=0.0)
+    return m
+
+
 BUILDERS = [
     enemy_standard, enemy_lean, enemy_plated, enemy_crawler, enemy_bloated, enemy_spitter, enemy_alpha, enemy_specimen,
     player_body, player_head,
     lambda: fob_booth(False), lambda: fob_booth(True), fob_transport, crate_stack,
     prop_crate, prop_locker, prop_column, prop_partition, prop_door, prop_relay, prop_switch, supply_cache,
+    weapon_halberd_ar, weapon_breacher_12, weapon_ranger_9, weapon_saber_7, weapon_wasp_smg, weapon_anvil_lmg,
+    weapon_tether_cleaver, weapon_mule_launcher,
 ]
 
 
@@ -705,7 +856,40 @@ def preview(objects, out_dir):
         for c in temp:
             bpy.data.objects.remove(c, do_unlink=True)
         bpy.data.objects.remove(cam, do_unlink=True)
+    paths.append(preview_weapons([o for o in objects if o.name.startswith("weapon_")], out_dir))
     return paths
+
+
+def preview_weapons(weapons, out_dir):
+    """Side view of every weapon, two columns, muzzle pointing right."""
+    scene = bpy.context.scene
+    temp = []
+    for i, src in enumerate(weapons):
+        c = src.copy()
+        c.data = src.data
+        c.hide_render = False
+        scene.collection.objects.link(c)
+        col, row = i % 2, i // 2
+        # Seen from Blender -X (the weapon's left side), Blender -Y (muzzle) points right in the image.
+        c.location = (0, -col * 1.3, -row * 0.45)
+        temp.append(c)
+    bpy.ops.object.camera_add()
+    cam = bpy.context.active_object
+    cam.data.type = 'ORTHO'
+    cam.data.ortho_scale = 2.9
+    target = Vector((0, -0.95, -0.7))
+    cam.location = target + Vector((-4, -0.6, 0.9))
+    cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    scene.camera = cam
+    scene.render.resolution_x = 1800
+    scene.render.resolution_y = 1200
+    path = os.path.join(out_dir, "models_weapons.png")
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    for c in temp:
+        bpy.data.objects.remove(c, do_unlink=True)
+    bpy.data.objects.remove(cam, do_unlink=True)
+    return path
 
 
 def main():

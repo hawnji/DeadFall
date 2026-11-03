@@ -54,6 +54,23 @@ namespace Deadfall.Game
             col.isTrigger = true; // doesn't block bullets or movement, still found by the interact ray
             col.size = new Vector3(6f, 4f, 1.4f);
             d._spin = body.transform;
+            // Blender model (T-58): spins on its own pivot at the placeholder's height, centred and enlarged so it
+            // reads on the floor. The placeholder keeps its trigger collider for the interact ray.
+            var pivot = new GameObject("Spin").transform;
+            pivot.SetParent(root.transform, false);
+            pivot.localPosition = body.transform.localPosition;
+            GameObject model = ModelLibrary.Spawn(def.ContentId.Replace('.', '_'), pivot, slot => ModelLibrary.SlotFromAccent(slot, def.PlaceholderColor));
+            if (model != null)
+            {
+                MeshFilter mf = model.GetComponentInChildren<MeshFilter>();
+                Vector3 c = mf != null && mf.sharedMesh != null ? mf.sharedMesh.bounds.center : Vector3.zero;
+                const float scale = 1.6f;
+                model.transform.localScale = Vector3.one * scale;
+                model.transform.localPosition = -c * scale;
+                body.GetComponent<Renderer>().enabled = false;
+                d._spin = pivot;
+            }
+            else Destroy(pivot.gameObject);
             return d;
         }
 
