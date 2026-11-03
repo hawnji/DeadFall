@@ -1,5 +1,6 @@
 using System;
 using Deadfall.Combat;
+using Deadfall.Core;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -19,6 +20,7 @@ namespace Deadfall.DebugTools
         private const float CrouchEye = 1.05f;
 
         private Transform _body;
+        private Transform _bodyModel;
         private Transform _aim;
         private Renderer[] _renderers;
         private Vector3 _targetPos;
@@ -100,6 +102,23 @@ namespace Deadfall.DebugTools
             root.AddComponent<PlayerIdentity>().SetRemote(clientId);
             proxy._body = body.transform;
             proxy._aim = aim;
+            // Blender models (T-58): the body follows crouching, the head/arms/rifle pitch with the aim.
+            Color accent = color;
+            GameObject bodyModel = ModelLibrary.Spawn("player_body", root.transform, slot => ModelLibrary.SlotFromAccent(slot, accent));
+            GameObject headModel = ModelLibrary.Spawn("player_head", aim, slot => ModelLibrary.SlotFromAccent(slot, accent));
+            if (bodyModel != null && headModel != null)
+            {
+                proxy._bodyModel = bodyModel.transform;
+                body.GetComponent<Renderer>().enabled = false;
+                head.GetComponent<Renderer>().enabled = false;
+                visor.GetComponent<Renderer>().enabled = false;
+                gun.GetComponent<Renderer>().enabled = false;
+            }
+            else
+            {
+                if (bodyModel != null) Object.Destroy(bodyModel);
+                if (headModel != null) Object.Destroy(headModel);
+            }
             proxy._renderers = root.GetComponentsInChildren<Renderer>();
             return proxy;
         }
@@ -147,6 +166,7 @@ namespace Deadfall.DebugTools
             float bodyScale = _eyeHeight / StandEye;
             _body.localScale = new Vector3(0.7f, 0.9f * bodyScale, 0.7f);
             _body.localPosition = new Vector3(0f, 0.9f * bodyScale, 0f);
+            if (_bodyModel != null) _bodyModel.localScale = new Vector3(1f, bodyScale, 1f);
 
             // Dead players lie down until they respawn.
             if (_dead) transform.rotation = Quaternion.Euler(-80f, _yaw, 0f);

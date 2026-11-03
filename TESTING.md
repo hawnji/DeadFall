@@ -289,6 +289,16 @@ Two players (as §3.1):
 
 - [ ] A door opened by either player opens for both; credits come from the player who paid. Board repairs and breaks show on both screens; a client joining late sees the right doors and boards.
 
+### 3.14 Manual checklist: Blender models
+
+- [ ] No "Model '...' not found" warnings in the console at start or when a map is built.
+- [ ] Enemies of every type show their model (not capsules), stand upright, face the way they walk, and touch the ground. Each type keeps its own colour. Weak points glow where they did before (Bulwark back, Pyre belly sac, Retcher throat, Alpha upper back), and shots there still count as weak point hits. Specimen plates, growths and core still appear by phase.
+- [ ] Wind-up, stagger and death poses still read (the whole model tilts).
+- [ ] FOB Halcyon: booths show panels, screens, partitions and consoles with each facility's colour; consoles still open with F. The transport and crates look right and still block movement.
+- [ ] Generated maps: columns, partitions, crates and lockers show models and keep their collision; partitions running both ways look right. Doors show the blast door with the lock colour band and still slide open. Switch panels and power relays show their models with the lever and lamp still working. Supply Caches show the footlocker.
+- [ ] Nothing is pink in a player build.
+- [ ] Two players: the teammate shows a soldier with their player colour on shoulders, chest and helmet; the head, arms and rifle tilt with their aim; crouching shortens the body.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -352,7 +362,7 @@ Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. Play
 - M9: structures use the Ignore Raycast layer so player bullets pass through them; Retcher globs and Pyre blasts don't hurt structures yet. Arc Fences don't use the map's power grid.
 - M10: the sandbox pause-screen class buttons ignore class locks (dev override). The client in co-op deploys wherever the host deploys, with no ready check yet. Research doesn't affect host-run systems (Scrap, credits). Kill counts per enemy type (for dossiers) only count on the host or solo.
 - Map rework: doors, switches and barricades are placed after the NavMesh bake (like M8 props). Power relays don't link to M8 generators. An enemy that spawns while a closet is still sealed waits there until it breaks the boards, so a fully repaired room can hold a small queue.
-- Enemies use placeholder primitives and code-driven poses instead of animations.
+- Enemies use scripted low-poly models (T-58) and code-driven poses instead of animations; models aren't rigged. If a model faces the wrong way or lies on its side after import, the FBX axis settings in `Tools/Blender/build_models.py` are the place to fix it.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.
 - The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.

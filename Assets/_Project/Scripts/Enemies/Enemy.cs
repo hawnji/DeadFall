@@ -252,6 +252,43 @@ namespace Deadfall.Enemies
                     break;
                 }
             }
+
+            DressWithModel(skin, dark);
+        }
+
+        /// <summary>
+        /// Swaps the primitive look for the body type's Blender model (T-58). The primitives stay as hurtboxes with their
+        /// renderers off; Specimen phase parts stay visible because they come and go by phase.
+        /// </summary>
+        private void DressWithModel(Color skin, Color dark)
+        {
+            if (!ModelFor(_definition.BodyType, out string id, out float h0, out float r0)) return;
+            GameObject model = ModelLibrary.Spawn(id, _visual, slot => slot == "Skin" ? skin : slot == "SkinDark" ? dark : (Color?)null);
+            if (model == null) return;
+            float sr = _definition.Radius / r0, sh = _definition.Height / h0;
+            model.transform.localScale = new Vector3(sr, sh, sr);
+            ModelLibrary.HideExcept(_visual, model.transform, r =>
+            {
+                foreach (PhasePart p in _phaseParts) if (p.Go != null && r.transform.IsChildOf(p.Go.transform)) return true;
+                return false;
+            });
+        }
+
+        /// <summary>Model id and the nominal height/radius it was built at (the prototype definition for that body).</summary>
+        private static bool ModelFor(EnemyBodyType body, out string id, out float height, out float radius)
+        {
+            switch (body)
+            {
+                case EnemyBodyType.Standard: id = "enemy_standard"; height = 1.8f; radius = 0.35f; return true;
+                case EnemyBodyType.Lean: id = "enemy_lean"; height = 1.65f; radius = 0.3f; return true;
+                case EnemyBodyType.Plated: id = "enemy_plated"; height = 2.3f; radius = 0.6f; return true;
+                case EnemyBodyType.Crawler: id = "enemy_crawler"; height = 0.7f; radius = 0.3f; return true;
+                case EnemyBodyType.Bloated: id = "enemy_bloated"; height = 1.75f; radius = 0.42f; return true;
+                case EnemyBodyType.Spitter: id = "enemy_spitter"; height = 1.7f; radius = 0.38f; return true;
+                case EnemyBodyType.Alpha: id = "enemy_alpha"; height = 2.15f; radius = 0.42f; return true;
+                case EnemyBodyType.Specimen: id = "enemy_specimen"; height = 3.4f; radius = 1f; return true;
+                default: id = null; height = radius = 1f; return false;
+            }
         }
 
         private Transform Part(PrimitiveType type, string partName, Vector3 localPos, Vector3 scale, Color color, HitZone? zone, float multiplier = 1f)

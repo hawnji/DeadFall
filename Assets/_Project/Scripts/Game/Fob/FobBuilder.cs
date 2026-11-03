@@ -50,9 +50,9 @@ namespace Deadfall.Game
             // Floor markings: the deployment lane to Command Center.
             Box(root, "Lane", new Vector3(0f, 0.01f, 2f), new Vector3(3f, 0.02f, Depth - 8f), new Color(0.7f, 0.6f, 0.2f), collider: false);
             // Some crates and a parked vehicle for scale and cover.
-            Box(root, "Crates1", new Vector3(-6f, 0.6f, -6f), new Vector3(2.4f, 1.2f, 1.2f), new Color(0.35f, 0.4f, 0.28f));
-            Box(root, "Crates2", new Vector3(6.5f, 0.9f, -7f), new Vector3(1.6f, 1.8f, 1.6f), new Color(0.35f, 0.4f, 0.28f));
-            Box(root, "Transport", new Vector3(0f, 1.1f, -11f), new Vector3(3.2f, 2.2f, 6f), new Color(0.3f, 0.36f, 0.3f));
+            ModelLibrary.Skin(Box(root, "Crates1", new Vector3(-6f, 0.6f, -6f), new Vector3(2.4f, 1.2f, 1.2f), new Color(0.35f, 0.4f, 0.28f)), "fob_crates");
+            ModelLibrary.Skin(Box(root, "Crates2", new Vector3(6.5f, 0.9f, -7f), new Vector3(1.6f, 1.8f, 1.6f), new Color(0.35f, 0.4f, 0.28f)), "prop_crate");
+            ModelLibrary.Skin(Box(root, "Transport", new Vector3(0f, 1.1f, -11f), new Vector3(3.2f, 2.2f, 6f), new Color(0.3f, 0.36f, 0.3f)), "fob_transport");
 
             Lights(root);
 
@@ -86,6 +86,9 @@ namespace Deadfall.Game
             Box(booth, "Screen", new Vector3(0f, 2.2f, -2.0f), new Vector3(w * 0.5f, 1.4f, 0.05f), c * 0.6f, collider: false);
             GameObject desk = Box(booth, "Console", new Vector3(0f, 0.55f, 0f), new Vector3(wide ? 3.2f : 2f, 1.1f, 0.9f), new Color(0.3f, 0.32f, 0.35f));
             Box(booth, "Glow", new Vector3(0f, 1.12f, 0f), new Vector3(0.9f, 0.04f, 0.8f), c, collider: false);
+            // Blender model (T-58): one piece for the whole booth; the boxes above keep their colliders.
+            GameObject model = ModelLibrary.Spawn(wide ? "fob_booth_wide" : "fob_booth", booth, slot => ModelLibrary.SlotFromAccent(slot, c));
+            if (model != null) ModelLibrary.HideExcept(booth, model.transform);
             var t = desk.AddComponent<FobTerminal>();
             t.Facility = facility;
             return t;

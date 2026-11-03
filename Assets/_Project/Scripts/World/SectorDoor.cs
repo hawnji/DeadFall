@@ -55,6 +55,7 @@ namespace Deadfall.World
             slab.transform.localScale = alongX ? new Vector3(width, height, 0.25f) : new Vector3(0.25f, height, width);
             slab.GetComponent<Renderer>().sharedMaterial = material;
             door._slab = slab.transform;
+            ModelLibrary.Skin(slab, "prop_door", material.color, longAlongX: true);
             door._collider = slab.GetComponent<Collider>();
 
             door._obstacle = root.AddComponent<NavMeshObstacle>();
