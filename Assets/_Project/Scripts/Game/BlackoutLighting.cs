@@ -59,7 +59,7 @@ namespace Deadfall.Game
                 // changed in Unity 6.x); it also returns assets and inactive objects, so keep live scene lights only.
                 foreach (Light l in Resources.FindObjectsOfTypeAll<Light>())
                 {
-                    if (l == null || l == _flashlight || !l.gameObject.scene.IsValid() || !l.isActiveAndEnabled) continue;
+                    if (l == null || l == _flashlight || !l.gameObject.scene.IsValid() || !l.gameObject.activeInHierarchy) continue; // flickering lights may be briefly disabled: include them
                     _saved[l] = l.intensity;
                     l.intensity *= LightFactor;
                 }
