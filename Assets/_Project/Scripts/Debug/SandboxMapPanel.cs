@@ -51,7 +51,7 @@ namespace Deadfall.DebugTools
             MapSession map = boot.MapSession;
             SessionService session = SessionService.Current;
             bool client = session != null && session.Role == SessionRole.Client;
-            GUILayout.Label(boot.InMap ? $"Cinder Ridge, seed {map.Seed} ({map.Map.Layout.Rooms.Count} rooms, {map.SectorCount} sectors). M: map overlay." : "Movement and combat sandbox.", _small);
+            GUILayout.Label(boot.InMap ? $"{map.Environment.DisplayName}, seed {map.Seed} ({map.Map.Layout.Rooms.Count} rooms, {map.SectorCount} sectors). M: map overlay." : "Movement and combat sandbox.", _small);
 
             if (client)
             {
@@ -64,6 +64,7 @@ namespace Deadfall.DebugTools
             _seedText = GUILayout.TextField(_seedText ?? "1", 18);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
+            _harrow = GUILayout.Toggle(_harrow, " Harrow Line (second environment)");
             if (GUILayout.Button("Generate", GUILayout.Height(26f)) && ulong.TryParse(_seedText, out ulong seed)) Enter(boot, seed);
             if (GUILayout.Button("Random", GUILayout.Height(26f)))
             {
@@ -76,17 +77,19 @@ namespace Deadfall.DebugTools
             {
                 if (map.OpenSectors < map.SectorCount && GUILayout.Button("Open next sector (debug)", GUILayout.Height(24f))) map.OpenNextSector();
                 ObjectiveDirector objectives = ObjectiveDirector.Current;
-                if (objectives != null && GUILayout.Button("Start Operation Cold Start", GUILayout.Height(24f))) objectives.StartOperation();
+                if (objectives != null && GUILayout.Button("Start this map's Operation", GUILayout.Height(24f))) objectives.StartOperation();
                 if (GUILayout.Button("Back to sandbox", GUILayout.Height(24f))) boot.EnterSandbox();
             }
             GUILayout.Label("Press N to start a Survival run (sectors open after surges 3, 7 and 12), or start an Operation on a map.", _small);
             GUILayout.EndArea();
         }
 
+        private bool _harrow;
+
         private void Enter(SandboxBootstrap boot, ulong seed)
         {
             PlayerPrefs.SetString(PrefKey, seed.ToString());
-            boot.EnterMap(seed);
+            boot.EnterMap(_harrow ? Deadfall.Rules.World.EnvironmentCatalog.Encode(seed, 1) : seed);
         }
 
         private static GameObject PlayerIdentityLocal() => Deadfall.Combat.PlayerIdentity.Local != null ? Deadfall.Combat.PlayerIdentity.Local.gameObject : null;

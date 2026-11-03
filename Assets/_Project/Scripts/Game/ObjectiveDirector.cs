@@ -58,7 +58,9 @@ namespace Deadfall.Game
 
         public IReadOnlyList<Objective> Objectives => _tracker.All;
         public bool IsOperation { get; private set; }
-        public string MissionName => _mission != null ? _mission.Name : (IsOperation ? ObjectiveRules.ColdStart.Name : null);
+        public string MissionName => _mission != null ? _mission.Name : (IsOperation ? EnvironmentMission.Name : null);
+        /// <summary>The Operation of the current map's environment (M12).</summary>
+        private MissionTemplate EnvironmentMission => ObjectiveRules.MissionById(_map != null ? _map.Environment.MissionId : null);
         public RunEventKind ActiveEvent { get; private set; }
         public RunEventKind PendingEvent { get; private set; }
         public bool HasKeycard { get; private set; }
@@ -150,7 +152,7 @@ namespace Deadfall.Game
         public bool StartOperation(MissionTemplate mission = null)
         {
             if (!IsAuthority || _waves == null || _map == null || !_map.HasMap) return false;
-            _mission = mission ?? ObjectiveRules.ColdStart;
+            _mission = mission ?? EnvironmentMission;
             _pendingOperation = true;
             ulong seed = _map.Seed ^ (ulong)DateTime.UtcNow.Ticks;
             if (_waves.StartOperation(seed, _mission.LullSeconds)) return true;
@@ -345,7 +347,7 @@ namespace Deadfall.Game
             _pendingOperation = false;
             if (IsOperation && _map != null && _map.HasMap)
             {
-                if (_mission == null) _mission = ObjectiveRules.ColdStart;
+                if (_mission == null) _mission = EnvironmentMission;
                 _map.OpenAllSectors(); // T-47: Operations open the whole map at once
                 foreach (MissionStep step in _mission.Steps) AddObjective(step.Kind, step.Required, 0);
                 Say(_mission.Name.ToUpperInvariant(), _mission.Briefing);

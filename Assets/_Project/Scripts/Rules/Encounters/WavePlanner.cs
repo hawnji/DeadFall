@@ -69,6 +69,8 @@ namespace Deadfall.Rules.Encounters
         /// <summary>Specimen surges: the boss id (also Spawns[0]) and its rolled modifiers.</summary>
         public string BossId;
         public SpecimenModifiers BossModifiers;
+        /// <summary>Endless escalation modifiers active this surge (M12).</summary>
+        public EndlessModifier Endless;
         /// <summary>Hunt surges: the pursuer id (also Spawns[0]).</summary>
         public string HunterId;
 
@@ -109,6 +111,11 @@ namespace Deadfall.Rules.Encounters
         private readonly IReadOnlyList<EnemyOption> _options;
         private readonly List<EnemyOption> _affordable = new List<EnemyOption>();
         private readonly Dictionary<string, float> _spentByType = new Dictionary<string, float>();
+
+        /// <summary>Endless runs add escalation modifiers from surge 21 (<see cref="EndlessRules"/>).</summary>
+        public bool Endless { get; set; }
+        /// <summary>Boss Specimen surges use here when it exists (the environment's boss, M12). Null: any boss.</summary>
+        public string PreferredBossId { get; set; }
 
         public WavePlanner(DifficultyCurve curve, IReadOnlyList<EnemyOption> options)
         {
@@ -196,6 +203,11 @@ namespace Deadfall.Rules.Encounters
                     plan.Directions = Math.Max(plan.Directions, SiegeMinDirections);
                     unlockSurge = surge + SiegeEarlyUnlock;
                     break;
+            }
+            if (Endless)
+            {
+                EndlessRules.Apply(plan, Math.Max(SiegeMinDirections, _curve.Settings.MaxDirections) + 1, _curve.Settings.MaxConcurrency);
+                variantMultiplier *= EndlessRules.VariantMultiplier(surge);
             }
 
             _spentByType.Clear();
@@ -291,6 +303,11 @@ namespace Deadfall.Rules.Encounters
         /// <summary>A weighted pick among options of <paramref name="role"/> unlocked by <paramref name="unlockSurge"/>.</summary>
         private EnemyOption PickRole(EnemyRole role, int unlockSurge, DeterministicRandom rng)
         {
+            if (role == EnemyRole.Boss && PreferredBossId != null)
+            {
+                for (int i = 0; i < _options.Count; i++)
+                    if (_options[i] != null && _options[i].Role == role && _options[i].Id == PreferredBossId) { rng.NextFloat(); return _options[i]; }
+            }
             float total = 0f;
             for (int i = 0; i < _options.Count; i++)
             {

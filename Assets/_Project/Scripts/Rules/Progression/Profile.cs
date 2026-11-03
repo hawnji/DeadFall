@@ -45,6 +45,8 @@ namespace Deadfall.Rules.Progression
     {
         public bool Won;
         public bool Operation;
+        /// <summary>Endless run (M12): it always ends in a wipe, so nothing is cut for failing; deep surges pay extra.</summary>
+        public bool Endless;
         public int SurgesCleared;
         public int Kills;
         public int Objectives;
@@ -65,6 +67,8 @@ namespace Deadfall.Rules.Progression
     public static class RunRewardRules
     {
         public const float FailureRetention = 0.5f;
+        /// <summary>Endless pays a bonus for every surge cleared past this one.</summary>
+        public const int EndlessDeepFrom = 15;
         public const float ClassXpShare = 0.8f;
 
         public static RunReward Compute(RunResult r)
@@ -78,7 +82,14 @@ namespace Deadfall.Rules.Progression
                 req += 600;
                 intel += r.Operation ? 4 : 2;
             }
-            float keep = r.Won ? 1f : FailureRetention;
+            if (r.Endless)
+            {
+                int deep = Math.Max(0, r.SurgesCleared - EndlessDeepFrom);
+                xp += 60L * deep;
+                req += 15L * deep;
+                intel += deep / 5;
+            }
+            float keep = r.Won || r.Endless ? 1f : FailureRetention;
             xp = (long)Math.Floor(xp * keep);
             req = (long)Math.Floor(req * keep);
             intel = (long)Math.Floor(intel * keep);
@@ -87,7 +98,7 @@ namespace Deadfall.Rules.Progression
                 OperatorXp = xp,
                 ClassXp = (long)Math.Floor(xp * ClassXpShare),
                 Currency = new Cost((int)Math.Min(int.MaxValue, req), (int)Math.Min(int.MaxValue, intel)),
-                Retained = !r.Won,
+                Retained = !r.Won && !r.Endless,
             };
         }
     }
@@ -133,6 +144,7 @@ namespace Deadfall.Rules.Progression
             if (!string.IsNullOrEmpty(classId)) p.ClassXp[classId] = p.XpOf(classId) + s.Reward.ClassXp;
             p.Wallet.Add(s.Reward.Currency);
             p.AddStat(result.Won ? StatKeys.RunsWon : StatKeys.RunsFailed);
+            if (result.Endless) p.SetStatMax(StatKeys.EndlessBest, result.SurgesCleared);
             if (result.Won && result.Operation) p.AddStat(StatKeys.OperationsWon);
             s.OperatorLevelAfter = p.OperatorLevel;
             s.RankAfter = p.RankOf(classId);

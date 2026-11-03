@@ -233,6 +233,7 @@ namespace Deadfall.Rules.Encounters
     /// <summary>An Operations mission (GAME_DESIGN §3.2): objectives that run together, then a timed extraction.</summary>
     public sealed class MissionTemplate
     {
+        public string Id;
         public string Name;
         public string Briefing;
         public MissionStep[] Steps;
@@ -261,6 +262,7 @@ namespace Deadfall.Rules.Encounters
 
         public static readonly MissionTemplate ColdStart = new MissionTemplate
         {
+            Id = "mission.cold_start",
             Name = "Operation Cold Start",
             Briefing = "Restore power to the complex, pull the research data core, then hold the airlock until the lift arrives.",
             Steps = new[]
@@ -271,6 +273,32 @@ namespace Deadfall.Rules.Encounters
                 new MissionStep(ObjectiveKind.RecoverSamples, false),
             },
         };
+
+        /// <summary>Harrow Line (M12): get the depot's power back, find the line keycard, clear the nest in the pump rooms, then hold the platform for the last train.</summary>
+        public static readonly MissionTemplate LastTrain = new MissionTemplate
+        {
+            Id = "mission.last_train",
+            Name = "Operation Last Train",
+            Briefing = "Bring the depot's power back, take the line keycard to the signal locker, then hold the lift until the last train arrives.",
+            Steps = new[]
+            {
+                new MissionStep(ObjectiveKind.RestorePower, true),
+                new MissionStep(ObjectiveKind.Keycard, true),
+                new MissionStep(ObjectiveKind.RetrieveDataCore, false),
+                new MissionStep(ObjectiveKind.DestroyNest, false),
+            },
+            ExtractionSeconds = 170f,
+            LullSeconds = 32f,
+            CompletionBonus = 1700,
+        };
+
+        public static readonly MissionTemplate[] Missions = { ColdStart, LastTrain };
+
+        public static MissionTemplate MissionById(string id)
+        {
+            foreach (MissionTemplate m in Missions) if (m.Id == id) return m;
+            return ColdStart;
+        }
 
         public static string Title(ObjectiveKind k) => k switch
         {

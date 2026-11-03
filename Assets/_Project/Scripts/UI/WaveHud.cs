@@ -128,7 +128,7 @@ namespace Deadfall.UI
 
         private string PanelLine()
         {
-            string final = _waves.FinalSurge > 0 ? $" / {_waves.FinalSurge}" : string.Empty;
+            string final = _waves.IsEndless ? "  ·  ENDLESS" : _waves.FinalSurge > 0 ? $" / {_waves.FinalSurge}" : string.Empty;
             switch (_waves.Phase)
             {
                 case RunPhase.Lull: return $"LULL  {Clock(_waves.TimeLeft)}";
