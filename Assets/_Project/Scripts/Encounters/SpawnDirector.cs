@@ -14,12 +14,16 @@ namespace Deadfall.Encounters
     {
         public Vector3 Position;
         public int Group;
+        /// <summary>A sealed breach closet: no distance or sight rules, picked by <see cref="BreachSpawns"/>.</summary>
+        public bool Sheltered;
     }
 
     /// <summary>
     /// Turns a <see cref="SurgePlan"/> into enemies over time (host only). Keeps the surge's alive count under
-    /// its concurrency, spawns out of sight and at least 15 m from every player, and limits arrivals to the
-    /// plan's number of directions. It only tracks the enemies it spawned, so debug spawns never count toward a surge.
+    /// its concurrency and limits arrivals to the plan's number of directions. Open points (the sandbox) must be
+    /// out of sight and at least 15 m from every player. Sheltered points (breach closets on generated maps) skip
+    /// those checks and are chosen by <see cref="Deadfall.Rules.Encounters.BreachSpawns"/>: some near the squad,
+    /// the rest spread over nearby breaches (T-57). It only tracks the enemies it spawned, so debug spawns never count toward a surge.
     /// </summary>
     public sealed class SpawnDirector
     {
@@ -68,9 +72,14 @@ namespace Deadfall.Encounters
                 if (d != null) _definitions[d.ContentId] = d;
         }
 
-        public void AddPoint(Vector3 position, int group)
+        private readonly List<float> _breachDistances = new List<float>(32);
+        private readonly List<int> _breachScratch = new List<int>(32);
+        private int _sheltered;
+
+        public void AddPoint(Vector3 position, int group, bool sheltered = false)
         {
-            _points.Add(new SpawnPoint { Position = position, Group = group });
+            _points.Add(new SpawnPoint { Position = position, Group = group, Sheltered = sheltered });
+            if (sheltered) _sheltered++;
             if (!_groups.Contains(group)) _groups.Add(group);
         }
 
@@ -78,6 +87,7 @@ namespace Deadfall.Encounters
         {
             _points.Clear();
             _groups.Clear();
+            _sheltered = 0;
         }
 
         public bool Owns(Enemy e) => e != null && _alive.Contains(e);
@@ -149,11 +159,16 @@ namespace Deadfall.Encounters
                 return true;
             }
 
-            int group = _activeGroups.Count > 0 ? _activeGroups[_groupCursor++ % _activeGroups.Count] : int.MinValue;
-            int point = PickPoint(group, MinPlayerDistance);
-            if (point < 0) point = PickPoint(int.MinValue, MinPlayerDistance); // this direction has nothing usable; try any
-            // Small maps (the first sector of a generated map): accept closer points rather than skipping enemies.
-            if (point < 0) point = PickPoint(int.MinValue, CloseMinPlayerDistance);
+            int point;
+            if (_sheltered > 0) point = PickBreach();
+            else
+            {
+                int group = _activeGroups.Count > 0 ? _activeGroups[_groupCursor++ % _activeGroups.Count] : int.MinValue;
+                point = PickPoint(group, MinPlayerDistance);
+                if (point < 0) point = PickPoint(int.MinValue, MinPlayerDistance); // this direction has nothing usable; try any
+                // Small open areas: accept closer points rather than skipping enemies.
+                if (point < 0) point = PickPoint(int.MinValue, CloseMinPlayerDistance);
+            }
             Enemy enemy = null;
             if (point >= 0)
             {
@@ -261,6 +276,26 @@ namespace Deadfall.Encounters
             int usable = 1;
             while (usable < top && (_scores[usable] >= 1000f) == bestSeen) usable++;
             return _candidates[_rng.Range(0, usable)];
+        }
+
+        /// <summary>Generated maps: a breach closet near the squad (see <see cref="BreachSpawns"/>).</summary>
+        private int PickBreach()
+        {
+            _breachDistances.Clear();
+            for (int i = 0; i < _points.Count; i++)
+            {
+                SpawnPoint p = _points[i];
+                if (!p.Sheltered) { _breachDistances.Add(-1f); continue; }
+                float nearest = float.MaxValue;
+                for (int k = 0; k < _players.Count; k++)
+                {
+                    Vector3 d = _players[k] - p.Position;
+                    d.y = 0f;
+                    nearest = Mathf.Min(nearest, d.magnitude);
+                }
+                _breachDistances.Add(nearest);
+            }
+            return BreachSpawns.Pick(_breachDistances, _rng, _breachScratch);
         }
 
         private void CollectPlayers()

@@ -170,6 +170,14 @@ Not in scope yet: the Arc Fence drawing on the map's power grid, the Overwatch a
 
 Not in scope yet: co-op ready check at the deployment board (the host deploys and clients follow), weapon camos and attachment unlocks through the Armory, cosmetics, timed research, rotating weekly challenges, prestige rewards beyond titles, a class select that respects locks on the sandbox pause screen (it stays a dev override).
 
+## Map rework (after first look at M5–M10) ✅ (editor check: `TESTING.md` §3.13)
+1. ✅ Bigger rooms with shapes (L, T, Z, plus, cut corners) up to 9×8 cells, taller walls, columns or a partition in big rooms; corridors include an L turn.
+2. ✅ Doors: sector doors on the main route cost credits (rising per sector) or need a wall switch or power relay found in an earlier room; many side branches sit behind a cheaper paid door. F opens them. Free outside runs.
+3. ✅ Breach closets: wave enemies spawn in sealed closets behind boarded openings, break the boards to get in, and players repair boards (F) for 10 credits each. Players can't enter the closets.
+4. ✅ Spawn spread (T-57): some enemies at the breaches nearest the squad, the rest at other breaches close by.
+5. ✅ FOB Halcyon is smaller (40×30 m).
+6. ✅ 5 new EditMode tests in `LayoutTests.cs`.
+
 ## M11 – Multiplayer completion ⬜
 Lobby/Relay flow, 4-player validation of every system, revives, spectate, reconnect window, host-drop handling, reward duplication tests, bandwidth profiling.
 

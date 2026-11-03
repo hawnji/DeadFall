@@ -59,7 +59,7 @@ namespace Deadfall.Game
                 Bounds rb = map.RoomBounds[i];
                 Vector2 a = ToScreen(new Vector3(rb.min.x, 0f, rb.max.z)), c = ToScreen(new Vector3(rb.max.x, 0f, rb.min.z));
                 Color col = MapBuilder.SectorColor(layout.Rooms[i].Sector);
-                col.a = layout.Rooms[i].Sector < s.OpenSectors ? 0.55f : 0.15f;
+                col.a = s.IsRoomOpen(i) ? 0.55f : 0.15f;
                 Fill(new Rect(a.x + 1f, a.y + 1f, c.x - a.x - 2f, c.y - a.y - 2f), col);
                 RoomRole role = layout.Rooms[i].Template.Role;
                 if (role != RoomRole.Corridor)
@@ -72,7 +72,7 @@ namespace Deadfall.Game
                 if (d != null) Dot(ToScreen(d.transform.position), d.IsOpen ? new Color(0.4f, 0.9f, 0.4f) : Color.red, 6f);
             foreach (SecretPanel p in map.SecretPanels)
                 if (p != null) Dot(ToScreen(p.transform.position), Color.cyan, 5f);
-            foreach (MapSpawnPoint p in map.EnemySpawns) Dot(ToScreen(p.Position), new Color(1f, 0.45f, 0.3f, p.Sector < s.OpenSectors ? 0.9f : 0.3f), 3f);
+            foreach (MapSpawnPoint p in map.EnemySpawns) Dot(ToScreen(p.Position), new Color(1f, 0.45f, 0.3f, s.IsRoomOpen(p.Room) ? 0.9f : 0.3f), 3f);
             foreach (MapLootPoint p in map.Loot) Dot(ToScreen(p.Position), p.Kind == LootKind.SupplyCache ? new Color(0.3f, 0.9f, 0.5f) : new Color(1f, 0.85f, 0.2f), 4f);
             if (EnemyManager.Current != null)
                 foreach (Enemy e in EnemyManager.Current.Active)

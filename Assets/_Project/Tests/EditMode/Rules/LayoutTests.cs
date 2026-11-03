@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Deadfall.Rules.Common;
+using Deadfall.Rules.Encounters;
 using Deadfall.Rules.World;
 using NUnit.Framework;
 
@@ -92,7 +94,8 @@ namespace Deadfall.Tests.EditMode.Rules
             foreach (RoomTemplate t in Kit.Templates)
                 foreach (SocketDef s in t.Sockets)
                 {
-                    bool onEdge = s.Facing == Dir.North ? s.Z == t.Depth - 1 : s.Facing == Dir.South ? s.Z == 0 : s.Facing == Dir.East ? s.X == t.Width - 1 : s.X == 0;
+                    // The socket cell is part of the room and the cell it faces is not (works for shaped rooms too).
+                    bool onEdge = t.HasCell(s.X, s.Z) && !t.HasCell(s.X + s.Facing.Dx(), s.Z + s.Facing.Dz());
                     Assert.IsTrue(onEdge, $"{t.Id} socket ({s.X},{s.Z}) {s.Facing}");
                 }
         }
@@ -147,6 +150,105 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.AreEqual(4, SectorSchedule.OpenSectors(12, 4));
             Assert.AreEqual(4, SectorSchedule.OpenSectors(99, 4));
             Assert.AreEqual(2, SectorSchedule.OpenSectors(99, 2));
+        }
+
+        [Test]
+        public void MapsUseShapedRoomsAndMaskedCells()
+        {
+            int shaped = 0;
+            for (ulong seed = 1; seed <= 100; seed++)
+            {
+                Layout l = LayoutGenerator.Generate(Kit, Graph(), seed);
+                foreach (PlacedRoom r in l.Rooms)
+                {
+                    if (r.Template.IsShaped) shaped++;
+                    int n = 0;
+                    foreach (Cell c in r.Cells())
+                    {
+                        n++;
+                        r.ToLocal(c, out int lx, out int lz);
+                        Assert.IsTrue(r.Template.HasCell(lx, lz));
+                        Assert.AreEqual(c, r.ToWorld(lx, lz), "ToLocal must invert ToWorld");
+                        Assert.IsTrue(r.Contains(c));
+                    }
+                    Assert.AreEqual(r.Template.CellCount, n);
+                    Assert.IsTrue(r.Contains(r.CenterCell));
+                }
+            }
+            Assert.Greater(shaped, 100, "most maps should contain L, T, Z or plus rooms");
+        }
+
+        [Test]
+        public void BreachClosetsSitOutsideRoomsAndAreSpread()
+        {
+            for (ulong seed = 1; seed <= 300; seed++)
+            {
+                Layout l = LayoutGenerator.Generate(Kit, Graph(), seed);
+                Assert.Greater(l.Breaches.Count, l.SectorCount, $"seed {seed}");
+                var closets = new HashSet<Cell>();
+                foreach (Breach b in l.Breaches)
+                {
+                    Assert.AreEqual(b.Room, l.RoomAt(b.Inner), $"seed {seed}: breach inner cell is not in its room");
+                    Assert.AreEqual(-1, l.RoomAt(b.Closet), $"seed {seed}: closet overlaps a room");
+                    Assert.IsTrue(closets.Add(b.Closet), $"seed {seed}: two breaches share a closet");
+                }
+            }
+        }
+
+        [Test]
+        public void DoorsAreLockedByCreditsSwitchesOrPower()
+        {
+            int side = 0, special = 0;
+            for (ulong seed = 1; seed <= 300; seed++)
+            {
+                Layout l = LayoutGenerator.Generate(Kit, Graph(), seed);
+                foreach (Connection c in l.Connections)
+                {
+                    if (c.Locked) Assert.IsTrue(c.IsDoor, $"seed {seed}: sector door without a lock");
+                    if (c.Lock == DoorLock.Credits) Assert.Greater(c.Cost, 0);
+                    if (c.Lock == DoorLock.Switch || c.Lock == DoorLock.Power)
+                    {
+                        special++;
+                        Assert.IsTrue(c.Locked, "only sector doors use switches");
+                        PlacedRoom sw = l.Rooms[c.SwitchRoom];
+                        Assert.IsTrue(sw.OnCriticalPath);
+                        Assert.Less(sw.Sector, c.UnlockSector, "the switch must be reachable before the door opens");
+                    }
+                    if (c.IsDoor && !c.Locked && !c.Secret) side++;
+                }
+            }
+            Assert.Greater(side, 100, "branch rooms should often sit behind paid side doors");
+            Assert.Greater(special, 50, "some sector doors should need a switch or power relay");
+        }
+
+        [Test]
+        public void BreachSpawnsMixNearestAndNearbyBreaches()
+        {
+            // 12 breaches 5 m apart; 2 unusable (sector closed).
+            var d = new List<float>();
+            for (int i = 0; i < 12; i++) d.Add(i * 5f);
+            d[1] = -1f; d[11] = -1f;
+            var rng = new DeterministicRandom(9);
+            var counts = new int[12];
+            for (int i = 0; i < 4000; i++) counts[BreachSpawns.Pick(d, rng)]++;
+            Assert.AreEqual(0, counts[1]);
+            Assert.AreEqual(0, counts[11]);
+            // Nearest three (0, 2, 3) get the close share on top of the spread share.
+            Assert.Greater(counts[0], counts[8]);
+            Assert.Greater(counts[3], counts[8]);
+            // Everything within 40 m is used; 50 m (index 10) is not, since 8 breaches are within range.
+            for (int i = 2; i <= 8; i++) Assert.Greater(counts[i], 0, $"breach {i}");
+            Assert.AreEqual(0, counts[10]);
+            Assert.AreEqual(-1, BreachSpawns.Pick(new List<float> { -1f, -1f }, rng));
+        }
+
+        [Test]
+        public void BreachSpawnsFallBackToNearestWhenAllAreFar()
+        {
+            var d = new List<float>();
+            for (int i = 0; i < 10; i++) d.Add(100f + i);
+            var rng = new DeterministicRandom(3);
+            for (int i = 0; i < 2000; i++) Assert.Less(BreachSpawns.Pick(d, rng), BreachSpawns.MinSpread);
         }
     }
 }

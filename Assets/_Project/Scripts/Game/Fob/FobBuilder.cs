@@ -12,7 +12,7 @@ namespace Deadfall.Game
     /// </summary>
     public static class FobBuilder
     {
-        public const float Width = 56f, Depth = 40f, WallHeight = 6f;
+        public const float Width = 40f, Depth = 30f, WallHeight = 5.5f;
 
         public readonly struct Built
         {
@@ -50,8 +50,8 @@ namespace Deadfall.Game
             // Floor markings: the deployment lane to Command Center.
             Box(root, "Lane", new Vector3(0f, 0.01f, 2f), new Vector3(3f, 0.02f, Depth - 8f), new Color(0.7f, 0.6f, 0.2f), collider: false);
             // Some crates and a parked vehicle for scale and cover.
-            Box(root, "Crates1", new Vector3(-8f, 0.6f, -6f), new Vector3(2.4f, 1.2f, 1.2f), new Color(0.35f, 0.4f, 0.28f));
-            Box(root, "Crates2", new Vector3(9f, 0.9f, -7f), new Vector3(1.6f, 1.8f, 1.6f), new Color(0.35f, 0.4f, 0.28f));
+            Box(root, "Crates1", new Vector3(-6f, 0.6f, -6f), new Vector3(2.4f, 1.2f, 1.2f), new Color(0.35f, 0.4f, 0.28f));
+            Box(root, "Crates2", new Vector3(6.5f, 0.9f, -7f), new Vector3(1.6f, 1.8f, 1.6f), new Color(0.35f, 0.4f, 0.28f));
             Box(root, "Transport", new Vector3(0f, 1.1f, -11f), new Vector3(3.2f, 2.2f, 6f), new Color(0.3f, 0.36f, 0.3f));
 
             Lights(root);
@@ -59,12 +59,12 @@ namespace Deadfall.Game
             var terminals = new List<FobTerminal>(7);
             float hx = Width * 0.5f - 3f, hz = Depth * 0.5f - 3f;
             terminals.Add(Booth(root, FacilityId.CommandCenter, new Vector3(0f, 0f, hz), 180f, wide: true));
-            terminals.Add(Booth(root, FacilityId.Armory, new Vector3(-hx, 0f, 8f), 90f));
+            terminals.Add(Booth(root, FacilityId.Armory, new Vector3(-hx, 0f, 6f), 90f));
             terminals.Add(Booth(root, FacilityId.ResearchLab, new Vector3(-hx, 0f, -4f), 90f));
-            terminals.Add(Booth(root, FacilityId.EngineeringWorkshop, new Vector3(hx, 0f, 8f), -90f));
+            terminals.Add(Booth(root, FacilityId.EngineeringWorkshop, new Vector3(hx, 0f, 6f), -90f));
             terminals.Add(Booth(root, FacilityId.IntelligenceCenter, new Vector3(hx, 0f, -4f), -90f));
-            terminals.Add(Booth(root, FacilityId.TrainingRange, new Vector3(-14f, 0f, -hz), 0f));
-            terminals.Add(Booth(root, FacilityId.TrophyRoom, new Vector3(14f, 0f, -hz), 0f));
+            terminals.Add(Booth(root, FacilityId.TrainingRange, new Vector3(-11f, 0f, -hz), 0f));
+            terminals.Add(Booth(root, FacilityId.TrophyRoom, new Vector3(11f, 0f, -hz), 0f));
 
             Vector3 spawn = origin + new Vector3(0f, 0.05f, -4f);
             return new Built(root, spawn, 0f, terminals);
@@ -97,10 +97,10 @@ namespace Deadfall.Game
             {
                 var go = new GameObject("Lamp");
                 go.transform.SetParent(root, false);
-                go.transform.localPosition = new Vector3(i * 16f, WallHeight - 0.6f, 0f);
+                go.transform.localPosition = new Vector3(i * 12f, WallHeight - 0.6f, 0f);
                 var l = go.AddComponent<Light>();
                 l.type = LightType.Point;
-                l.range = 24f;
+                l.range = 20f;
                 l.intensity = 1.6f;
                 l.color = new Color(1f, 0.95f, 0.85f);
             }

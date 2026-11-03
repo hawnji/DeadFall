@@ -90,6 +90,8 @@ Objectives (M8): F uses objective props; L toggles the flashlight. On a map, Esc
 
 Engineering (M9): B build mode (1-4 pick, R turn, click place), F repair/refill, U upgrade, X dismantle, Z drone mode. Free outside runs.
 
+Map rework: doors show their price or what they need (switch, power relay); F opens them, pulls switches and starts relays. Enemies break in through boarded openings; F at one repairs a board for 10 credits during a run.
+
 FOB and progression (M10): F at a facility console opens it. Command Center deploys (Operation or Survival) and has a dev button that grants currency and levels; Armory sets class and loadout; Training Range holds skill trees and prestige; Research Lab, Engineering Workshop and Intelligence Center sell research; Trophy Room shows challenges. Runs end on a results screen with "Return to FOB".
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.

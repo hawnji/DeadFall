@@ -50,13 +50,21 @@ namespace Deadfall.Rules.World
         public const string Vent = "vent";
     }
 
-    /// <summary>One room or corridor piece of a kit. Footprints are rectangles of cells.</summary>
+    /// <summary>
+    /// One room or corridor piece of a kit. The footprint is a Width x Depth box of cells, optionally cut into an
+    /// L, T, Z or plus shape by <see cref="Mask"/>.
+    /// </summary>
     public sealed class RoomTemplate
     {
         public string Id;
         public string DisplayName;
         public RoomRole Role;
         public int Width = 1, Depth = 1;
+        /// <summary>
+        /// Optional shape: one string per row, top row first (z = Depth - 1), '#' for a room cell and '.' for empty.
+        /// Null means the full rectangle.
+        /// </summary>
+        public string[] Mask;
         public readonly List<SocketDef> Sockets = new List<SocketDef>();
         public string[] Tags = Array.Empty<string>();
         /// <summary>Supply cache / pickup slots (D-05: caches are randomised across tagged slots).</summary>
@@ -67,7 +75,28 @@ namespace Deadfall.Rules.World
         public int Weight = 10;
 
         public bool HasTag(string tag) => Array.IndexOf(Tags, tag) >= 0;
-        public int CellCount => Width * Depth;
+
+        /// <summary>True if the template-local cell is part of the room.</summary>
+        public bool HasCell(int lx, int lz)
+        {
+            if (lx < 0 || lz < 0 || lx >= Width || lz >= Depth) return false;
+            if (Mask == null) return true;
+            string row = Mask[Depth - 1 - lz];
+            return lx < row.Length && row[lx] == '#';
+        }
+
+        public int CellCount
+        {
+            get
+            {
+                int n = 0;
+                for (int x = 0; x < Width; x++) for (int z = 0; z < Depth; z++) if (HasCell(x, z)) n++;
+                return n;
+            }
+        }
+
+        /// <summary>True when the template is not a plain rectangle.</summary>
+        public bool IsShaped => Mask != null && CellCount < Width * Depth;
     }
 
     /// <summary>A set of room templates that share a visual style (an environment's room kit).</summary>
@@ -111,6 +140,40 @@ namespace Deadfall.Rules.World
         public int MaxAttempts = 16;
         /// <summary>Chance a main-route link is a corridor piece rather than a direct room-to-room door.</summary>
         public float CorridorChance = 0.7f;
+        /// <summary>Chance a side branch sits behind its own locked door (opened with credits).</summary>
+        public float BranchDoorChance = 0.6f;
+        /// <summary>Chance a sector door opens from a power relay or security switch instead of credits.</summary>
+        public float SpecialDoorChance = 0.35f;
+        /// <summary>Credit price of the door into sector 1; each later sector adds <see cref="SectorDoorCostStep"/>.</summary>
+        public int SectorDoorCost = 750;
+        public int SectorDoorCostStep = 250;
+        public int BranchDoorCost = 500;
+    }
+
+    /// <summary>What opens a locked door.</summary>
+    public enum DoorLock : byte
+    {
+        None,
+        /// <summary>Bought with Field Credits at the door.</summary>
+        Credits,
+        /// <summary>A security switch somewhere earlier on the map.</summary>
+        Switch,
+        /// <summary>A power relay somewhere earlier on the map; the door opens once power is restored.</summary>
+        Power,
+    }
+
+    /// <summary>
+    /// A boarded opening in a room's outer wall with a sealed closet behind it (the cell <see cref="Closet"/>).
+    /// Wave enemies appear in the closet and have to break the boards to get in; players can't enter closets.
+    /// </summary>
+    public struct Breach
+    {
+        public int Room;
+        /// <summary>The room cell the opening is in.</summary>
+        public Cell Inner;
+        /// <summary>The wall the opening goes through (out of the room).</summary>
+        public Dir Facing;
+        public Cell Closet => Inner.Step(Facing);
     }
 
     /// <summary>A room placed on the grid. Origin is the lowest (x, z) cell of its rotated footprint.</summary>
@@ -129,6 +192,19 @@ namespace Deadfall.Rules.World
         public int Parent = -1;
 
         public int Width => (Rotation & 1) == 0 ? Template.Width : Template.Depth;
+
+        /// <summary>Template-local cell of a world cell inside the bounding box (inverse of <see cref="ToWorld"/>).</summary>
+        public void ToLocal(Cell c, out int lx, out int lz)
+        {
+            int w = Template.Width, d = Template.Depth, dx = c.X - Origin.X, dz = c.Z - Origin.Z;
+            switch (Rotation & 3)
+            {
+                case 0: lx = dx; lz = dz; break;
+                case 1: lx = w - 1 - dz; lz = dx; break;
+                case 2: lx = w - 1 - dx; lz = d - 1 - dz; break;
+                default: lx = dz; lz = d - 1 - dx; break;
+            }
+        }
         public int Depth2 => (Rotation & 1) == 0 ? Template.Depth : Template.Width;
 
         /// <summary>World cell of a template-local cell.</summary>
@@ -151,10 +227,36 @@ namespace Deadfall.Rules.World
         {
             for (int x = 0; x < Width; x++)
                 for (int z = 0; z < Depth2; z++)
-                    yield return new Cell(Origin.X + x, Origin.Z + z);
+                {
+                    var c = new Cell(Origin.X + x, Origin.Z + z);
+                    if (Contains(c)) yield return c;
+                }
         }
 
-        public bool Contains(Cell c) => c.X >= Origin.X && c.X < Origin.X + Width && c.Z >= Origin.Z && c.Z < Origin.Z + Depth2;
+        public bool Contains(Cell c)
+        {
+            if (c.X < Origin.X || c.X >= Origin.X + Width || c.Z < Origin.Z || c.Z >= Origin.Z + Depth2) return false;
+            if (Template.Mask == null) return true;
+            ToLocal(c, out int lx, out int lz);
+            return Template.HasCell(lx, lz);
+        }
+
+        /// <summary>The room cell nearest the middle of its bounding box (always inside, even for L shapes).</summary>
+        public Cell CenterCell
+        {
+            get
+            {
+                float cx = Origin.X + (Width - 1) * 0.5f, cz = Origin.Z + (Depth2 - 1) * 0.5f;
+                Cell best = Origin;
+                float bestD = float.MaxValue;
+                foreach (Cell c in Cells())
+                {
+                    float d = (c.X - cx) * (c.X - cx) + (c.Z - cz) * (c.Z - cz);
+                    if (d < bestD) { bestD = d; best = c; }
+                }
+                return best;
+            }
+        }
     }
 
     /// <summary>A doorway between two placed rooms.</summary>
@@ -165,7 +267,15 @@ namespace Deadfall.Rules.World
         public int UnlockSector;
         /// <summary>True for a vent into a secret room (hidden panel instead of a door).</summary>
         public bool Secret;
+        /// <summary>What opens the door here (None: open doorway).</summary>
+        public DoorLock Lock;
+        /// <summary>Credit price for <see cref="DoorLock.Credits"/>.</summary>
+        public int Cost;
+        /// <summary>Room holding the switch or power relay for <see cref="DoorLock.Switch"/> / <see cref="DoorLock.Power"/>, else -1.</summary>
+        public int SwitchRoom;
+        /// <summary>A door between sectors (as opposed to a side door into a branch).</summary>
         public bool Locked => UnlockSector > 0;
+        public bool IsDoor => Lock != DoorLock.None;
     }
 
     public enum LootKind { SupplyCache, AmmoCrate, Medkit, SecretStash }
@@ -188,7 +298,37 @@ namespace Deadfall.Rules.World
         public readonly List<PlacedRoom> Rooms = new List<PlacedRoom>();
         public readonly List<Connection> Connections = new List<Connection>();
         public readonly List<LootPlacement> Loot = new List<LootPlacement>();
+        public readonly List<Breach> Breaches = new List<Breach>();
         public int SectorCount;
+
+        /// <summary>Index of the room containing the cell, or -1.</summary>
+        public int RoomAt(Cell c)
+        {
+            foreach (PlacedRoom r in Rooms) if (r.Contains(c)) return r.Index;
+            return -1;
+        }
+
+        /// <summary>
+        /// The locked side door (not a sector door) on the way from spawn to <paramref name="room"/>, nearest the
+        /// room, or -1. Rooms form a tree, so walking parents finds it.
+        /// </summary>
+        public int SideDoorTo(int room, Func<int, bool> isOpen = null)
+        {
+            int r = room;
+            while (r > 0)
+            {
+                int parent = Rooms[r].Parent;
+                for (int i = 0; i < Connections.Count; i++)
+                {
+                    Connection c = Connections[i];
+                    if (!c.IsDoor || c.Locked) continue;
+                    if ((c.RoomA == parent && c.RoomB == r) || (c.RoomB == parent && c.RoomA == r))
+                        if (isOpen == null || !isOpen(i)) return i;
+                }
+                r = parent;
+            }
+            return -1;
+        }
 
         public PlacedRoom SpawnRoom => Rooms.Count > 0 ? Rooms[0] : null;
 
@@ -220,7 +360,8 @@ namespace Deadfall.Rules.World
             ulong h = 1469598103934665603UL;
             void Mix(long v) { h ^= (ulong)v; h *= 1099511628211UL; }
             foreach (PlacedRoom r in Rooms) { Mix(StableHash(r.Template.Id)); Mix(r.Origin.Key); Mix(r.Rotation); Mix(r.Sector); }
-            foreach (Connection c in Connections) { Mix(c.RoomA); Mix(c.SocketA); Mix(c.RoomB); Mix(c.SocketB); Mix(c.UnlockSector); }
+            foreach (Connection c in Connections) { Mix(c.RoomA); Mix(c.SocketA); Mix(c.RoomB); Mix(c.SocketB); Mix(c.UnlockSector); Mix((int)c.Lock); Mix(c.Cost); Mix(c.SwitchRoom); }
+            foreach (Breach b in Breaches) { Mix(b.Room); Mix(b.Inner.Key); Mix((int)b.Facing); }
             foreach (LootPlacement l in Loot) { Mix(l.Room); Mix(l.Slot); Mix((int)l.Kind); }
             return h;
         }

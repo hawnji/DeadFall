@@ -50,7 +50,7 @@ namespace Deadfall.Game
                 int r = map.RoomAt(me.transform.position);
                 if (r >= 0) room = map.Layout.Rooms[r].Template.DisplayName + "  ·  ";
             }
-            string next = s.NextUnlockSurge > 0 ? $"  ·  next sector after surge {s.NextUnlockSurge}" : "  ·  all sectors open";
+            string next = $"  ·  doors {s.DoorsOpened}/{s.DoorCount} open";
             GUI.Label(new Rect(24f, Screen.height - 104f, 700f, 22f), $"Cinder Ridge  ·  {room}sectors {s.OpenSectors}/{s.SectorCount}{next}", _line);
 
             if (Time.unscaledTime < _bannerUntil)

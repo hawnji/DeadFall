@@ -11,7 +11,7 @@ namespace Deadfall.Rules.World
     public static class LayoutValidator
     {
         /// <summary>Largest map side in cells (keeps the runtime NavMesh bake bounded).</summary>
-        public const int MaxExtentCells = 48;
+        public const int MaxExtentCells = 72;
 
         public static List<string> Validate(Layout layout)
         {
@@ -36,6 +36,13 @@ namespace Deadfall.Rules.World
                     if (c.X > maxX) maxX = c.X;
                     if (c.Z > maxZ) maxZ = c.Z;
                 }
+            }
+            foreach (Breach br in layout.Breaches)
+            {
+                if (br.Room < 0 || br.Room >= rooms.Count) { errors.Add($"Breach points at missing room {br.Room}."); continue; }
+                if (!rooms[br.Room].Contains(br.Inner)) errors.Add($"Breach of room {br.Room} at {br.Inner} is outside the room.");
+                if (cells.TryGetValue(br.Closet.Key, out int other)) errors.Add($"Breach closet at {br.Closet} overlaps room or closet {other}.");
+                else cells[br.Closet.Key] = -1;
             }
             if (maxX - minX + 1 > MaxExtentCells || maxZ - minZ + 1 > MaxExtentCells)
                 errors.Add($"Map is {maxX - minX + 1}x{maxZ - minZ + 1} cells (max {MaxExtentCells}).");
@@ -111,12 +118,26 @@ namespace Deadfall.Rules.World
             if (g.BossRoom && bosses < 1) errors.Add("No boss room.");
             if (secrets < g.Secrets) errors.Add($"Expected {g.Secrets} secret rooms, found {secrets}.");
 
-            // Enemy spawn points per sector.
+            // Breach closets per sector, counting only rooms that aren't behind a side door.
             for (int s = 0; s < layout.SectorCount; s++)
             {
                 int n = 0;
-                foreach (PlacedRoom r in rooms) if (r.Sector == s) n += r.Template.EnemySpawns;
-                if (n < g.MinSpawnsPerSector) errors.Add($"Sector {s} has {n} enemy spawn points (min {g.MinSpawnsPerSector}).");
+                foreach (Breach br in layout.Breaches)
+                    if (br.Room >= 0 && br.Room < rooms.Count && rooms[br.Room].Sector == s && layout.SideDoorTo(br.Room) < 0) n++;
+                if (n < g.MinSpawnsPerSector) errors.Add($"Sector {s} has {n} breach spawns outside side rooms (min {g.MinSpawnsPerSector}).");
+            }
+
+            // Doors: every sector door is locked, and a switch or relay sits where the squad can reach it first.
+            foreach (Connection c in layout.Connections)
+            {
+                if (c.Locked && !c.IsDoor) errors.Add($"Sector door {c.RoomA}-{c.RoomB} has no lock.");
+                if (c.Lock == DoorLock.Credits && c.Cost <= 0) errors.Add($"Door {c.RoomA}-{c.RoomB} costs nothing.");
+                if (c.Lock == DoorLock.Switch || c.Lock == DoorLock.Power)
+                {
+                    if (c.SwitchRoom < 0 || c.SwitchRoom >= rooms.Count) errors.Add($"Door {c.RoomA}-{c.RoomB} has no switch room.");
+                    else if (!rooms[c.SwitchRoom].OnCriticalPath || rooms[c.SwitchRoom].Sector >= c.UnlockSector)
+                        errors.Add($"Switch for door {c.RoomA}-{c.RoomB} is in room {c.SwitchRoom}, which isn't reachable before the door.");
+                }
             }
 
             // Loot.

@@ -9,9 +9,12 @@ namespace Deadfall.World
     /// <summary>An enemy spawn point inside a built room.</summary>
     public struct MapSpawnPoint
     {
+        /// <summary>Centre of the breach closet the enemy appears in.</summary>
         public Vector3 Position;
         public int Room;
         public int Sector;
+        /// <summary>Index into <see cref="Layout.Breaches"/> and <see cref="BuiltMap.Breaches"/>.</summary>
+        public int Breach;
     }
 
     /// <summary>A loot slot that got an item.</summary>
@@ -39,26 +42,28 @@ namespace Deadfall.World
         public readonly List<MapLootPoint> Loot = new List<MapLootPoint>();
         public readonly List<SectorDoor> Doors = new List<SectorDoor>();
         public readonly List<SecretPanel> SecretPanels = new List<SecretPanel>();
+        /// <summary>One per <see cref="Layout.Breaches"/> entry, same order (built after the bake).</summary>
+        public readonly List<BreachBarricade> Breaches = new List<BreachBarricade>();
+        public readonly List<DoorSwitch> Switches = new List<DoorSwitch>();
+        public float CellSize = 4f;
 
-        /// <summary>Room index at a world position, or -1.</summary>
-        public int RoomAt(Vector3 p)
+        /// <summary>Room index at a world position, or -1 (exact for shaped rooms).</summary>
+        public int RoomAt(Vector3 p) => Layout.RoomAt(new Cell(Mathf.FloorToInt(p.x / CellSize), Mathf.FloorToInt(p.z / CellSize)));
+
+        /// <summary>Middle of the room's centre cell (inside the room even for L shapes).</summary>
+        public Vector3 RoomCenter(int room)
         {
-            for (int i = 0; i < RoomBounds.Count; i++)
-            {
-                Bounds b = RoomBounds[i];
-                if (p.x >= b.min.x && p.x <= b.max.x && p.z >= b.min.z && p.z <= b.max.z) return i;
-            }
-            return -1;
+            Cell c = Layout.Rooms[room].CenterCell;
+            return new Vector3((c.X + 0.5f) * CellSize, RoomBounds[room].center.y, (c.Z + 0.5f) * CellSize);
         }
-
-        public Vector3 RoomCenter(int room) => RoomBounds[room].center;
     }
 
     /// <summary>
-    /// Turns a <see cref="Layout"/> into greybox geometry: floor, ceiling and walls per room (doorways where
-    /// sockets connect, solid wall where they don't), a light per room, a few cover props, and points for player
-    /// spawns, enemy spawns and loot. Doors for locked sector connections are built by <see cref="BuildDoors"/>
-    /// after the NavMesh bake, so the bake sees every doorway open and doors carve it while closed (T-32).
+    /// Turns a <see cref="Layout"/> into greybox geometry: floor, ceiling and walls per room cell edge (doorways where
+    /// sockets connect, boarded openings at breaches, solid wall elsewhere), lights, columns and cover props, sealed
+    /// closets behind breaches, and points for player spawns, enemy spawns (the closets) and loot. Locked doors,
+    /// their switches and the breach barricades are built by <see cref="BuildDoors"/> after the NavMesh bake, so the
+    /// bake sees every opening open and those carve it while closed (T-32).
     /// Everything is deterministic from the layout seed, so every peer builds the same map.
     /// </summary>
     public sealed class MapBuilder
@@ -87,7 +92,7 @@ namespace Deadfall.World
             _h = layout.Kit.WallHeight;
             _root = new GameObject($"[Map {layout.Seed}]").transform;
             _root.SetParent(parent, false);
-            var map = new BuiltMap { Layout = layout, Root = _root };
+            var map = new BuiltMap { Layout = layout, Root = _root, CellSize = _cs };
             var all = new Bounds();
             bool first = true;
 
@@ -100,6 +105,7 @@ namespace Deadfall.World
             map.Bounds = all;
 
             foreach (PlacedRoom room in layout.Rooms) BuildRoom(layout, map, room);
+            for (int i = 0; i < layout.Breaches.Count; i++) BuildCloset(layout, map, i);
             BuildSpawnPoints(layout, map);
             BuildLoot(layout, map);
             return map;
@@ -112,7 +118,7 @@ namespace Deadfall.World
             for (int i = 0; i < layout.Connections.Count; i++)
             {
                 Connection c = layout.Connections[i];
-                if (!c.Locked && !c.Secret) continue;
+                if (!c.IsDoor && !c.Secret) continue;
                 PlacedRoom a = layout.Rooms[c.RoomA];
                 Dir facing = a.SocketFacing(c.SocketA);
                 Vector3 edge = EdgeMid(a.SocketCell(c.SocketA), facing);
@@ -129,8 +135,55 @@ namespace Deadfall.World
                     var door = SectorDoor.Create(edge, alongX, DoorWidth + 0.3f, DoorHeight + 0.1f, c.UnlockSector,
                         Mat(Color.Lerp(new Color(0.3f, 0.3f, 0.32f), SectorColor(c.UnlockSector), 0.45f)), _root);
                     door.ConnectionIndex = i;
+                    door.Lock = c.Lock;
+                    door.Cost = c.Cost;
                     map.Doors.Add(door);
+                    if (c.Lock == DoorLock.Switch || c.Lock == DoorLock.Power) BuildSwitch(layout, map, i, c);
                 }
+            }
+
+            // Breach barricades (they carve the NavMesh, so after the bake too).
+            Material wood = Mat(new Color(0.48f, 0.36f, 0.22f)), frame = Mat(new Color(0.25f, 0.25f, 0.27f));
+            for (int i = 0; i < layout.Breaches.Count; i++)
+            {
+                Breach br = layout.Breaches[i];
+                Vector3 edge = EdgeMid(br.Inner, br.Facing);
+                var outward = new Vector3(br.Facing.Dx(), 0f, br.Facing.Dz());
+                map.Breaches.Add(BreachBarricade.Create(i, br.Room, edge, outward, wood, frame, _root));
+            }
+        }
+
+        /// <summary>The switch or power relay for a door, against a wall of its room, away from doorways.</summary>
+        private void BuildSwitch(Layout layout, BuiltMap map, int connection, Connection c)
+        {
+            if (c.SwitchRoom < 0) return;
+            PlacedRoom room = layout.Rooms[c.SwitchRoom];
+            List<Vector3> pts = WallPoints(layout, room, c.Lock == DoorLock.Power ? 0.75f : 0.45f);
+            Vector3 p = pts.Count > 0 ? pts[(connection * 7 + 3) % pts.Count] : map.RoomCenter(room.Index);
+            Vector3 toCenter = map.RoomCenter(room.Index) - p;
+            toCenter.y = 0f;
+            float yaw = toCenter.sqrMagnitude > 0.01f ? Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg : 0f;
+            Color body = c.Lock == DoorLock.Power ? new Color(0.55f, 0.5f, 0.2f) : new Color(0.3f, 0.35f, 0.45f);
+            map.Switches.Add(DoorSwitch.Create(connection, c.Lock, new Vector3(p.x, 0f, p.z), yaw, Mat(body), _root));
+        }
+
+        /// <summary>A sealed closet behind a breach: floor, ceiling and three walls (the room wall has the opening).</summary>
+        private void BuildCloset(Layout layout, BuiltMap map, int index)
+        {
+            Breach br = layout.Breaches[index];
+            Cell c = br.Closet;
+            var t = new GameObject($"Closet #{index}").transform;
+            t.SetParent(_root, false);
+            var center = new Vector3((c.X + 0.5f) * _cs, 0f, (c.Z + 0.5f) * _cs);
+            Color dark = new Color(0.22f, 0.2f, 0.2f);
+            Box(t, "Floor", center + Vector3.down * 0.1f, new Vector3(_cs, 0.2f, _cs), new Color(0.24f, 0.22f, 0.21f));
+            Box(t, "Ceiling", center + Vector3.up * (_h + 0.1f), new Vector3(_cs, 0.2f, _cs), dark);
+            Dir back = br.Facing.Opposite();
+            for (int d = 0; d < 4; d++)
+            {
+                var dir = (Dir)d;
+                if (dir == back) continue;
+                BuildWall(t, c, dir, Opening.None, _h, dark);
             }
         }
 
@@ -173,10 +226,23 @@ namespace Deadfall.World
             if (role == RoomRole.Boss) floor = new Color(0.34f, 0.24f, 0.24f);
             float ceilingY = role == RoomRole.Secret ? 1.6f : _h;
 
-            Box(t, "Floor", new Vector3(b.center.x, -0.1f, b.center.z), new Vector3(b.size.x, 0.2f, b.size.z), floor);
-            Box(t, "Ceiling", new Vector3(b.center.x, ceilingY + 0.1f, b.center.z), new Vector3(b.size.x, 0.2f, b.size.z), new Color(0.2f, 0.2f, 0.22f));
-            // A stripe of the sector colour along the floor's centre helps reading the map while sectors are new.
-            Box(t, "SectorMark", new Vector3(b.center.x, 0.005f, b.center.z), new Vector3(Mathf.Min(b.size.x - 1f, 1.2f), 0.01f, Mathf.Min(b.size.z - 1f, 1.2f)), SectorColor(room.Sector), collider: false);
+            // Floor and ceiling as one box per run of cells in each row (shaped rooms leave their notches empty).
+            for (int z = 0; z < room.Depth2; z++)
+            {
+                int x = 0;
+                while (x < room.Width)
+                {
+                    if (!room.Contains(new Cell(room.Origin.X + x, room.Origin.Z + z))) { x++; continue; }
+                    int start = x;
+                    while (x < room.Width && room.Contains(new Cell(room.Origin.X + x, room.Origin.Z + z))) x++;
+                    float x0 = (room.Origin.X + start) * _cs, x1 = (room.Origin.X + x) * _cs, zc = (room.Origin.Z + z + 0.5f) * _cs;
+                    Box(t, "Floor", new Vector3((x0 + x1) * 0.5f, -0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), floor);
+                    Box(t, "Ceiling", new Vector3((x0 + x1) * 0.5f, ceilingY + 0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), new Color(0.2f, 0.2f, 0.22f));
+                }
+            }
+            // A square of the sector colour in the middle helps reading the map while sectors are new.
+            Vector3 mid = map.RoomCenter(room.Index);
+            Box(t, "SectorMark", new Vector3(mid.x, 0.005f, mid.z), new Vector3(1.2f, 0.01f, 1.2f), SectorColor(room.Sector), collider: false);
 
             // Walls: one segment per boundary cell edge.
             Color wall = new Color(0.36f, 0.37f, 0.4f);
@@ -194,23 +260,32 @@ namespace Deadfall.World
                 }
 
             // Light.
-            var lightGo = new GameObject("Light");
-            lightGo.transform.SetParent(t, false);
-            lightGo.transform.position = new Vector3(b.center.x, ceilingY - 0.4f, b.center.z);
-            var light = lightGo.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.shadows = LightShadows.None;
-            light.range = Mathf.Max(b.size.x, b.size.z) * 0.85f + 2f;
-            light.intensity = role == RoomRole.Corridor ? 1.1f : 1.5f;
-            light.color = role == RoomRole.Boss ? new Color(1f, 0.75f, 0.7f) : new Color(0.95f, 0.97f, 1f);
+            // Lights: one for small rooms, a few spread over the cells of big ones.
+            int lights = Mathf.Clamp(room.Template.CellCount / 10, 1, 4);
+            var lightCells = new List<Cell>(room.Cells());
+            for (int li = 0; li < lights; li++)
+            {
+                Cell lc = lights == 1 ? room.CenterCell : lightCells[(li * lightCells.Count) / lights + lightCells.Count / (lights * 2)];
+                var lightGo = new GameObject("Light");
+                lightGo.transform.SetParent(t, false);
+                lightGo.transform.position = new Vector3((lc.X + 0.5f) * _cs, ceilingY - 0.4f, (lc.Z + 0.5f) * _cs);
+                var light = lightGo.AddComponent<Light>();
+                light.type = LightType.Point;
+                light.shadows = LightShadows.None;
+                light.range = lights == 1 ? Mathf.Max(b.size.x, b.size.z) * 0.85f + 2f : 16f;
+                light.intensity = role == RoomRole.Corridor ? 1.1f : 1.5f;
+                light.color = role == RoomRole.Boss ? new Color(1f, 0.75f, 0.7f) : new Color(0.95f, 0.97f, 1f);
+            }
 
             BuildProps(layout, room, t, b);
         }
 
-        private enum Opening { None, Door, Vent }
+        private enum Opening { None, Door, Vent, Breach }
 
         private static Opening OpeningAt(Layout layout, PlacedRoom room, Cell c, Dir dir)
         {
+            foreach (Breach br in layout.Breaches)
+                if (br.Room == room.Index && br.Facing == dir && br.Inner.Equals(c)) return Opening.Breach;
             for (int s = 0; s < room.Template.Sockets.Count; s++)
             {
                 if (room.SocketFacing(s) != dir || !room.SocketCell(s).Equals(c)) continue;
@@ -235,30 +310,74 @@ namespace Deadfall.World
                 Box(parent, "Wall", center + Vector3.up * (height * 0.5f), Size(_cs, height), color);
                 return;
             }
-            float gap = opening == Opening.Door ? DoorWidth : VentWidth;
-            float gapH = opening == Opening.Door ? DoorHeight : VentHeight;
+            float gap = opening == Opening.Door ? DoorWidth : opening == Opening.Breach ? BreachBarricade.OpeningWidth : VentWidth;
+            float gapH = opening == Opening.Door ? DoorHeight : opening == Opening.Breach ? BreachBarricade.OpeningHeight : VentHeight;
             float side = (_cs - gap) * 0.5f;
             Box(parent, "Wall", center + axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color);
             Box(parent, "Wall", center - axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color);
             Box(parent, "Lintel", center + Vector3.up * (gapH + (height - gapH) * 0.5f), Size(gap, height - gapH), color);
         }
 
-        /// <summary>A few crates and benches inside bigger rooms, kept clear of doorways and the room centre line.</summary>
+        /// <summary>
+        /// Columns at inner cell corners of big rooms (they break sight lines and change how the room flows), plus a
+        /// few crates and lockers. Everything stays clear of doorways, breaches, the room's centre (objective props)
+        /// and the wall strip where loot and switches go.
+        /// </summary>
         private void BuildProps(Layout layout, PlacedRoom room, Transform parent, Bounds b)
         {
             RoomRole role = room.Template.Role;
-            if (role == RoomRole.Corridor || role == RoomRole.Secret || room.Width < 3 || room.Depth2 < 3) return;
+            if (role == RoomRole.Corridor || role == RoomRole.Secret || room.Template.CellCount < 9) return;
             var rng = new DeterministicRandom(layout.Seed ^ (ulong)(room.Index * 7919 + 17));
-            int count = role == RoomRole.Boss ? 4 : rng.Range(2, 5);
-            var doors = DoorPoints(layout, room);
-            for (int i = 0, tries = 0; i < count && tries < 30; tries++)
+            List<Vector3> keepClear = DoorPoints(layout, room);
+            Vector3 mid = new Vector3((room.CenterCell.X + 0.5f) * _cs, 0f, (room.CenterCell.Z + 0.5f) * _cs);
+
+            bool Clear(Vector3 p, float doorRadius)
             {
-                float x = rng.Range(b.min.x + 2f, b.max.x - 2f);
-                float z = rng.Range(b.min.z + 2f, b.max.z - 2f);
-                var p = new Vector3(x, 0f, z);
-                bool clear = (p - new Vector3(b.center.x, 0f, b.center.z)).sqrMagnitude > 4f;
-                foreach (Vector3 d in doors) if ((p - d).sqrMagnitude < 9f) clear = false;
-                if (!clear) continue;
+                if ((p - mid).sqrMagnitude < 9f) return false;
+                foreach (Vector3 d in keepClear) if ((p - d).sqrMagnitude < doorRadius * doorRadius) return false;
+                return true;
+            }
+
+            // Columns: corners shared by four room cells, every other corner, some skipped at random.
+            if (room.Template.CellCount >= 16 && role != RoomRole.Spawn)
+            {
+                Color col = new Color(0.33f, 0.34f, 0.37f);
+                int placed = 0;
+                for (int x = 1; x < room.Width; x++)
+                    for (int z = 1; z < room.Depth2; z++)
+                    {
+                        if (((x + z) & 1) != 0 || (x % 2 != 0 && z % 2 != 0)) continue;
+                        int cx = room.Origin.X + x, cz = room.Origin.Z + z;
+                        if (!room.Contains(new Cell(cx, cz)) || !room.Contains(new Cell(cx - 1, cz)) ||
+                            !room.Contains(new Cell(cx, cz - 1)) || !room.Contains(new Cell(cx - 1, cz - 1))) continue;
+                        var p = new Vector3(cx * _cs, 0f, cz * _cs);
+                        if (!Clear(p, 3.2f) || rng.NextFloat() < 0.3f) continue;
+                        float w = role == RoomRole.Boss ? 1.2f : 0.8f;
+                        Box(parent, "Column", p + Vector3.up * (_h * 0.5f), new Vector3(w, _h, w), col);
+                        placed++;
+                    }
+                // Rooms too narrow for corner columns get a low partition wall instead.
+                if (placed == 0 && room.Template.CellCount >= 20)
+                {
+                    var p = mid + (room.Width >= room.Depth2 ? new Vector3(_cs * 1.5f, 0f, 0f) : new Vector3(0f, 0f, _cs * 1.5f));
+                    if (room.Contains(new Cell(Mathf.FloorToInt(p.x / _cs), Mathf.FloorToInt(p.z / _cs))) && Clear(p, 3.2f))
+                    {
+                        Vector3 size = room.Width >= room.Depth2 ? new Vector3(0.4f, 1.2f, _cs * 0.9f) : new Vector3(_cs * 0.9f, 1.2f, 0.4f);
+                        Box(parent, "Partition", p + Vector3.up * 0.6f, size, new Color(0.35f, 0.36f, 0.38f));
+                    }
+                }
+            }
+
+            int count = role == RoomRole.Boss ? 4 : rng.Range(2, 5);
+            var cells = new List<Cell>(room.Cells());
+            for (int i = 0, tries = 0; i < count && tries < 40; tries++)
+            {
+                Cell c = cells[rng.Range(0, cells.Count)];
+                // Interior cells only (the wall strip is for loot, switches and the build ghost's clearance).
+                bool interior = room.Contains(c.Step(Dir.North)) && room.Contains(c.Step(Dir.South)) && room.Contains(c.Step(Dir.East)) && room.Contains(c.Step(Dir.West));
+                if (!interior) continue;
+                var p = new Vector3((c.X + rng.Range(0.25f, 0.75f)) * _cs, 0f, (c.Z + rng.Range(0.25f, 0.75f)) * _cs);
+                if (!Clear(p, 3f)) continue;
                 bool tall = rng.NextFloat() < 0.3f;
                 var size = tall ? new Vector3(1.2f, 1.8f, 1.2f) : new Vector3(rng.Range(1.2f, 2.4f), rng.Range(0.8f, 1.1f), rng.Range(0.8f, 1.4f));
                 GameObject prop = Box(parent, tall ? "Locker" : "Crate", p + Vector3.up * (size.y * 0.5f), size, new Color(0.4f, 0.37f, 0.32f));
@@ -267,7 +386,7 @@ namespace Deadfall.World
             }
         }
 
-        /// <summary>Inner points just inside each connected doorway of the room.</summary>
+        /// <summary>Inner points just inside each connected doorway and breach of the room.</summary>
         private List<Vector3> DoorPoints(Layout layout, PlacedRoom room)
         {
             var list = new List<Vector3>();
@@ -277,31 +396,31 @@ namespace Deadfall.World
                 Dir f = room.SocketFacing(s);
                 list.Add(EdgeMid(room.SocketCell(s), f) - new Vector3(f.Dx(), 0f, f.Dz()) * 1.5f);
             }
+            foreach (Breach br in layout.Breaches)
+                if (br.Room == room.Index) list.Add(EdgeMid(br.Inner, br.Facing) - new Vector3(br.Facing.Dx(), 0f, br.Facing.Dz()) * 1.5f);
             return list;
         }
 
-        /// <summary>Candidate points along the inside of a room's walls, in a fixed order, skipping doorways.</summary>
+        /// <summary>Candidate points along the inside of a room's walls, in a fixed order, skipping doorways and breaches.</summary>
         private List<Vector3> WallPoints(Layout layout, PlacedRoom room, float inset)
         {
-            Bounds b = RoomBoundsOf(room);
             var doors = DoorPoints(layout, room);
             var list = new List<Vector3>();
-            for (int x = 0; x < room.Width; x++)
-                for (int z = 0; z < room.Depth2; z++)
-                {
-                    bool edge = x == 0 || z == 0 || x == room.Width - 1 || z == room.Depth2 - 1;
-                    if (!edge && room.Width > 2 && room.Depth2 > 2) continue;
-                    float px = (room.Origin.X + x + 0.5f) * _cs, pz = (room.Origin.Z + z + 0.5f) * _cs;
-                    // Push towards the nearest wall(s).
-                    if (x == 0) px = b.min.x + inset;
-                    if (x == room.Width - 1 && room.Width > 1) px = b.max.x - inset;
-                    if (z == 0) pz = b.min.z + inset;
-                    if (z == room.Depth2 - 1 && room.Depth2 > 1) pz = b.max.z - inset;
-                    var p = new Vector3(px, 0f, pz);
-                    bool clear = true;
-                    foreach (Vector3 d in doors) if ((p - d).sqrMagnitude < 4f) clear = false;
-                    if (clear) list.Add(p);
-                }
+            foreach (Cell c in room.Cells())
+            {
+                float px = (c.X + 0.5f) * _cs, pz = (c.Z + 0.5f) * _cs;
+                bool edge = false;
+                // Push towards each wall this cell touches.
+                if (!room.Contains(c.Step(Dir.West))) { px = c.X * _cs + inset; edge = true; }
+                else if (!room.Contains(c.Step(Dir.East))) { px = (c.X + 1) * _cs - inset; edge = true; }
+                if (!room.Contains(c.Step(Dir.South))) { pz = c.Z * _cs + inset; edge = true; }
+                else if (!room.Contains(c.Step(Dir.North))) { pz = (c.Z + 1) * _cs - inset; edge = true; }
+                if (!edge) continue;
+                var p = new Vector3(px, 0f, pz);
+                bool clear = true;
+                foreach (Vector3 d in doors) if ((p - d).sqrMagnitude < 4f) clear = false;
+                if (clear) list.Add(p);
+            }
             return list;
         }
 
@@ -309,11 +428,17 @@ namespace Deadfall.World
         {
             // Players: around the centre of the spawn room, facing its first doorway.
             PlacedRoom spawn = layout.SpawnRoom;
-            Bounds sb = map.RoomBounds[0];
-            Vector3 c = new Vector3(sb.center.x, 0.05f, sb.center.z);
+            Vector3 c = map.RoomCenter(0);
+            c.y = 0.05f;
             Vector3 toDoor = Vector3.forward;
-            List<Vector3> doors = DoorPoints(layout, spawn);
-            if (doors.Count > 0) toDoor = (doors[0] - c).normalized;
+            var doors = new List<Vector3>();
+            for (int s = 0; s < spawn.Template.Sockets.Count; s++)
+            {
+                if (!layout.IsConnected(spawn.Index, s, out _)) continue;
+                Dir f = spawn.SocketFacing(s);
+                doors.Add(EdgeMid(spawn.SocketCell(s), f));
+            }
+            if (doors.Count > 0) { toDoor = doors[0] - c; toDoor.y = 0f; toDoor.Normalize(); }
             map.PlayerSpawnYaw = Mathf.Atan2(toDoor.x, toDoor.z) * Mathf.Rad2Deg;
             Vector3 right = Vector3.Cross(Vector3.up, toDoor).normalized;
             map.PlayerSpawns.Add(c - right * 1.2f);
@@ -321,18 +446,13 @@ namespace Deadfall.World
             map.PlayerSpawns.Add(c - right * 1.2f - toDoor * 1.8f);
             map.PlayerSpawns.Add(c + right * 1.2f - toDoor * 1.8f);
 
-            // Enemies: spread over wall points of each room (vents and hatches come with the art pass).
-            foreach (PlacedRoom room in layout.Rooms)
+            // Enemies: the middle of each breach closet (they break in through the boards).
+            for (int i = 0; i < layout.Breaches.Count; i++)
             {
-                int n = room.Template.EnemySpawns;
-                if (n <= 0) continue;
-                List<Vector3> pts = WallPoints(layout, room, 1.2f);
-                if (pts.Count == 0) pts.Add(map.RoomCenter(room.Index));
-                for (int i = 0; i < n; i++)
-                {
-                    Vector3 p = pts[(i * pts.Count / n + i) % pts.Count];
-                    map.EnemySpawns.Add(new MapSpawnPoint { Position = p, Room = room.Index, Sector = room.Sector });
-                }
+                Breach br = layout.Breaches[i];
+                Cell k = br.Closet;
+                var p = new Vector3((k.X + 0.5f) * _cs, 0f, (k.Z + 0.5f) * _cs);
+                map.EnemySpawns.Add(new MapSpawnPoint { Position = p, Room = br.Room, Sector = layout.Rooms[br.Room].Sector, Breach = i });
             }
         }
 
