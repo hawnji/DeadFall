@@ -14,3 +14,5 @@ means "very likely compiles", not "verified in Unity 6". Always confirm in the e
 Stubs: `stubs/InputSystemStubs.cs` (Input System) and `stubs/NetcodeStubs.cs` (Netcode for GameObjects 2.13.3).
 When code starts using a new package API, copy its exact public signature from the package source into the
 matching stub, and map new package assembly names in `STUBS` in `check.py`.
+
+Editor-only assemblies (`includePlatforms: ["Editor"]`, such as `Deadfall.Editor`) compile against `stubs/UnityEditorStubs.cs`, which covers only the editor API the project calls.

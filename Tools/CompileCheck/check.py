@@ -23,6 +23,7 @@ STUBS = {
     "Unity.InputSystem": glob.glob(f"{HERE}/stubs/InputSystemStubs.cs"),
     "Unity.Networking.Transport": glob.glob(f"{HERE}/stubs/TransportStubs.cs"),
     "Unity.Netcode.Runtime": glob.glob(f"{HERE}/stubs/NetcodeStubs.cs"),
+    "UnityEditor": glob.glob(f"{HERE}/stubs/UnityEditorStubs.cs"),
 }
 STUB_REFS = {"Unity.Netcode.Runtime": ["Unity.Networking.Transport"]}
 # Package assemblies whose types live inside another stub.
@@ -65,6 +66,8 @@ def build(name):
     out = f"{B}/{name}.dll"
     extra = [] if j.get("noEngineReferences") else UNITY
     if name.startswith("Deadfall.Tests"): extra = extra + NUNIT
+    # Editor-only assemblies get UnityEditor implicitly in Unity; here that is a stub.
+    elif j.get("includePlatforms") == ["Editor"]: extra = extra + [f"-r:{stub_dlls['UnityEditor']}"]
     code, log = run(CSC + ["-t:library", f"-out:{out}"] + extra + refs + srcs)
     print(f"{'ok    ' if code == 0 else 'FAILED'} {name} ({len(srcs)} files)")
     if log: print("   " + log.replace("\n", "\n   "))

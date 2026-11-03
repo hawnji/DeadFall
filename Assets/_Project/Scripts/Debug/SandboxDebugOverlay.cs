@@ -74,6 +74,8 @@ namespace Deadfall.DebugTools
 
         private void OnHit(HitConfirmed e)
         {
+            GameSettings gs = Settings;
+            if (gs != null && !gs.DamageNumbers) return;
             if (_numbers.Count >= 32) _numbers.RemoveAt(0);
             _numbers.Add(new DamageNumber { Position = e.Point, Amount = e.Amount, Crit = e.IsCritical, Until = Time.time + 0.8f });
         }
@@ -89,20 +91,9 @@ namespace Deadfall.DebugTools
             }
             _worstDt = Mathf.Max(_worstDt, dt);
 
-            if (_f1.WasPressedThisFrame()) SetCap(30);
-            if (_f2.WasPressedThisFrame()) SetCap(60);
-            if (_f3.WasPressedThisFrame()) SetCap(144);
-            if (_f4.WasPressedThisFrame()) SetCap(0);
-            if (_help.WasPressedThisFrame()) _showHelp = !_showHelp;
-            if (_f9.WasPressedThisFrame() && _player != null)
-            {
-                _health.Revive();
-                _motor.Teleport(_spawnPos, _spawnYaw);
-            }
-            if (_f10.WasPressedThisFrame() && _health != null) _health.Invulnerable = !_health.Invulnerable;
+            if (BuildInfo.DevTools) DevKeys();
 
-            for (int i = _numbers.Count - 1; i >= 0; i--)
-                if (Time.time > _numbers[i].Until) _numbers.RemoveAt(i);
+            TickNumbers();
 
             // Outside a run, get back up a few seconds after going down so testing never stalls. During a run the
             // squad rules decide (revives, kits, return after the surge: M11).
@@ -118,6 +109,29 @@ namespace Deadfall.DebugTools
         }
 
         private float _respawnAt = -1f;
+
+        private void DevKeys()
+        {
+            if (_f1.WasPressedThisFrame()) SetCap(30);
+            if (_f2.WasPressedThisFrame()) SetCap(60);
+            if (_f3.WasPressedThisFrame()) SetCap(144);
+            if (_f4.WasPressedThisFrame()) SetCap(0);
+            if (_help.WasPressedThisFrame()) _showHelp = !_showHelp;
+            if (_f9.WasPressedThisFrame() && _player != null)
+            {
+                _health.Revive();
+                _motor.Teleport(_spawnPos, _spawnYaw);
+            }
+            if (_f10.WasPressedThisFrame() && _health != null) _health.Invulnerable = !_health.Invulnerable;
+        }
+
+        private void TickNumbers()
+        {
+            for (int i = _numbers.Count - 1; i >= 0; i--)
+                if (Time.time > _numbers[i].Until) _numbers.RemoveAt(i);
+        }
+
+        private static GameSettings Settings => ServiceRegistry.TryGet(out ISettingsService s) ? s.Current : null;
 
         private static void SetCap(int cap)
         {
@@ -136,28 +150,6 @@ namespace Deadfall.DebugTools
             }
         }
 
-        private PlayerCursorLock _cursor;
-
-        /// <summary>Pause screen: VSync on/off (saved with the settings).</summary>
-        private void DrawVSyncToggle()
-        {
-            if (_cursor == null && _player != null) _cursor = _player.GetComponent<PlayerCursorLock>();
-            if (_cursor == null || _cursor.IsLocked || UiModal.Active) return;
-            bool on = QualitySettings.vSyncCount > 0;
-            if (!HudKit.Button(new Rect(HudKit.W * 0.5f - 130f, HudKit.H - 84f, 260f, 36f), on ? "VSYNC ON  ·  CLICK TO TURN OFF" : "VSYNC OFF  ·  CLICK TO TURN ON", false, true, 13)) return;
-            if (ServiceRegistry.TryGet(out ISettingsService settings))
-            {
-                settings.Current.VSync = !on;
-                settings.NotifyChanged();
-                settings.Save();
-            }
-            else
-            {
-                QualitySettings.vSyncCount = on ? 0 : 1;
-                Application.targetFrameRate = -1;
-            }
-        }
-
         private void OnGUI()
         {
             HudKit.Begin();
@@ -167,10 +159,16 @@ namespace Deadfall.DebugTools
 
         private void DrawGui()
         {
-
+            if (!BuildInfo.DevTools)
+            {
+                GameSettings gs = Settings;
+                if (gs != null && gs.ShowFps)
+                    HudKit.Label(new Rect(HudKit.W - 140f, 8f, 130f, 20f), $"{1f / Mathf.Max(0.0001f, _smoothedDt):0} FPS", 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
+                DrawNumbers();
+                return;
+            }
             int cap = Application.targetFrameRate;
             string capText = QualitySettings.vSyncCount > 0 ? "vsync" : cap > 0 ? cap.ToString() : "off";
-            DrawVSyncToggle();
             string text = $"FPS {1f / Mathf.Max(0.0001f, _smoothedDt):0}  ({_smoothedDt * 1000f:0.0} ms, worst {_worstDt * 1000f:0.0} ms)  cap {capText}";
             if (_motor != null)
                 text += $"\nSpeed {_motor.HorizontalSpeed:0.00} m/s  {(_motor.IsGrounded ? "grounded" : "air")}{(_motor.IsSprinting ? "  sprint" : "")}{(_motor.IsCrouched ? "  crouch" : "")}";
@@ -192,14 +190,18 @@ namespace Deadfall.DebugTools
             if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
             if (_showHelp)
                 text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · 1-4 / wheel swap · Esc pause" +
-                        "\nF1/F2/F3/F4 cap 30/60/144/off (turns VSync off; Esc for the VSync button) · F9 respawn · F10 god mode · H hide help" +
+                        "\nF1/F2/F3/F4 cap 30/60/144/off (turns VSync off; Esc › Settings to change back) · F9 respawn · F10 god mode · H hide help" +
                         "\nF12 next advanced enemy (Ctrl: variant) · F5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap" +
                         "\nN start / stop survival run · G ready (ends the lull)" +
                         "\nQ class ability · Esc to pick a class";
             else text += "\nH: controls";
             // Small dev readout under the location card (top left), out of the way of the real HUD.
             HudKit.Label(new Rect(30f, 108f, 900f, 220f), text, 12, new Color(0.72f, 0.9f, 0.75f, 0.85f), TextAnchor.UpperLeft, wrap: false);
+            DrawNumbers();
+        }
 
+        private void DrawNumbers()
+        {
             Camera cam = Camera.main;
             if (cam == null) return;
             for (int i = 0; i < _numbers.Count; i++)

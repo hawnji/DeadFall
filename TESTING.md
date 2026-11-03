@@ -376,6 +376,15 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Settings are kept after restarting the game. Esc while the window is open closes it and resumes. Reset to defaults works.
 - [ ] Windowed toggle works in a standalone build (it does nothing in the editor).
 
+### 3.21 Manual checklist: M13 part 2 (release mode, builds, new models)
+
+- [ ] **Deadfall → Build → Windows (Development)** finishes and `Builds/Windows-Dev/Deadfall.exe` runs: dev readout and F-keys work, the pause screen shows "Deadfall v0.13.0 dev".
+- [ ] **Deadfall → Build → Windows (Release)**: no dev readout, F5–F12, F9, F10 and N do nothing, G still readies up. Settings → Show FPS shows a small counter. `-devtools` on the command line brings the dev tools back. `build_info.txt` sits next to the exe.
+- [ ] Settings → Damage numbers off hides the floating numbers.
+- [ ] The Vesper DMR, Bulldog .44, Hailstorm, Kestrel PDW and Railspike Maul show their own models in first person, on teammates and as drops; muzzle flashes line up with the barrels.
+- [ ] The Broodmother uses her spider-like model; the carapace, egg sacs and core still appear by phase and take hits.
+- [ ] Full standalone pass: a 2-player co-op run in release builds from FOB to extraction, then quit and relaunch to check the profile and settings were kept.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

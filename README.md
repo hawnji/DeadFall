@@ -22,7 +22,7 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M10 – FOB and permanent progression | Done (editor check: `TESTING.md` §3.12): FOB Halcyon with seven facilities, loadouts, skill trees, research, challenges, achievements, prestige, versioned saves |
 | M11 – Multiplayer completion | Done except Lobby/Relay (editor check: `TESTING.md` §3.17): downs, revives, self-revive kits, spectating, returns after surges, 90 s rejoin window, single reward banking, bandwidth counters |
 | M12 – Modes and content | Done (editor check: `TESTING.md` §3.18 and §3.19): second environment Harrow Line Transit Depot, Endless mode with escalation, Operation Last Train, five weapons, the Broodmother boss, eight Field Mods, Frenzy and Toxic Leak events, Defend Uplink and Purge Hives objectives |
-| M13 – Polish and release prep | Part 1 done (editor check: `TESTING.md` §3.20): synthesised sound effects and ambience, Settings window. Part 2 (release config, build script, models, polish) in progress |
+| M13 – Polish and release prep | Done in code (editor and build checks: `TESTING.md` §3.20, §3.21): synthesised sound effects and ambience, Settings window, release mode with developer tools hidden, build script, models for the M12 weapons and the Broodmother |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -77,7 +77,8 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 3. Press Play. FOB Halcyon (M10), the range, melee pit, movement course, and pads build themselves; the scene's own camera is switched off. You start in the FOB; the Training Range console (or its "Go to the firing range" button) takes you to the range.
 
 Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, 1–4 or wheel to swap, Esc pause.
-Debug: VSync is on by default (toggle with the button at the bottom left of the pause screen); F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, H toggle help.
+Settings (M13): Esc → Settings for volumes, sensitivity, FOV, VSync, frame cap, quality, window mode, FPS counter and damage numbers.
+Debug (editor and development builds only, or a release build started with `-devtools`): F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, H toggle help.
 Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill all, `[` / `]` lower or raise the alive cap.
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.
@@ -105,6 +106,11 @@ Co-op life (M11): at 0 HP you are downed, not dead. Teammates hold F near you fo
 FOB and progression (M10): F at a facility console opens it. Command Center deploys (Operation or Survival) and has a dev button that grants currency and levels; Armory sets class and loadout; Training Range holds skill trees and prestige; Research Lab, Engineering Workshop and Intelligence Center sell research; Trophy Room shows challenges. Runs end on a results screen with "Return to FOB".
 
 **Co-op test (M1.5)**: press Esc in the sandbox to open the co-op panel. One copy presses **Host**, the other presses **Join** (address `127.0.0.1` on the same PC, or the host's LAN IP). Full steps are in `TESTING.md` §3.1. A build also accepts `-deadfall-host [port]` or `-deadfall-join [address] [port]` on the command line.
+
+Audio (M13): every sound is synthesised at startup from recipes in `Rules/Common/Sfx.cs` (no audio files yet); see T-72.
+
+**Builds (M13)**: **Deadfall → Build → Windows (Release)** (or Development, Linux, macOS) builds every enabled scene in Build Settings into `Builds/<Target>/` and writes `build_info.txt`. From the command line:
+`Unity -batchmode -quit -projectPath . -buildTarget Win64 -executeMethod Deadfall.EditorTools.BuildScript.BuildFromCommandLine -deadfallTarget windows -deadfallVersion 0.13.0` (add `-deadfallDev` for a development build). Release builds hide the developer keys and readout.
 
 **Tests**: **Window → General → Test Runner**, run EditMode (Rules unit tests) then PlayMode (movement and combat integration).
 

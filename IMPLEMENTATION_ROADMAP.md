@@ -203,12 +203,15 @@ Survival, Operations, Endless complete; second environment; more weapons, bosses
 8. ✅ Events Frenzy and Toxic Leak (T-70); objectives Defend Uplink and Purge Hives (T-71).
 9. ✅ 10 new EditMode tests in `ContentPackTests.cs`. Models for the new weapons and the Broodmother are still placeholders.
 
-## M13 – Polish and release prep 🟡
+## M13 – Polish and release prep ✅
 UI/audio/animation/VFX/lighting pass, optimisation, balance, save and MP stability, build automation, release config, final checklist on standalone builds.
 
 1. ✅ Audio: synthesised sound effects and ambience for every major event (T-72), `AudioSynthTests.cs`.
 2. ✅ Settings window with volumes, controls and video options (T-73).
-3. ⬜ Release config, build script, models for the M12 content, final polish.
+3. ✅ Release mode with developer tools hidden, version label, FPS counter and damage-numbers options (T-74).
+4. ✅ Build script for Windows, Linux and macOS (T-75); the compile check now builds editor scripts.
+5. ✅ Blender models for the five M12 weapons and the Broodmother.
+6. ⬜ The user's standalone build pass (`TESTING.md` §3.21) and any balance changes it turns up. Lobby/Relay (M11) still needs a Unity Cloud project link.
 
 ## Prototype gate (after M8–M10 subset)
 Matches brief Part 23: FOB, one facility, procedural rooms with unlocks, five classes with one ability each, ~8 weapons, 4–5 enemy types + 1 boss, waves, 1–2 events, objectives, Field Mods, rewards, host/join. **Content production waits until this is fun.**
