@@ -55,9 +55,11 @@ namespace Deadfall.Game
             if (dark)
             {
                 _saved.Clear();
-                foreach (Light l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                // Resources.FindObjectsOfTypeAll is not deprecated in any Unity version (FindObjectsByType's overloads
+                // changed in Unity 6.x); it also returns assets and inactive objects, so keep live scene lights only.
+                foreach (Light l in Resources.FindObjectsOfTypeAll<Light>())
                 {
-                    if (l == null || l == _flashlight) continue;
+                    if (l == null || l == _flashlight || !l.gameObject.scene.IsValid() || !l.isActiveAndEnabled) continue;
                     _saved[l] = l.intensity;
                     l.intensity *= LightFactor;
                 }
