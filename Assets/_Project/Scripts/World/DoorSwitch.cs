@@ -32,13 +32,14 @@ namespace Deadfall.World
             s.Kind = kind;
             if (kind == DoorLock.Power)
             {
-                Part(root.transform, new Vector3(0f, 0.8f, 0f), new Vector3(1.3f, 1.6f, 0.7f), body, true);
-                Part(root.transform, new Vector3(0f, 1.62f, 0f), new Vector3(1.4f, 0.06f, 0.8f), body, false);
+                GameObject cabinet = Part(root.transform, new Vector3(0f, 0.8f, 0f), new Vector3(1.3f, 1.6f, 0.7f), body, true);
+                GameObject lid = Part(root.transform, new Vector3(0f, 1.62f, 0f), new Vector3(1.4f, 0.06f, 0.8f), body, false);
+                if (ModelLibrary.Skin(cabinet, "prop_relay", body.color) != null) lid.GetComponent<Renderer>().enabled = false;
                 s._lamp = Part(root.transform, new Vector3(0f, 1.2f, 0.36f), new Vector3(0.5f, 0.3f, 0.04f), null, false).GetComponent<Renderer>();
             }
             else
             {
-                Part(root.transform, new Vector3(0f, 1.3f, 0f), new Vector3(0.7f, 0.9f, 0.2f), body, true);
+                ModelLibrary.Skin(Part(root.transform, new Vector3(0f, 1.3f, 0f), new Vector3(0.7f, 0.9f, 0.2f), body, true), "prop_switch", body.color);
                 s._lever = Part(root.transform, new Vector3(0f, 1.4f, 0.16f), new Vector3(0.1f, 0.45f, 0.1f), body, false).transform;
                 s._lever.localRotation = Quaternion.Euler(35f, 0f, 0f);
                 s._lamp = Part(root.transform, new Vector3(0f, 1.0f, 0.11f), new Vector3(0.18f, 0.12f, 0.04f), null, false).GetComponent<Renderer>();

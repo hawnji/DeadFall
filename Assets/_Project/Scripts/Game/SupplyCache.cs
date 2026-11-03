@@ -39,6 +39,9 @@ namespace Deadfall.Game
             c.Part(new Vector3(0f, 0.45f, 0f), new Vector3(1.6f, 0.9f, 0.8f), new Color(0.22f, 0.36f, 0.26f));
             c.Part(new Vector3(0f, 0.92f, 0f), new Vector3(1.66f, 0.06f, 0.86f), new Color(0.75f, 0.62f, 0.2f));
             c.Part(new Vector3(0f, 0.55f, -0.41f), new Vector3(0.5f, 0.18f, 0.02f), new Color(0.4f, 0.9f, 0.5f));
+            // Blender model (T-58) over the placeholder parts; the parts have no gameplay role beyond looks.
+            GameObject model = ModelLibrary.Spawn("supply_cache", root.transform);
+            if (model != null) ModelLibrary.HideExcept(root.transform, model.transform);
             c.RollStock(mapSeed);
             if (RunEconomy.Current != null) RunEconomy.Current.Register(c);
             return c;

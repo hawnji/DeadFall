@@ -357,7 +357,7 @@ namespace Deadfall.World
                         var p = new Vector3(cx * _cs, 0f, cz * _cs);
                         if (!Clear(p, 3.2f) || rng.NextFloat() < 0.3f) continue;
                         float w = role == RoomRole.Boss ? 1.2f : 0.8f;
-                        Box(parent, "Column", p + Vector3.up * (_h * 0.5f), new Vector3(w, _h, w), col);
+                        ModelLibrary.Skin(Box(parent, "Column", p + Vector3.up * (_h * 0.5f), new Vector3(w, _h, w), col), "prop_column");
                         placed++;
                     }
                 // Rooms too narrow for corner columns get a low partition wall instead.
@@ -367,7 +367,7 @@ namespace Deadfall.World
                     if (room.Contains(new Cell(Mathf.FloorToInt(p.x / _cs), Mathf.FloorToInt(p.z / _cs))) && Clear(p, 3.2f))
                     {
                         Vector3 size = room.Width >= room.Depth2 ? new Vector3(0.4f, 1.2f, _cs * 0.9f) : new Vector3(_cs * 0.9f, 1.2f, 0.4f);
-                        Box(parent, "Partition", p + Vector3.up * 0.6f, size, new Color(0.35f, 0.36f, 0.38f));
+                        ModelLibrary.Skin(Box(parent, "Partition", p + Vector3.up * 0.6f, size, new Color(0.35f, 0.36f, 0.38f)), "prop_partition", longAlongX: true);
                     }
                 }
             }
@@ -386,6 +386,7 @@ namespace Deadfall.World
                 var size = tall ? new Vector3(1.2f, 1.8f, 1.2f) : new Vector3(rng.Range(1.2f, 2.4f), rng.Range(0.8f, 1.1f), rng.Range(0.8f, 1.4f));
                 GameObject prop = Box(parent, tall ? "Locker" : "Crate", p + Vector3.up * (size.y * 0.5f), size, new Color(0.4f, 0.37f, 0.32f));
                 prop.transform.rotation = Quaternion.Euler(0f, rng.Range(0, 4) * 90f + rng.Range(-8f, 8f), 0f);
+                ModelLibrary.Skin(prop, tall ? "prop_locker" : "prop_crate");
                 i++;
             }
         }
