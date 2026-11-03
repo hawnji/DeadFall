@@ -9,6 +9,8 @@ using Deadfall.Player;
 using Deadfall.Rules.Combat;
 using Deadfall.Rules.Engineering;
 using Deadfall.Rules.Progression;
+using Deadfall.Rules.World;
+using Deadfall.Rules.Encounters;
 using UnityEngine;
 
 namespace Deadfall.Game
@@ -179,9 +181,20 @@ namespace Deadfall.Game
             GUILayout.EndHorizontal();
             GUILayout.Space(4f);
 
+            // M12: pick the environment, then the mode.
+            GUILayout.BeginHorizontal();
+            foreach (EnvironmentDef env in EnvironmentCatalog.All)
+                if (GUILayout.Toggle(_environment == env.Index, env.DisplayName, GUI.skin.button, GUILayout.Height(28f))) _environment = env.Index;
+            GUILayout.EndHorizontal();
+            EnvironmentDef picked = EnvironmentCatalog.At(_environment);
+            GUILayout.Label(picked.Blurb, _small);
+            MissionTemplate op = ObjectiveRules.MissionById(picked.MissionId);
             GUI.enabled = !client && WorldControl.EnterMap != null;
-            Mission("Operation: Cold Start", "Cinder Ridge Research Complex. Restore power, recover the research data, reach extraction. Surges continue until you extract. Pays the most Intel.", () => Deploy(true));
-            Mission("Survival: Cinder Ridge", "Hold out through every surge. Sectors open after surges 3, 7 and 12; a Specimen waits at the end.", () => Deploy(false));
+            Mission(op.Name.Replace("Operation ", "Operation: "), op.Briefing + " Surges continue until you extract. Pays the most Intel.", () => Deploy(DeployMode.Operation));
+            Mission("Survival", "Hold out through every surge. Sectors open after surges 3, 7 and 12; a Specimen waits at the end.", () => Deploy(DeployMode.Survival));
+            long best = p.Stat(StatKeys.EndlessBest);
+            Mission("Endless", "No final surge. From surge 21 a new escalation stacks every 5 surges (Armored, Swarming, Frenzied, Elite Tide, Relentless). Rewards keep growing." +
+                    (best > 0 ? $" Your best: surge {best}." : string.Empty), () => Deploy(DeployMode.Endless));
             GUI.enabled = true;
             if (client) GUILayout.Label("Waiting for the host to deploy.", _small);
 
@@ -218,17 +231,25 @@ namespace Deadfall.Game
             GUILayout.EndVertical();
         }
 
-        private void Deploy(bool operation)
+        private enum DeployMode { Operation, Survival, Endless }
+        private int _environment;
+
+        private void Deploy(DeployMode mode)
         {
             if (!ulong.TryParse(_seedText, out ulong seed) || seed == 0) seed = (ulong)Random.Range(1, int.MaxValue);
+            seed = EnvironmentCatalog.Encode(seed, _environment);
             Close();
             if (WorldControl.EnterMap == null || !WorldControl.EnterMap(seed)) { RunToasts.Show("Deployment failed: the map would not generate.", new Color(1f, 0.5f, 0.4f)); return; }
-            if (operation)
+            if (mode == DeployMode.Operation)
             {
                 if (ObjectiveDirector.Current == null || !ObjectiveDirector.Current.StartOperation())
                     RunToasts.Show("Could not start the Operation.", new Color(1f, 0.5f, 0.4f));
             }
-            else if (WaveManager.Current != null) WaveManager.Current.StartRun();
+            else if (WaveManager.Current != null)
+            {
+                if (mode == DeployMode.Endless) WaveManager.Current.StartEndless();
+                else WaveManager.Current.StartRun();
+            }
         }
 
         // ---------------------------------------------------------------- Armory

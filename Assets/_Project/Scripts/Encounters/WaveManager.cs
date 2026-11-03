@@ -70,6 +70,11 @@ namespace Deadfall.Encounters
         public int FinalSurge => _runSettings.FinalSurge;
         /// <summary>Host/offline: true while an Operations mission runs (no final surge; objectives end it).</summary>
         public bool IsOperation => _operation;
+        /// <summary>Endless run (no final surge, escalation modifiers from surge 21). Synced to clients.</summary>
+        public bool IsEndless => _endless;
+        private bool _endless;
+        /// <summary>The environment's boss for Specimen surges (set when a map is built; null for any boss).</summary>
+        public string PreferredBossId { get => _planner != null ? _planner.PreferredBossId : null; set { if (_planner != null) _planner.PreferredBossId = value; } }
         public float TimeLeft => Mathf.Max(0f, (float)(_phaseEndsAt - Time.timeAsDouble));
         public int EnemiesRemaining => _remaining;
         public int ReadyCount => _readyCount;
@@ -197,6 +202,18 @@ namespace Deadfall.Encounters
             return true;
         }
 
+        /// <summary>Host/offline: starts an Endless run (M12, D-15): no final surge, escalation from surge 21.</summary>
+        public bool StartEndless(ulong seed = 0)
+        {
+            if (!StartRun(seed)) return false;
+            _endless = true;
+            _planner.Endless = true;
+            _runSettings.FinalSurge = 0;
+            _stateDirty = true;
+            GameLog.Info("Waves", "Endless run: no final surge.");
+            return true;
+        }
+
         /// <summary>Host/offline: lull length for the rest of the run (extraction pressure).</summary>
         public void SetLullSeconds(float seconds)
         {
@@ -224,6 +241,8 @@ namespace Deadfall.Encounters
             if (!IsAuthority) return false;
             StopRun();
             _operation = false;
+            _endless = false;
+            _planner.Endless = false;
             _completeSubtitle = null;
             _runSettings.FinalSurge = _defaultFinalSurge;
             _runSettings.LullSeconds = _defaultLullSeconds;
@@ -314,6 +333,8 @@ namespace Deadfall.Encounters
             {
                 _ready.Clear();
                 _plan = _planner.Plan(_run.Surge, Mathf.Max(1, _players.Count), _seed);
+                // Endless "Relentless": shorter lulls after this surge.
+                if (_endless) _runSettings.LullSeconds = _defaultLullSeconds * EndlessRules.LullMultiplier(_run.Surge);
                 _director.Begin(_plan, _seed, now);
                 SurgePlanned?.Invoke(_plan);
                 GameLog.Info("Waves", $"Surge {_plan.Surge} ({_plan.Type}): {_plan.Spawns.Count} enemies, budget {_plan.Budget:0.#}, " +
@@ -486,8 +507,14 @@ namespace Deadfall.Encounters
                         SurgeType.Hunt => "Hunt · something is tracking you. Stay together",
                         SurgeType.Supply => "Supply · crates are dropping into the area",
                         SurgeType.Specimen => "Specimen · the test subject is loose",
-                        _ => _surge == FinalSurge ? "Final surge" : null,
+                        _ => !_endless && _surge == FinalSurge ? "Final surge" : null,
                     };
+                    if (_endless && EndlessRules.Steps(_surge) > 0)
+                    {
+                        string mods = EndlessRules.Describe(_surge);
+                        if (EndlessRules.StepsUpAt(_surge)) title = $"SURGE {_surge}  ·  ESCALATION";
+                        subtitle = subtitle != null ? subtitle + "  ·  " + mods : mods;
+                    }
                     break;
                 case RunPhase.Reward:
                     title = $"SURGE {_surge} CLEARED";
@@ -562,6 +589,7 @@ namespace Deadfall.Encounters
                     w.WriteValueSafe(kv.Key);
                     w.WriteValueSafe(kv.Value);
                 }
+                w.WriteValueSafe((byte)(_endless ? 1 : 0));
                 if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgState, w, NetworkDelivery.ReliableSequenced);
                 else _session.SendToClient(MsgState, onlyTo, w, NetworkDelivery.ReliableSequenced);
             }
@@ -587,6 +615,8 @@ namespace Deadfall.Encounters
                 r.ReadValueSafe(out int credits);
                 _credits.Set(id, credits);
             }
+            r.ReadValueSafe(out byte flags);
+            _endless = (flags & 1) != 0;
             if (phase > (byte)RunPhase.Failed || type > (byte)SurgeType.Specimen) return;
             int gained = _credits.Get(me) - before;
             if (gained > 0) LocalCreditsEarned?.Invoke(gained, null);

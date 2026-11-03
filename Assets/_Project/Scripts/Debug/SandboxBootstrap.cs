@@ -163,7 +163,7 @@ namespace Deadfall.DebugTools
                 return false;
             }
             if (RenderSettings.sun != null) RenderSettings.sun.enabled = false;
-            SetMapAtmosphere(true);
+            SetMapAtmosphere(true, Deadfall.Rules.World.EnvironmentCatalog.IndexOf(seed));
             _map.MoveLocalPlayerToSpawn();
             return true;
         }
@@ -258,7 +258,7 @@ namespace Deadfall.DebugTools
         /// Generated maps: darker ambient and a thin haze so far rooms fade and the room lights do the work (T-59).
         /// Fog keywords are kept in builds by Graphics settings (fog stripping set to custom, all modes kept).
         /// </summary>
-        private static void SetMapAtmosphere(bool map)
+        private static void SetMapAtmosphere(bool map, int environment = 0)
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = map ? new Color(0.2f, 0.21f, 0.24f) : new Color(0.32f, 0.34f, 0.38f);
@@ -266,6 +266,13 @@ namespace Deadfall.DebugTools
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.fogDensity = 0.022f;
             RenderSettings.fogColor = new Color(0.05f, 0.055f, 0.065f);
+            if (map && environment == 1)
+            {
+                // Harrow Line: damp, greener and a little thicker underground.
+                RenderSettings.ambientLight = new Color(0.17f, 0.2f, 0.19f);
+                RenderSettings.fogDensity = 0.03f;
+                RenderSettings.fogColor = new Color(0.04f, 0.06f, 0.055f);
+            }
         }
 
         private void EnsureLight()

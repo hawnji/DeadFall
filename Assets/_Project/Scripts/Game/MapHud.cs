@@ -55,7 +55,7 @@ namespace Deadfall.Game
             Color sc = sector >= 0 ? MapBuilder.SectorColor(sector) : HudKit.TextDim;
             var card = new Rect(28f, 24f, 300f, 74f);
             HudKit.AccentPanel(card, sc);
-            HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 20f), "CINDER RIDGE" + (sector >= 0 ? $"  ·  SECTOR {sector}" : string.Empty), 12, sc, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 20f), MapShortName() + (sector >= 0 ? $"  ·  SECTOR {sector}" : string.Empty), 12, sc, TextAnchor.MiddleLeft, head: true);
             HudKit.Label(new Rect(card.x + 16f, card.y + 24f, card.width - 32f, 26f), room, 19, Color.white, TextAnchor.MiddleLeft, head: true);
             HudKit.Label(new Rect(card.x + 16f, card.y + 50f, card.width - 32f, 18f),
                 $"Sectors {s.OpenSectors}/{s.SectorCount}   ·   Doors {s.DoorsOpened}/{s.DoorCount}", 12, HudKit.TextDim, TextAnchor.MiddleLeft);
@@ -71,6 +71,12 @@ namespace Deadfall.Game
                 HudKit.Label(b, _bannerText, 28, new Color(HudKit.Good.r, HudKit.Good.g, HudKit.Good.b, a), TextAnchor.MiddleCenter, head: true);
             }
             HudKit.End();
+        }
+
+        private static string MapShortName()
+        {
+            MapSession m = MapSession.Current;
+            return m != null && m.Environment != null && m.Environment.Index == 1 ? "HARROW LINE" : "CINDER RIDGE";
         }
     }
 }

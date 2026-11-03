@@ -21,6 +21,8 @@ namespace Deadfall.Rules.Progression
         public const string Research = "research";
         public const string Prestiges = "prestiges";
         public const string OperatorLevel = "operator.level";
+        /// <summary>Deepest surge cleared in an Endless run (a maximum, not a count).</summary>
+        public const string EndlessBest = "endless.best";
         public static string KillsOf(string enemyId) => "kills." + enemyId;
     }
 
@@ -116,6 +118,8 @@ namespace Deadfall.Rules.Progression
             A("ach.scholar", "Scholar", "Finish {0} research projects", StatKeys.Research, 5),
             A("ach.prestige", "Born Again", "Prestige a class", StatKeys.Prestiges, 1),
             A("ach.thousand", "One Thousand", "Kill {0} infected", StatKeys.Kills, 1000),
+            A("ach.endless_25", "Deep Run", "Clear surge {0} in Endless", StatKeys.EndlessBest, 25),
+            A("ach.endless_40", "No Way Out", "Clear surge {0} in Endless", StatKeys.EndlessBest, 40),
         };
 
         private static Cost R(int req, int intel = 0) => new Cost(req, intel);

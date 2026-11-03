@@ -341,6 +341,17 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Bandwidth: the dev readout and the co-op panel show bytes per second up and down and the busiest messages. Note the numbers for 2 and 4 players during a big surge (target in §5).
 - [ ] 4-player pass of every system: classes and abilities, Supply Caches, Field Mods, objectives and Operations extraction, Engineering structures, doors and barricades, bosses, FOB deploy. Note anything that only one machine sees.
 
+### 3.18 Manual checklist: M12 part 1 (Harrow Line, Endless, Last Train)
+
+- [ ] Command Center: the deployment board has an environment row (Cinder Ridge, Harrow Line), and each has Operation, Survival and Endless. The seed field still works for both.
+- [ ] Harrow Line builds: service-lift spawn, brick-red service tunnels with warm lights, cream-and-green platform halls, ticket concourse, maintenance yard, pump rooms, staff lockers, signal box, Line Control and the Flooded Turntable. The haze is greener and a little thicker. The location card says HARROW LINE.
+- [ ] Doors, breach closets, loot, secrets and sector unlocks behave the same as Cinder Ridge. Try 5 or so seeds.
+- [ ] Operation Last Train on Harrow Line: restore power, keycard to the locker, optional data core and nest, then extraction (about 170 s). Clients see the right mission name. Cold Start still runs on Cinder Ridge.
+- [ ] Endless: the surge panel says ENDLESS instead of "/ 20". Surge 21 shows SURGE 21 · ESCALATION with "Armored"; 26 adds Swarming, and so on (use the debug surge skip if there is one, or a long session). Lulls get shorter once Relentless is active (surge 41).
+- [ ] Endless results: the run ends on a wipe but the results screen keeps full rewards (no 50% cut). The board shows "Your best: surge N". Deep Run (25) and No Way Out (40) appear in the Trophy Room.
+- [ ] Pause screen map panel: the Harrow Line toggle generates that environment; "Start this map's Operation" starts the right one.
+- [ ] Co-op: a client sees the same environment as the host, and ENDLESS on the surge panel.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -387,7 +398,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-03: 195/195 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 

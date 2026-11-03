@@ -53,7 +53,68 @@ namespace Deadfall.World
                 Floor = new Color(0.3f, 0.31f, 0.33f), FloorAlt = new Color(0.27f, 0.28f, 0.3f),
                 Light = new Color(0.95f, 0.97f, 1f), LightScale = 1f, Furniture = System.Array.Empty<string>(),
             };
-            if (t.Role == RoomRole.Corridor) { th.Pipes = true; th.Floor = new Color(0.27f, 0.28f, 0.3f); th.FloorAlt = new Color(0.25f, 0.26f, 0.28f); }
+            if (t.Role == RoomRole.Corridor && t.HasTag("tunnel"))
+            {
+                // Harrow Line service tunnels: sooty brick-red walls, wet concrete, sodium lights.
+                th.Wall = new Color(0.33f, 0.24f, 0.21f); th.Panel = new Color(0.22f, 0.17f, 0.15f);
+                th.Floor = new Color(0.24f, 0.25f, 0.25f); th.FloorAlt = new Color(0.21f, 0.22f, 0.22f);
+                th.Light = new Color(1f, 0.78f, 0.5f); th.LightScale = 0.85f; th.Pipes = true;
+            }
+            else if (t.Role == RoomRole.Corridor) { th.Pipes = true; th.Floor = new Color(0.27f, 0.28f, 0.3f); th.FloorAlt = new Color(0.25f, 0.26f, 0.28f); }
+            else if (t.HasTag("platform"))
+            {
+                // Cream tiles with a green band, worn platform floor.
+                th.Wall = new Color(0.62f, 0.6f, 0.52f); th.Panel = new Color(0.2f, 0.38f, 0.3f);
+                th.Floor = new Color(0.36f, 0.35f, 0.33f); th.FloorAlt = new Color(0.55f, 0.48f, 0.18f);
+                th.Light = new Color(0.92f, 1f, 0.9f);
+                th.Furniture = new[] { "prop_desk", "barrels", "prop_desk", "barrels" };
+            }
+            else if (t.HasTag("concourse"))
+            {
+                th.Wall = new Color(0.52f, 0.48f, 0.42f); th.Panel = new Color(0.45f, 0.24f, 0.18f);
+                th.Floor = new Color(0.44f, 0.42f, 0.39f); th.FloorAlt = new Color(0.3f, 0.3f, 0.31f);
+                th.Light = new Color(1f, 0.92f, 0.78f);
+                th.Furniture = new[] { "prop_desk", "prop_planter", "prop_desk", "prop_planter", "prop_table" };
+            }
+            else if (t.HasTag("yard"))
+            {
+                th.Wall = new Color(0.36f, 0.36f, 0.34f); th.Panel = new Color(0.5f, 0.4f, 0.14f);
+                th.Floor = new Color(0.29f, 0.29f, 0.28f); th.FloorAlt = new Color(0.26f, 0.26f, 0.25f);
+                th.Light = new Color(1f, 0.85f, 0.6f); th.LightScale = 1.05f; th.Pipes = true;
+                th.Furniture = new[] { "prop_generator", "barrels", "prop_shelf", "barrels", "prop_generator" };
+            }
+            else if (t.HasTag("pumps"))
+            {
+                th.Wall = new Color(0.3f, 0.36f, 0.36f); th.Panel = new Color(0.18f, 0.3f, 0.32f);
+                th.Floor = new Color(0.25f, 0.29f, 0.29f); th.FloorAlt = new Color(0.22f, 0.26f, 0.26f);
+                th.Light = new Color(0.75f, 1f, 0.95f); th.LightScale = 0.9f; th.Pipes = true;
+                th.Furniture = new[] { "prop_tank", "prop_generator", "prop_tank", "barrels" };
+            }
+            else if (t.HasTag("lockers"))
+            {
+                th.Wall = new Color(0.45f, 0.47f, 0.5f); th.Panel = new Color(0.25f, 0.32f, 0.42f);
+                th.Furniture = new[] { "prop_locker", "prop_locker", "prop_table", "prop_locker" };
+            }
+            else if (t.HasTag("signal"))
+            {
+                th.Wall = new Color(0.4f, 0.36f, 0.3f); th.Panel = new Color(0.32f, 0.26f, 0.18f);
+                th.Light = new Color(1f, 0.88f, 0.7f);
+                th.Furniture = new[] { "prop_desk", "prop_server_rack", "prop_desk" };
+            }
+            else if (t.HasTag("control"))
+            {
+                th.Wall = new Color(0.34f, 0.36f, 0.4f); th.Panel = new Color(0.2f, 0.3f, 0.45f);
+                th.Floor = new Color(0.3f, 0.31f, 0.34f); th.FloorAlt = new Color(0.26f, 0.27f, 0.3f);
+                th.Light = new Color(0.75f, 0.88f, 1f); th.Pipes = true;
+                th.Furniture = new[] { "prop_desk", "prop_server_rack", "prop_desk", "prop_server_rack", "prop_generator" };
+            }
+            else if (t.HasTag("turntable"))
+            {
+                th.Wall = new Color(0.28f, 0.27f, 0.25f); th.Panel = new Color(0.22f, 0.16f, 0.12f);
+                th.Floor = new Color(0.18f, 0.22f, 0.21f); th.FloorAlt = new Color(0.15f, 0.19f, 0.18f);
+                th.Light = new Color(0.8f, 1f, 0.7f); th.LightScale = 1.1f; th.Pipes = true;
+                th.Furniture = new[] { "prop_generator", "barrels", "prop_tank", "barrels" };
+            }
             else if (t.Role == RoomRole.Spawn)
             {
                 th.Wall = new Color(0.44f, 0.48f, 0.45f); th.Panel = new Color(0.3f, 0.37f, 0.33f);

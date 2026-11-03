@@ -69,6 +69,8 @@ namespace Deadfall.Game
         public int OpenSectors { get; private set; } = 1;
         public int SectorCount => Map != null ? Map.Layout.SectorCount : 0;
         public RoomKit Kit => _kit;
+        /// <summary>The environment of the current (or last) map.</summary>
+        public EnvironmentDef Environment { get; private set; } = EnvironmentCatalog.All[0];
         public float LastBuildMilliseconds { get; private set; }
         public float LastBakeMilliseconds { get; private set; }
 
@@ -157,6 +159,11 @@ namespace Deadfall.Game
         {
             Clear(notifyClients: false);
             float started = Time.realtimeSinceStartup;
+            // M12: the environment travels inside the seed.
+            Environment = EnvironmentCatalog.ForSeed(seed);
+            _kit = Environment.CreateKit();
+            _graph = Environment.CreateGraph();
+            if (WaveManager.Current != null) WaveManager.Current.PreferredBossId = Environment.BossId;
             Layout layout = LayoutGenerator.Generate(_kit, _graph, seed);
             if (layout == null)
             {
