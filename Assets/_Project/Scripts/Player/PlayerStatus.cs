@@ -16,6 +16,9 @@ namespace Deadfall.Player
         public float BonusMoveMultiplier = 1f;
         /// <summary>0..1 aim-down-sights blend, read by look (sensitivity, FOV) and motor (speed).</summary>
         public float AimBlend;
+        /// <summary>Downed (D-01): crawling, sidearm only, no abilities.</summary>
+        public bool IsDowned;
+        /// <summary>Eliminated (bled out): no control until the squad brings them back (D-02).</summary>
         public bool IsDead;
     }
 }

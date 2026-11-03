@@ -79,6 +79,9 @@ namespace Deadfall.DebugTools
             ui.AddComponent<FobLabels>();
             ui.AddComponent<RunResultsPanel>();
             ui.AddComponent<ProgressionTracker>().Bind(player);
+            // M11: downs, revives, kits, spectating, the squad roster, and drop/rejoin handling.
+            ui.AddComponent<SquadHud>();
+            ui.AddComponent<SpectatorCamera>().Bind(player);
 
             // M1.5 networking spike: host/join from the pause screen.
             var net = new GameObject("[NetSpike]");
@@ -101,6 +104,9 @@ namespace Deadfall.DebugTools
             net.AddComponent<ObjectiveDirector>();
             // M9: Engineering structures and the squad's Scrap (host-run).
             net.AddComponent<EngineeringDirector>();
+            // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.
+            net.AddComponent<SquadLife>().Bind(player);
+            net.AddComponent<ReconnectDirector>().Bind(player);
 
             // M3: survival waves. Press N to start a run.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();

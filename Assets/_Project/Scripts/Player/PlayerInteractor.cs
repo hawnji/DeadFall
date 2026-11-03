@@ -29,6 +29,8 @@ namespace Deadfall.Player
 
         private float _nextRepeat;
         private float _lastUse;
+        private float _channelStart = -1f;
+        private IChannelInteractable _channeling;
 
         private void Awake()
         {
@@ -39,18 +41,53 @@ namespace Deadfall.Player
 
         private void Update()
         {
+            if (_health != null && !_health.IsAlive)
+            {
+                // Downed or eliminated: nothing to use (self-revive kits are handled by the squad system).
+                StopChannel();
+                Current = null;
+                Prompt = string.Empty;
+                CanUse = IsHold = false;
+                HoldProgress = -1f;
+                return;
+            }
             IInteractable previous = Current;
             Current = Find() ?? FindNearby();
             Prompt = Current != null ? Current.InteractPrompt(gameObject) ?? string.Empty : string.Empty;
             CanUse = Current != null && Current.CanInteract(gameObject);
             var hold = Current as IHoldInteractable;
-            IsHold = hold != null;
+            var channel = Current as IChannelInteractable;
+            IsHold = hold != null || channel != null;
             if (Current != previous) _nextRepeat = 0f;
 
             bool alive = _health == null || _health.IsAlive;
             bool pressed = _input != null && _input.Current.InteractPressed;
             bool held = _input != null && _input.Current.InteractHeld;
             float now = Time.time;
+
+            if (channel != null)
+            {
+                // Channelled use (revives): hold without a break, then one use.
+                bool active = CanUse && alive && held;
+                if (!active || channel != _channeling) StopChannel();
+                if (active)
+                {
+                    if (_channeling == null) { _channeling = channel; _channelStart = now; }
+                    channel.OnChannel(gameObject, true);
+                    float need = Mathf.Max(0.1f, channel.ChannelSeconds);
+                    HoldProgress = Mathf.Clamp01((now - _channelStart) / need);
+                    if (now - _channelStart >= need)
+                    {
+                        StopChannel();
+                        channel.Interact(gameObject);
+                        HoldProgress = -1f;
+                    }
+                }
+                else HoldProgress = -1f;
+                return;
+            }
+            StopChannel();
+
             if (CanUse && alive && (pressed || (hold != null && held && now >= _nextRepeat)))
             {
                 Current.Interact(gameObject);
@@ -61,6 +98,15 @@ namespace Deadfall.Player
                 ? Mathf.Clamp01((now - _lastUse) / Mathf.Max(0.1f, hold.RepeatSeconds))
                 : -1f;
         }
+
+        private void StopChannel()
+        {
+            if (_channeling != null && !(_channeling is Object o && o == null)) _channeling.OnChannel(gameObject, false);
+            _channeling = null;
+            _channelStart = -1f;
+        }
+
+        private void OnDisable() => StopChannel();
 
         /// <summary>Closest usable <see cref="INearbyInteractable"/> in reach (one that can't be used only if none can).</summary>
         private IInteractable FindNearby()

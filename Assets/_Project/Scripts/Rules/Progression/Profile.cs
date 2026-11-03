@@ -17,6 +17,8 @@ namespace Deadfall.Rules.Progression
         public readonly Dictionary<string, string[]> Loadouts = new Dictionary<string, string[]>();
         public readonly Dictionary<string, long> Stats = new Dictionary<string, long>();
         public readonly Dictionary<string, long> WeaponXp = new Dictionary<string, long>();
+        /// <summary>Ids of the most recent banked runs (oldest first), so a run can never pay out twice (M11).</summary>
+        public readonly List<string> BankedRuns = new List<string>();
 
         public int OperatorLevel => OperatorLevels.LevelForXp(OperatorXp);
         public long XpOf(string classId) => classId != null && ClassXp.TryGetValue(classId, out long v) ? v : 0;
@@ -47,6 +49,8 @@ namespace Deadfall.Rules.Progression
         public int Kills;
         public int Objectives;
         public int Specimens;
+        /// <summary>Unique id of the run on this machine. A run with an id already banked pays nothing (M11 reconnects).</summary>
+        public string RunId;
     }
 
     public struct RunReward
@@ -94,6 +98,8 @@ namespace Deadfall.Rules.Progression
         public int OperatorLevelBefore, OperatorLevelAfter;
         public int RankBefore, RankAfter;
         public List<ChallengeCompletion> Completed;
+        /// <summary>The run had already been banked; nothing was paid.</summary>
+        public bool Duplicate;
     }
 
     /// <summary>Changes to a profile. Every write path goes through here so tests cover it.</summary>
@@ -103,8 +109,20 @@ namespace Deadfall.Rules.Progression
         /// Banks a finished run: XP, currency and run stats. Per-kill stats are counted live during the run (so
         /// challenge progress is never lost, D-03) and are not touched here.
         /// </summary>
+        public const int BankedRunMemory = 20;
+
+        public static bool WasBanked(PlayerProfile p, string runId) => !string.IsNullOrEmpty(runId) && p.BankedRuns.Contains(runId);
+
         public static RunSummary ApplyRun(PlayerProfile p, string classId, RunResult result, IReadOnlyList<ChallengeDef> challenges)
         {
+            if (WasBanked(p, result.RunId))
+                return new RunSummary { Duplicate = true, OperatorLevelBefore = p.OperatorLevel, OperatorLevelAfter = p.OperatorLevel,
+                    RankBefore = p.RankOf(classId), RankAfter = p.RankOf(classId), Completed = new List<ChallengeCompletion>() };
+            if (!string.IsNullOrEmpty(result.RunId))
+            {
+                p.BankedRuns.Add(result.RunId);
+                while (p.BankedRuns.Count > BankedRunMemory) p.BankedRuns.RemoveAt(0);
+            }
             var s = new RunSummary
             {
                 Reward = RunRewardRules.Compute(result),

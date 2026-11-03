@@ -324,6 +324,23 @@ Generate a few maps (different seeds) and walk them:
 - [ ] Barricades: standing anywhere in front of a damaged breach (up to about 2.5 m, a little past each post) shows "Hold · Repair barricade" without aiming at it. Holding F repairs one board about every 0.7 s with a progress line in the prompt, paying credits each time during a run, and stops at 5/5. Aiming at another interactable still takes priority. It does not trigger from the next room through a wall.
 - [ ] The dev readout (FPS, enemies) sits small under the location card; H toggles the controls list (off by default now).
 
+### 3.17 Manual checklist: M11 multiplayer (needs 2 to 4 copies)
+
+Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo first where it applies, then with 2 and 4 players.
+
+- [ ] Downed: at 0 HP you drop low and crawl, only the sidearm works, Q does nothing, enemies walk past you. The screen shows YOU'RE DOWN with a bleed-out bar: 30 s the first time, 20 s the second, 10 s after that in the same run.
+- [ ] Teammates see you lower down with a red + marker, DOWN on the name plate and a draining bar. The squad roster (left edge) shows each teammate's state.
+- [ ] Revive: stand within about 2 m of a downed teammate (no need to aim) and hold F for 4 s. Letting go starts over. Their bleed-out pauses while you hold. They stand up with 40% health. Try it from both host and client.
+- [ ] Self-revive kits: while downed during a run, hold F for 2.5 s. The squad has 3 per run (roster heading and downed screen show the count); the host's count stays right when two players use kits at once.
+- [ ] Bleed out: you are ELIMINATED, the camera follows a living teammate from behind (click to switch), the gun model is hidden. When the surge is cleared (or an objective completes in Operations) you come back next to a teammate with your class's starting loadout.
+- [ ] Squad wipe: with everyone down and no kits left the run fails; with everyone down but a kit left it does not fail until the downed bleed out. Solo: the 3 kits are your only way back.
+- [ ] Outside a run (sandbox, FOB) you get back up after 3 s like before. F9 still revives.
+- [ ] Client drop (kill the client's network or close it mid-surge): the host and other clients see that player downed in place with RECONNECTING and a countdown. The dropped client sees Connection Lost with Rejoin and Return to FOB and retries on its own. Rejoining within 90 s puts them back where they were with the same health or downed state and the same Field Credits. After 90 s the stand-in disappears.
+- [ ] Rewards: a dropped client that rejoins and finishes the run gets one results screen and one payout. Giving up (Return to FOB) or letting the window run out banks once with the failure share. Restarting the game afterwards doesn't pay again.
+- [ ] Host drop: clients get Connection Lost, rejoin fails, and the run banks with the failure share when the window ends or they press Return to FOB. The host's own run carries on offline.
+- [ ] Bandwidth: the dev readout and the co-op panel show bytes per second up and down and the busiest messages. Note the numbers for 2 and 4 players during a big surge (target in §5).
+- [ ] 4-player pass of every system: classes and abilities, Supply Caches, Field Mods, objectives and Operations extraction, Engineering structures, doors and barricades, bosses, FOB deploy. Note anything that only one machine sees.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -370,7 +387,7 @@ Baseline PC: 6-core CPU (Ryzen 5 3600 / i5-9600K class), GTX 1660 / RX 5600 clas
 | PlayMode | `Tests/PlayMode/MovementFrameRateTests.cs` | Walk distance equal at 30/60/144 FPS (±2%), sprint faster, strafe can't sprint, stops in 0.15 s |
 | PlayMode | `Tests/PlayMode/CombatIntegrationTests.cs` | Headshot via raycast + resolver, shooter ignores own collider, melee arc, one hit per target, dead targets |
 
-Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
+Status 2026-11-03: 195/195 EditMode tests pass in the compile-check runner. PlayMode tests compile but have not been run in the editor yet.
 
 ## 7. Known issues
 
@@ -380,7 +397,7 @@ Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. Play
 - Melee hits use the camera position; a target directly overlapping the player's camera may be missed.
 - No audio yet.
 - M2 co-op: the host sends all enemies to every client (no distance-based priority yet); enemy types are numbered by their order in `PrototypeEnemies` until definitions are registered assets. Clients see enemies about 100 ms behind the host.
-- M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Solo death ends the run right away because there are no revives yet (M11). Credits cannot be spent until Supply Caches (M6).
+- M3: the sandbox is one open arena, so most spawn points are visible; real maps (M5) provide hidden spawn spots. Credits cannot be spent until Supply Caches (M6).
 - M4: a client's shield copy doesn't darken with damage (only the host's copy tracks health). Explosions ignore walls (no line-of-sight check yet). Bomblet copies on clients may land slightly differently from the host's; the damage follows the host's.
 - M7: Creepers don't use vents yet. Specimen Zero has no arena hazards or damage-type armor yet. Supply crates aren't sent to players who join mid-surge. Acid globs fly through walls on their arc (Retchers only fire with a clear line of sight).
 - M8: objective props are placed after the NavMesh bake, so enemies can bump into them. Generators don't power doors or turrets yet. Operations open every sector at once.
@@ -390,4 +407,5 @@ Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. Play
 - Enemies use scripted low-poly models (T-58) and code-driven poses instead of animations; models aren't rigged. If a model faces the wrong way or lies on its side after import, the FBX axis settings in `Tools/Blender/build_models.py` are the place to fix it.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.
+- M11: Lobby and Relay (join codes over the internet) are not in yet; they need the Unity Gaming Services package and a Unity Cloud project linked in the editor. Direct IP host/join still works. A rejoining player gets a new player number. Reviving uses each player's own reported position, so the 1.5 m slack is the only latency allowance.
 - The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.

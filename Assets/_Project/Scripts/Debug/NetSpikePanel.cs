@@ -107,6 +107,7 @@ namespace Deadfall.DebugTools
             else
             {
                 GUILayout.Label(StatusText(s));
+                GUILayout.Label(s.Stats.Summary(3));
                 GUILayout.Space(8f);
                 if (GUILayout.Button(s.IsHost ? "Close session" : s.IsConnecting ? "Cancel" : "Leave", GUILayout.Height(30f))) s.Stop();
             }

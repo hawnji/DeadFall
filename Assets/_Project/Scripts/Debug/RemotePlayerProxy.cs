@@ -1,6 +1,8 @@
 using System;
 using Deadfall.Combat;
 using Deadfall.Core;
+using Deadfall.Game;
+using Deadfall.Rules.Combat;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -11,7 +13,7 @@ namespace Deadfall.DebugTools
     /// head and a gun barrel that follows their aim. It has no colliders, so it never blocks shots or
     /// movement. Positions are smoothed toward the latest state; real interpolation arrives with M11.
     /// </summary>
-    public sealed class RemotePlayerProxy : MonoBehaviour, ICombatTarget, IDamageable
+    public sealed class RemotePlayerProxy : MonoBehaviour, ICombatTarget, IDamageable, ISquadMember, IChannelInteractable, INearbyInteractable
     {
         private const float PositionSharpness = 18f;
         private const float RotationSharpness = 22f;
@@ -39,26 +41,77 @@ namespace Deadfall.DebugTools
         public ulong ClientId { get; private set; }
         public float Health01 { get; private set; } = 1f;
         public bool IsDead => _dead;
+        public bool IsDowned => _downed;
+
+        private bool _downed;
+        private float _bleed01;
+        private float _ghostUntil = -1f;
+
+        // ISquadMember (M11)
+        public bool IsLocalMember => false;
+        public LifeState Life => _dead ? LifeState.Eliminated : _downed ? LifeState.Downed : LifeState.Alive;
+        public float BleedOut01 => _bleed01;
+        /// <summary>Dropped mid-run and held for a rejoin (D-16): shown downed in place until then.</summary>
+        public bool Disconnected => _ghostUntil >= 0f;
+        public Transform Body => transform;
+        public Vector3 Eye => transform.position + Vector3.up * (_downed || _dead ? 0.5f : _eyeHeight);
+        public float GhostSecondsLeft => Disconnected ? Mathf.Max(0f, _ghostUntil - Time.time) : 0f;
+
+        public void MarkDisconnected(float seconds)
+        {
+            _ghostUntil = Time.time + seconds;
+            _downed = true;
+            _hasState = true;
+        }
+
+        // Revive (D-01): hold Interact near a downed teammate. No colliders, so it is found by distance.
+        public float ChannelSeconds => DownedRules.ReviveSeconds;
+        public bool InReach(Vector3 feet, out float distance)
+        {
+            distance = Vector3.Distance(feet, transform.position);
+            return _downed && !_dead && !Disconnected && distance <= DownedRules.ReviveRange;
+        }
+        public string InteractPrompt(GameObject interactor) => $"Revive player {ClientId}";
+        public bool CanInteract(GameObject interactor) => _downed && !_dead && !Disconnected && SquadLife.Current != null;
+        public void Interact(GameObject interactor)
+        {
+            if (SquadLife.Current != null) SquadLife.Current.RequestRevive(ClientId);
+        }
+        public void OnChannel(GameObject interactor, bool active)
+        {
+            if (SquadLife.Current != null) SquadLife.Current.SetReviving(ClientId, active);
+        }
 
         /// <summary>Host: an enemy hit this player. The amount is sent to their machine, which applies it.</summary>
         public event Action<RemotePlayerProxy, float, Vector3> DamageRequested;
 
         // Host enemies hunt remote players through these (ICombatTarget / IDamageable).
         public Transform TargetTransform => transform;
-        public bool IsTargetable => _hasState && !_dead && isActiveAndEnabled;
+        public bool IsTargetable => _hasState && !_dead && !_downed && isActiveAndEnabled;
         public IDamageable Damageable => this;
-        public bool IsAlive => !_dead;
+        public bool IsAlive => !_dead && !_downed;
         public float DamageReduction => 0f; // the owner applies their own reduction
 
         public float ApplyDamage(in DamageInfo info)
         {
-            if (_dead || info.Amount <= 0f) return 0f;
+            if (_dead || _downed || info.Amount <= 0f) return 0f;
             DamageRequested?.Invoke(this, info.Amount, info.Direction);
             return info.Amount;
         }
 
-        private void OnEnable() => CombatTargets.Register(this);
-        private void OnDisable() => CombatTargets.Unregister(this);
+        private void OnEnable()
+        {
+            CombatTargets.Register(this);
+            SquadMembers.Register(this);
+            NearbyInteractables.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            CombatTargets.Unregister(this);
+            SquadMembers.Unregister(this);
+            NearbyInteractables.Unregister(this);
+        }
         /// <summary>Latest reported eye position (unsmoothed), used by the host to validate hit claims.</summary>
         public Vector3 EyePosition => _targetPos + Vector3.up * (_crouched ? CrouchEye : StandEye);
 
@@ -152,8 +205,10 @@ namespace Deadfall.DebugTools
             _renderers = GetComponentsInChildren<Renderer>();
         }
 
-        public void SetTarget(Vector3 position, float yaw, float pitch, bool crouched, bool dead, float health01)
+        public void SetTarget(Vector3 position, float yaw, float pitch, bool crouched, bool dead, float health01, bool downed = false, float bleed01 = 0f)
         {
+            _downed = downed && !dead;
+            _bleed01 = Mathf.Clamp01(bleed01);
             _targetPos = position;
             _targetYaw = yaw;
             _targetPitch = pitch;
@@ -187,8 +242,9 @@ namespace Deadfall.DebugTools
             _body.localPosition = new Vector3(0f, 0.9f * bodyScale, 0f);
             if (_bodyModel != null) _bodyModel.localScale = new Vector3(1f, bodyScale, 1f);
 
-            // Dead players lie down until they respawn.
+            // Downed players sit low; eliminated (and dropped) players lie down until they come back.
             if (_dead) transform.rotation = Quaternion.Euler(-80f, _yaw, 0f);
+            else if (_downed) transform.rotation = Quaternion.Euler(-35f, _yaw, 0f);
         }
 
         private void OnGUI()
@@ -204,10 +260,18 @@ namespace Deadfall.DebugTools
             float fade = Mathf.Clamp01((60f - sp.z) / 15f);
             string label = $"PLAYER {ClientId}{(cls != null ? "  ·  " + cls.DisplayName.ToUpperInvariant() : "")}";
             Color c = cls != null ? cls.Color : Color.white;
-            Deadfall.Core.HudKit.Label(new Rect(p.x - 110f, p.y - 26f, 220f, 18f), _dead ? label + "  ·  DOWN" : label, 12,
-                _dead ? new Color(1f, 0.4f, 0.35f, fade) : new Color(c.r, c.g, c.b, fade), TextAnchor.MiddleCenter, head: true);
-            Deadfall.Core.HudKit.Bar(new Rect(p.x - 40f, p.y - 6f, 80f, 7f), Health01, _dead ? Deadfall.Core.HudKit.Bad : Deadfall.Core.HudKit.Good,
+            string state = Disconnected ? $"  ·  RECONNECTING {Mathf.CeilToInt(GhostSecondsLeft)}s" : _dead ? "  ·  OUT" : _downed ? "  ·  DOWN" : "";
+            bool bad = _dead || _downed;
+            Deadfall.Core.HudKit.Label(new Rect(p.x - 140f, p.y - 26f, 280f, 18f), label + state, 12,
+                bad ? new Color(1f, 0.4f, 0.35f, fade) : new Color(c.r, c.g, c.b, fade), TextAnchor.MiddleCenter, head: true);
+            // Downed: the bar shows the bleed-out instead of health.
+            Deadfall.Core.HudKit.Bar(new Rect(p.x - 40f, p.y - 6f, 80f, 7f), _downed && !Disconnected ? _bleed01 : Health01, bad ? Deadfall.Core.HudKit.Bad : Deadfall.Core.HudKit.Good,
                 0, new Color(0f, 0f, 0f, 0.5f * fade));
+            if (_downed && !_dead && !Disconnected)
+            {
+                // Downed marker that reads from further away.
+                Deadfall.Core.HudKit.Label(new Rect(p.x - 20f, p.y - 54f, 40f, 26f), "+", 26, new Color(1f, 0.35f, 0.3f, Mathf.Max(fade, 0.6f)), TextAnchor.MiddleCenter, head: true);
+            }
             Deadfall.Core.HudKit.End();
         }
     }

@@ -320,7 +320,14 @@ namespace Deadfall.Player
                 return;
             }
 
-            HandleSwap(f);
+            bool downed = _status != null && _status.IsDowned;
+            if (downed)
+            {
+                // Downed (D-01): sidearm only.
+                int side = SidearmIndex();
+                if (side >= 0 && side != _current) Equip(side);
+            }
+            else HandleSwap(f);
             slot = _slots[_current];
             RefreshHandling(slot);
             bool equipping = now < _equipEnd;
@@ -338,7 +345,7 @@ namespace Deadfall.Player
             bool fireIntent = f.FireHeld || f.FirePressed;
 
             // Melee (quick melee from any weapon, or the primary attack of a melee weapon)
-            if (!IsMeleeing && !equipping)
+            if (!IsMeleeing && !equipping && !downed)
             {
                 if (f.MeleePressed) StartMelee(slot.IsMelee ? slot.Definition.Melee : _quickMelee, now, slot);
                 else if (slot.IsMelee && fireIntent && sprintRecovered) StartMelee(slot.Definition.Melee, now, slot);
@@ -395,6 +402,20 @@ namespace Deadfall.Player
                 _viewmodel.SetState(_aimBlend, EquipProgress, ReloadProgress, MeleeProgress, IsMeleeing,
                     _motor != null && _motor.IsSprinting, _motor != null ? _motor.MoveFactor : 0f);
             }
+        }
+
+        /// <summary>The pistol slot (first one), else the first firearm, else -1.</summary>
+        public int SidearmIndex()
+        {
+            int firearm = -1;
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                WeaponDefinition d = _slots[i].Definition;
+                if (d == null || _slots[i].Firearm == null) continue;
+                if (d.Category == WeaponCategory.Pistol) return i;
+                if (firearm < 0) firearm = i;
+            }
+            return firearm;
         }
 
         private void HandleSwap(in PlayerInputFrame f)

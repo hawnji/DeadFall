@@ -73,6 +73,14 @@ namespace Deadfall.Rules.Combat
             Current = Math.Min(_regenCap, Current + _stats.RegenPerSecond * dt);
         }
 
+        /// <summary>Sets health directly (revives, rejoin restore). Regeneration refills the new segment only.</summary>
+        public void SetCurrent(float value)
+        {
+            Current = Math.Max(0f, Math.Min(Max, value));
+            _regenCap = ComputeRegenCap(Current);
+            _lastDamageTime = double.NegativeInfinity;
+        }
+
         public void ResetToFull()
         {
             Current = Max;
