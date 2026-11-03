@@ -384,6 +384,14 @@ namespace Deadfall.Encounters
         private void OnSummonRequested(Enemy boss, int count)
         {
             if (!IsAuthority || boss == null || _run.Phase != RunPhase.Surge) return;
+            if (boss.Definition != null && boss.Definition.IsBrood)
+            {
+                // Her brood: Creepers, with a Retcher in every five.
+                int spitters = count / 5;
+                _director.SpawnNear(PrototypeEnemies.Creeper, boss.transform.position, count - spitters, 2.5f, 6f);
+                if (spitters > 0) _director.SpawnNear(PrototypeEnemies.Retcher, boss.transform.position, spitters, 4f, 8f);
+                return;
+            }
             int bolters = count / 4;
             _director.SpawnNear(PrototypeEnemies.Husk, boss.transform.position, count - bolters, 3f, 7f);
             if (bolters > 0) _director.SpawnNear(PrototypeEnemies.Bolter, boss.transform.position, bolters, 3f, 7f);
@@ -506,7 +514,7 @@ namespace Deadfall.Encounters
                         SurgeType.Elite => "Elite · Alphas lead the pack, mutations everywhere",
                         SurgeType.Hunt => "Hunt · something is tracking you. Stay together",
                         SurgeType.Supply => "Supply · crates are dropping into the area",
-                        SurgeType.Specimen => "Specimen · the test subject is loose",
+                        SurgeType.Specimen => PreferredBossId == "enemy.broodmother" ? "Specimen · the Broodmother has woken" : "Specimen · the test subject is loose",
                         _ => !_endless && _surge == FinalSurge ? "Final surge" : null,
                     };
                     if (_endless && EndlessRules.Steps(_surge) > 0)

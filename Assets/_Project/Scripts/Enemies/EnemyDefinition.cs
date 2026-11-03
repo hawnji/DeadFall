@@ -22,6 +22,8 @@ namespace Deadfall.Enemies
         Alpha,
         /// <summary>The Specimen: huge, plated, with growths and a chest core that open by phase.</summary>
         Specimen,
+        /// <summary>The Broodmother (M12): low, swollen egg-bearer with a spitting maw; egg sacs and a core open by phase.</summary>
+        Brood,
     }
 
     /// <summary>
@@ -69,6 +71,8 @@ namespace Deadfall.Enemies
         public EnemyRole Role => _role;
         public bool CanSplit => _canSplit;
         public bool IsBoss => _role == EnemyRole.Boss;
+        /// <summary>The Broodmother's boss rules (summons in every phase, spits instead of charging).</summary>
+        public bool IsBrood => _bodyType == EnemyBodyType.Brood;
         public EnemyBodyType BodyType => _bodyType;
         public float Height => _height;
         public float Radius => _radius;

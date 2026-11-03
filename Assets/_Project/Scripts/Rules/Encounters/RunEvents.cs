@@ -13,6 +13,10 @@ namespace Deadfall.Rules.Encounters
         Stalker,
         /// <summary>Sector doors seal; a terminal has to be hacked to lift it.</summary>
         Lockdown,
+        /// <summary>M12: the infected are faster and hit harder for the surge.</summary>
+        Frenzy,
+        /// <summary>M12: two rooms fill with toxic gas for the surge (hurts players, not the infected).</summary>
+        ToxicLeak,
     }
 
     /// <summary>
@@ -25,6 +29,10 @@ namespace Deadfall.Rules.Encounters
         public const int FirstSurge = 4;
         public const int CooldownSurges = 3;
         public const float Chance = 0.3f;
+        public const RunEventKind Last = RunEventKind.ToxicLeak;
+        /// <summary>Frenzy: enemy move speed and damage multipliers.</summary>
+        public const float FrenzySpeed = 1.25f;
+        public const float FrenzyDamage = 1.15f;
 
         private int _lastEventSurge = int.MinValue / 2;
 
@@ -35,6 +43,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Blackout => 3f,
             RunEventKind.Stalker => 2f,
             RunEventKind.Lockdown => hasMap && openSectors >= 2 ? 2f : 0f,
+            RunEventKind.Frenzy => 2f,
+            RunEventKind.ToxicLeak => hasMap ? 2f : 0f,
             _ => 0f,
         };
 
@@ -45,10 +55,10 @@ namespace Deadfall.Rules.Encounters
             if (surge - _lastEventSurge <= CooldownSurges) return RunEventKind.None;
             if (rng.NextFloat() >= Chance) return RunEventKind.None;
             float total = 0f;
-            for (var k = RunEventKind.Blackout; k <= RunEventKind.Lockdown; k++) total += Weight(k, hasMap, openSectors);
+            for (var k = RunEventKind.Blackout; k <= Last; k++) total += Weight(k, hasMap, openSectors);
             if (total <= 0f) return RunEventKind.None;
             float roll = rng.NextFloat() * total;
-            for (var k = RunEventKind.Blackout; k <= RunEventKind.Lockdown; k++)
+            for (var k = RunEventKind.Blackout; k <= Last; k++)
             {
                 roll -= Weight(k, hasMap, openSectors);
                 if (roll <= 0f && Weight(k, hasMap, openSectors) > 0f)
@@ -65,6 +75,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Blackout => "BLACKOUT",
             RunEventKind.Stalker => "THE STALKER",
             RunEventKind.Lockdown => "EMERGENCY LOCKDOWN",
+            RunEventKind.Frenzy => "FRENZY",
+            RunEventKind.ToxicLeak => "TOXIC LEAK",
             _ => string.Empty,
         };
 
@@ -73,6 +85,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Blackout => "The lights are failing. Flashlight on (L); restart the generators to restore power",
             RunEventKind.Stalker => "Something is hunting you. Stay together; it drops a rare weapon",
             RunEventKind.Lockdown => "Sector doors are sealing. Hack the terminal to lift the lockdown",
+            RunEventKind.Frenzy => "They're faster and hit harder this surge. Hold a choke point",
+            RunEventKind.ToxicLeak => "Gas is venting into two rooms. Stay out of the green haze",
             _ => string.Empty,
         };
     }

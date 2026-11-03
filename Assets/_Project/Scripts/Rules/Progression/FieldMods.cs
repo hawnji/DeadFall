@@ -172,6 +172,10 @@ namespace Deadfall.Rules.Progression
                 M("thick_skin", "Thick Skin", "+15 max health.", ModRarity.Common, StackRule.Stacks, 4, E(ModStat.MaxHealth, 15f)),
                 M("steady_grip", "Steady Grip", "-10% recoil.", ModRarity.Common, StackRule.Stacks, 3, E(ModStat.Recoil, -0.1f)),
                 M("second_wind", "Second Wind", "Heal 30 when a surge is cleared.", ModRarity.Common, StackRule.Unique, 1, E(ModStat.HealOnSurgeClear, 30f)),
+                // M12 commons
+                M("trigger_discipline", "Trigger Discipline", "+6% fire rate.", ModRarity.Common, StackRule.Stacks, 3, E(ModStat.FireRate, 0.06f)),
+                M("light_pack", "Light Pack", "+4% move speed and +10% reserve ammo.", ModRarity.Common, StackRule.Stacks, 2, E(ModStat.MoveSpeed, 0.04f), E(ModStat.Reserve, 0.1f)),
+                M("field_dressing", "Field Dressing", "Heal 15 when a surge is cleared.", ModRarity.Common, StackRule.Stacks, 3, E(ModStat.HealOnSurgeClear, 15f)),
                 // Rare
                 M("adrenal_surge", "Adrenal Surge", "Kills give +25% fire rate for 2 s.", ModRarity.Rare, StackRule.Unique, 1, E(ModStat.KillFireRateBurst, 0.25f)),
                 M("overclock", "Overclock", "Ability cooldowns 15% faster.", ModRarity.Rare, StackRule.Stacks, 2, E(ModStat.CooldownRate, 0.15f)),
@@ -189,7 +193,24 @@ namespace Deadfall.Rules.Progression
                     Rarity = ModRarity.Legendary, Stack = StackRule.Unique, IsEvolution = true,
                     Effects = new[] { E(ModStat.HealOnKill, 4f), E(ModStat.Damage, 0.1f) },
                 },
+                // M12 rares
+                M("hardened", "Hardened", "4% damage reduction and +10 max health.", ModRarity.Rare, StackRule.Stacks, 3, E(ModStat.DamageReduction, 0.04f), E(ModStat.MaxHealth, 10f)),
+                M("sleight", "Sleight of Hand", "+15% reload speed and -8% recoil.", ModRarity.Rare, StackRule.Stacks, 2, E(ModStat.ReloadSpeed, 0.15f), E(ModStat.Recoil, -0.08f)),
+                new FieldModDef
+                {
+                    Id = "mod.combat_stims", DisplayName = "Combat Stims", Description = "Kills give +10% fire rate for 2 s. At 3 stacks becomes Berserker Protocol.",
+                    Rarity = ModRarity.Rare, Stack = StackRule.Evolves, EvolvesInto = "mod.berserker_protocol", EvolveAt = 3,
+                    Effects = new[] { E(ModStat.KillFireRateBurst, 0.1f) },
+                },
+                new FieldModDef
+                {
+                    Id = "mod.berserker_protocol", DisplayName = "Berserker Protocol", Description = "Kills give +35% fire rate for 2 s; +8% move speed and +15% melee damage.",
+                    Rarity = ModRarity.Legendary, Stack = StackRule.Unique, IsEvolution = true,
+                    Effects = new[] { E(ModStat.KillFireRateBurst, 0.35f), E(ModStat.MoveSpeed, 0.08f), E(ModStat.MeleeDamage, 0.15f) },
+                },
                 // Legendary
+                M("deadeye", "Deadeye", "+25% weapon damage and +20% more while below 30% health.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.Damage, 0.25f), E(ModStat.LowHealthDamage, 0.2f)),
+                M("phoenix_rig", "Phoenix Rig", "Ability cooldowns 30% faster and heal 40 when a surge is cleared.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.CooldownRate, 0.3f), E(ModStat.HealOnSurgeClear, 40f)),
                 M("last_stand", "Last Stand", "+40% damage while below 30% health.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.LowHealthDamage, 0.4f)),
                 M("juggernaut", "Juggernaut", "+50 max health and 10% damage reduction.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.MaxHealth, 50f), E(ModStat.DamageReduction, 0.1f)),
             };

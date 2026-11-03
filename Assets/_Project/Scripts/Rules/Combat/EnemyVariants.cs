@@ -165,10 +165,16 @@ namespace Deadfall.Rules.Combat
             return SpecimenPhase.Stalk;
         }
 
-        /// <summary>Infected summoned per wave in the Rampage phase.</summary>
-        public static int SummonCount(int players, SpecimenModifiers mods)
+        /// <summary>Broodmother (M12): calls her brood in every phase, more often while enraged.</summary>
+        public static bool SummonsIn(SpecimenPhase phase, bool brood) => brood || phase == SpecimenPhase.Rampage;
+
+        public static float SummonInterval(SpecimenPhase phase, bool brood) =>
+            !brood ? SummonIntervalSeconds : phase == SpecimenPhase.Rampage ? 6f : 10f;
+
+        /// <summary>Infected summoned per wave in the Rampage phase (the Broodmother brings two more each time).</summary>
+        public static int SummonCount(int players, SpecimenModifiers mods, bool brood = false)
         {
-            int n = SummonBase + Math.Max(0, players - 1);
+            int n = SummonBase + Math.Max(0, players - 1) + (brood ? 2 : 0);
             if ((mods & SpecimenModifiers.Brood) != 0) n = (int)Math.Ceiling(n * 1.5f);
             return n;
         }
@@ -192,11 +198,29 @@ namespace Deadfall.Rules.Combat
         }
 
         /// <summary>Writes the phase's stats into <paramref name="target"/> (the boss's own copy), starting from its base stats.</summary>
-        public static void ApplyPhase(EnemyStats baseStats, EnemyStats target, SpecimenPhase phase, SpecimenModifiers mods)
+        public static void ApplyPhase(EnemyStats baseStats, EnemyStats target, SpecimenPhase phase, SpecimenModifiers mods, bool brood = false)
         {
             if (baseStats == null || target == null) return;
             target.CopyFrom(baseStats);
-            switch (phase)
+            if (brood)
+            {
+                // Broodmother: keeps her distance and spits; never charges. Enraged she moves faster and spits more often.
+                target.CanCharge = false;
+                target.CanShoot = true;
+                if (phase == SpecimenPhase.Rampage)
+                {
+                    target.ChaseSpeed *= 1.25f;
+                    target.RangedCooldownSeconds *= 0.65f;
+                    target.DamageReduction = Math.Max(0f, target.DamageReduction - 0.15f);
+                }
+                else if (phase == SpecimenPhase.ExposedCore)
+                {
+                    target.ChaseSpeed *= 0.7f;
+                    target.DamageReduction = 0f;
+                    target.PoolRadius *= 1.4f;
+                }
+            }
+            else switch (phase)
             {
                 case SpecimenPhase.Stalk:
                     target.CanCharge = false;

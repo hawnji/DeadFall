@@ -50,6 +50,8 @@ namespace Deadfall.Game
         private bool _dirty;
         private float _nextSend;
         private double _nextNestSpawn;
+        private readonly HashSet<ushort> _uplinks = new HashSet<ushort>();
+        private double _nextUplinkRush;
         private ExtractionZone _zone;
         private HoldTimer _hold;
         private Vector3 _zonePos;
@@ -256,10 +258,26 @@ namespace Deadfall.Game
                 bool done = c.Tick(dt, PlayerNear(p.transform.position, ObjectiveRules.ChannelRange));
                 p.SetState(c.Value01, true, done);
                 if (Mathf.Abs(c.Value01 - before) > 0f) _dirty = true;
-                if (!done) continue;
+                if (!done)
+                {
+                    if (_uplinks.Contains(id)) RushUplink(p.transform.position);
+                    continue;
+                }
+                _uplinks.Remove(id);
                 _tracker.Advance(p.ObjectiveId);
                 _dirty = true;
             }
+        }
+
+        /// <summary>Defend Uplink: while it uploads, Husks keep coming for the terminal.</summary>
+        private void RushUplink(Vector3 at)
+        {
+            if (_waves == null || _waves.Director == null) return;
+            double now = Time.timeAsDouble;
+            if (now < _nextUplinkRush) return;
+            _nextUplinkRush = now + ObjectiveRules.UplinkRushSeconds;
+            _born.Clear();
+            _waves.Director.SpawnNear(PrototypeEnemies.Husk, at, ObjectiveRules.UplinkRushCount, 8f, 14f, _born);
         }
 
         private void TickNests()
@@ -409,6 +427,13 @@ namespace Deadfall.Game
                         AddObjective(ObjectiveKind.LiftLockdown, false, plan.Surge);
                     }
                     break;
+                case RunEventKind.Frenzy:
+                    Enemy.EventSpeedMultiplier = EventScheduler.FrenzySpeed;
+                    Enemy.EventDamageMultiplier = EventScheduler.FrenzyDamage;
+                    break;
+                case RunEventKind.ToxicLeak:
+                    ToxicLeak.Begin(_map, plan.Surge);
+                    break;
             }
             if (ActiveEvent != RunEventKind.None) Say(EventScheduler.Name(ActiveEvent), EventScheduler.Hint(ActiveEvent));
             _dirty = true;
@@ -419,6 +444,7 @@ namespace Deadfall.Game
             if (ActiveEvent == RunEventKind.None) return;
             if (ActiveEvent == RunEventKind.Blackout) BlackoutLighting.SetDark(false);
             if (ActiveEvent == RunEventKind.Lockdown && _map != null) _map.SetSealed(false);
+            ClearEventEffects();
             ActiveEvent = RunEventKind.None;
             _dirty = true;
         }
@@ -489,6 +515,26 @@ namespace Deadfall.Game
                 case ObjectiveKind.LiftLockdown:
                     PlaceLockdownTerminal(o.Id);
                     break;
+                case ObjectiveKind.DefendUplink:
+                {
+                    ushort before = PeekId();
+                    PlaceProp(o.Id, ObjectivePropKind.DataTerminal, 0, ObjectiveRules.UplinkSeconds);
+                    _uplinks.Add(before);
+                    break;
+                }
+                case ObjectiveKind.PurgeHives:
+                {
+                    float scale = _waves != null && _waves.CurrentPlan != null ? _waves.CurrentPlan.HealthScale : 1f;
+                    for (int i = 0; i < o.Target; i++)
+                    {
+                        Vector3 pos = PickSpot(i, out _);
+                        ushort id = NextId();
+                        ObjectiveNest n = ObjectiveNest.Create(id, o.Id, pos, ObjectiveRules.NestHealth * ObjectiveRules.HiveHealthFraction * scale, transform);
+                        n.Destroyed += OnNestDestroyed;
+                        _nests[id] = n;
+                    }
+                    break;
+                }
                 case ObjectiveKind.DestroyNest:
                 {
                     Vector3 pos = PickSpot(0, out _);
@@ -575,6 +621,8 @@ namespace Deadfall.Game
         private static Vector3 FloorPoint(Vector3 p) =>
             NavMesh.SamplePosition(p, out NavMeshHit hit, 6f, NavMesh.AllAreas) ? hit.position : p;
 
+        private ushort PeekId() => _nextPropId;
+
         private ushort NextId()
         {
             ushort id = _nextPropId++;
@@ -592,6 +640,7 @@ namespace Deadfall.Game
                 if (_props.TryGetValue(id, out ObjectiveProp p) && p != null) Destroy(p.gameObject, all ? 0f : 2f);
                 _props.Remove(id);
                 _channels.Remove(id);
+                _uplinks.Remove(id);
             }
             _scratch.Clear();
             foreach (KeyValuePair<ushort, ObjectiveNest> kv in _nests)
@@ -609,6 +658,7 @@ namespace Deadfall.Game
             foreach (ObjectiveNest n in _nests.Values) if (n != null) Destroy(n.gameObject);
             _props.Clear();
             _channels.Clear();
+            _uplinks.Clear();
             _nests.Clear();
             _nestSpawns.Clear();
             _tracker.Clear();
@@ -619,6 +669,7 @@ namespace Deadfall.Game
             HasKeycard = false;
             if (ActiveEvent == RunEventKind.Blackout || BlackoutLighting.IsDark) BlackoutLighting.SetDark(false);
             if (_map != null) _map.SetSealed(false);
+            ClearEventEffects();
             ActiveEvent = PendingEvent = RunEventKind.None;
             IsOperation = false;
             if (notify) _dirty = true;
@@ -757,8 +808,8 @@ namespace Deadfall.Game
             IsOperation = op == 1;
             HasKeycard = keycard == 1;
             ExtractionOccupied = occupied == 1;
-            ApplyEvent(activeEvent <= (byte)RunEventKind.Lockdown ? (RunEventKind)activeEvent : RunEventKind.None);
-            PendingEvent = pendingEvent <= (byte)RunEventKind.Lockdown ? (RunEventKind)pendingEvent : RunEventKind.None;
+            ApplyEvent(activeEvent <= (byte)EventScheduler.Last ? (RunEventKind)activeEvent : RunEventKind.None);
+            PendingEvent = pendingEvent <= (byte)EventScheduler.Last ? (RunEventKind)pendingEvent : RunEventKind.None;
             if (holdDuration > 0f)
             {
                 if (_hold == null || Mathf.Abs(_hold.Duration - holdDuration) > 0.01f) _hold = new HoldTimer(holdDuration);
@@ -784,7 +835,7 @@ namespace Deadfall.Game
                 r.ReadValueSafe(out byte target);
                 r.ReadValueSafe(out ushort reward);
                 r.ReadValueSafe(out ushort expires);
-                if (kind > (byte)ObjectiveKind.Extraction || status > (byte)ObjectiveStatus.Failed) continue;
+                if (kind > (byte)ObjectiveRules.LastKind || status > (byte)ObjectiveStatus.Failed) continue;
                 list.Add(new Objective
                 {
                     Id = id, Kind = (ObjectiveKind)kind, Required = required == 1, Status = (ObjectiveStatus)status,
@@ -851,9 +902,19 @@ namespace Deadfall.Game
             if (kind == ActiveEvent) return;
             if (ActiveEvent == RunEventKind.Blackout) BlackoutLighting.SetDark(false);
             if (ActiveEvent == RunEventKind.Lockdown && _map != null) _map.SetSealed(false);
+            ClearEventEffects();
             ActiveEvent = kind;
             if (kind == RunEventKind.Blackout) BlackoutLighting.SetDark(true);
             if (kind == RunEventKind.Lockdown && _map != null) _map.SetSealed(true);
+            if (kind == RunEventKind.ToxicLeak) ToxicLeak.Begin(_map, _waves != null ? _waves.Surge : 0);
+        }
+
+        /// <summary>Undoes Frenzy and Toxic Leak (M12) on this machine.</summary>
+        private static void ClearEventEffects()
+        {
+            Enemy.EventSpeedMultiplier = 1f;
+            Enemy.EventDamageMultiplier = 1f;
+            ToxicLeak.End();
         }
     }
 }

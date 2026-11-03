@@ -48,6 +48,11 @@ namespace Deadfall.Combat
         public static WeaponDefinition AnvilLmg => ById("weapon.anvil_lmg");
         public static WeaponDefinition TetherCleaver => ById("weapon.tether_cleaver");
         public static WeaponDefinition MuleLauncher => ById("weapon.mule_launcher");
+        public static WeaponDefinition VesperDmr => ById("weapon.vesper_dmr");
+        public static WeaponDefinition Bulldog44 => ById("weapon.bulldog_44");
+        public static WeaponDefinition Hailstorm => ById("weapon.hailstorm");
+        public static WeaponDefinition KestrelPdw => ById("weapon.kestrel_pdw");
+        public static WeaponDefinition RailspikeMaul => ById("weapon.railspike_maul");
 
         private static WeaponDefinition[] Build() => new[]
         {
@@ -130,6 +135,58 @@ namespace Deadfall.Combat
                 MoveSpeedMultiplier = 0.93f, AmmoTypeId = "ammo.grenade",
                 ProjectileSpeed = 32f, ExplosionRadius = 4.2f,
             }, null, new Color(0.3f, 0.34f, 0.25f)),
+
+            // M12 additions (appended: the network numbers weapons by position).
+            WeaponDefinition.CreateRuntime("weapon.vesper_dmr", "Vesper DMR", WeaponKind.Firearm, new WeaponStats
+            {
+                Category = WeaponCategory.AssaultRifle, FireMode = FireMode.SemiAuto,
+                Damage = 64f, RoundsPerMinute = 260f, MagazineSize = 15, MaxReserve = 120, HeadMultiplier = 2.2f,
+                TacticalReloadSeconds = 2.2f, EmptyReloadSeconds = 2.7f,
+                EffectiveRange = 55f, MaxRange = 200f, MinRangeMultiplier = 0.75f,
+                HipSpread = 2.6f, AimSpread = 0.05f, MoveSpreadPenalty = 1.6f, BloomPerShot = 0.6f, MaxBloom = 2.4f,
+                RecoilPitch = 1.6f, RecoilYaw = 0.25f, EquipSeconds = 0.55f, SprintToFireSeconds = 0.22f, AimInSeconds = 0.3f,
+                MoveSpeedMultiplier = 0.95f, AimFovMultiplier = 0.65f, AmmoTypeId = "ammo.rifle",
+            }, null, new Color(0.32f, 0.3f, 0.26f)),
+
+            WeaponDefinition.CreateRuntime("weapon.bulldog_44", "Bulldog .44", WeaponKind.Firearm, new WeaponStats
+            {
+                Category = WeaponCategory.Pistol, FireMode = FireMode.SemiAuto,
+                Damage = 72f, RoundsPerMinute = 150f, MagazineSize = 6, MaxReserve = 48, HeadMultiplier = 2f,
+                TacticalReloadSeconds = 2.3f, EmptyReloadSeconds = 2.3f,
+                EffectiveRange = 22f, MaxRange = 80f, MinRangeMultiplier = 0.6f,
+                HipSpread = 1.6f, AimSpread = 0.2f, MoveSpreadPenalty = 0.8f, BloomPerShot = 1.2f, MaxBloom = 2.5f,
+                RecoilPitch = 3.2f, RecoilYaw = 0.6f, RecoilRecoveryPerSecond = 8f, EquipSeconds = 0.35f, SprintToFireSeconds = 0.14f,
+                MoveSpeedMultiplier = 1.03f, AimFovMultiplier = 0.88f, AmmoTypeId = "ammo.pistol",
+            }, null, new Color(0.36f, 0.3f, 0.22f)),
+
+            WeaponDefinition.CreateRuntime("weapon.hailstorm", "Hailstorm Auto-Shotgun", WeaponKind.Firearm, new WeaponStats
+            {
+                Category = WeaponCategory.Shotgun, FireMode = FireMode.FullAuto,
+                Damage = 10f, PelletsPerShot = 8, RoundsPerMinute = 230f, MagazineSize = 12, MaxReserve = 60,
+                TacticalReloadSeconds = 2.8f, EmptyReloadSeconds = 3.4f,
+                EffectiveRange = 9f, MaxRange = 35f, MinRangeMultiplier = 0.25f, HeadMultiplier = 1.4f,
+                HipSpread = 6f, AimSpread = 4.5f, MoveSpreadPenalty = 0.8f, BloomPerShot = 0.4f, MaxBloom = 2f,
+                RecoilPitch = 2.2f, RecoilYaw = 0.9f, RecoilRecoveryPerSecond = 7f,
+                EquipSeconds = 0.65f, SprintToFireSeconds = 0.25f, MoveSpeedMultiplier = 0.93f,
+                AmmoTypeId = "ammo.shell",
+            }, null, new Color(0.24f, 0.26f, 0.3f)),
+
+            WeaponDefinition.CreateRuntime("weapon.kestrel_pdw", "Kestrel PDW", WeaponKind.Firearm, new WeaponStats
+            {
+                Category = WeaponCategory.SubmachineGun, FireMode = FireMode.FullAuto,
+                Damage = 15f, RoundsPerMinute = 1050f, MagazineSize = 40, MaxReserve = 280,
+                TacticalReloadSeconds = 1.7f, EmptyReloadSeconds = 2.1f,
+                EffectiveRange = 13f, MaxRange = 60f, MinRangeMultiplier = 0.45f,
+                HipSpread = 1.8f, AimSpread = 0.6f, MoveSpreadPenalty = 0.8f, BloomPerShot = 0.18f, MaxBloom = 2.2f,
+                RecoilPitch = 0.3f, RecoilYaw = 0.3f, EquipSeconds = 0.3f, SprintToFireSeconds = 0.1f,
+                MoveSpeedMultiplier = 1.06f, AmmoTypeId = "ammo.smg",
+            }, null, new Color(0.22f, 0.28f, 0.3f)),
+
+            WeaponDefinition.CreateRuntime("weapon.railspike_maul", "Railspike Maul", WeaponKind.Melee, null, new MeleeStats
+            {
+                Damage = 160f, HeadMultiplier = 1.5f, Range = 2.7f, ArcDegrees = 120f,
+                WindupSeconds = 0.35f, RecoverySeconds = 1.05f, MaxTargets = 5, MoveSpeedMultiplier = 0.95f,
+            }, new Color(0.4f, 0.38f, 0.36f)),
         };
     }
 }

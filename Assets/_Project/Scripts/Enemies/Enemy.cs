@@ -60,6 +60,9 @@ namespace Deadfall.Enemies
 
         /// <summary>Host: a Specimen in its Rampage phase calls for help (boss, how many). The encounter layer spawns them.</summary>
         public static event System.Action<Enemy, int> SummonRequested;
+        /// <summary>Host: global move speed and damage multipliers for events (Frenzy, M12). 1 = normal.</summary>
+        public static float EventSpeedMultiplier = 1f;
+        public static float EventDamageMultiplier = 1f;
         /// <summary>Any machine: a Specimen changed phase (boss, new phase).</summary>
         public static event System.Action<Enemy, SpecimenPhase> PhaseChanged;
         private NavMeshAgent _agent;
@@ -117,6 +120,7 @@ namespace Deadfall.Enemies
         {
             SharedMaterials.Clear();
             SummonRequested = null;
+            EventSpeedMultiplier = EventDamageMultiplier = 1f;
             PhaseChanged = null;
         }
 
@@ -242,6 +246,29 @@ namespace Deadfall.Enemies
                     Part(PrimitiveType.Cube, "ArmR", new Vector3(r + 0.25f, h * 0.55f, 0.4f), new Vector3(0.35f, 0.35f, 1.4f), skin, null);
                     break;
                 }
+                case EnemyBodyType.Brood:
+                {
+                    // Low swollen abdomen behind a raised front body; egg sacs on the back open in Rampage, the core in the maw last.
+                    Part(PrimitiveType.Sphere, "Body", new Vector3(0f, h * 0.38f, -r * 0.35f), new Vector3(r * 2f, h * 0.62f, r * 2.3f), skin, HitZone.Body);
+                    Part(PrimitiveType.Capsule, "Front", new Vector3(0f, h * 0.55f, r * 0.55f), new Vector3(r * 1.1f, h * 0.35f, r * 1.1f), skin, HitZone.Body);
+                    Part(PrimitiveType.Sphere, "Head", new Vector3(0f, h * 0.78f, r * 0.95f), Vector3.one * 0.6f, dark, HitZone.Head);
+                    Color plate = new Color(0.22f, 0.24f, 0.2f);
+                    PhaseOnly(Part(PrimitiveType.Cube, "Carapace", new Vector3(0f, h * 0.72f, -r * 0.35f), new Vector3(r * 1.7f, 0.2f, r * 1.9f),
+                        plate, HitZone.Armor, d.ArmorMultiplier), SpecimenPhase.Stalk, SpecimenPhase.Stalk);
+                    Color egg = new Color(0.95f, 0.85f, 0.35f);
+                    for (int e = 0; e < 3; e++)
+                        PhaseOnly(Part(PrimitiveType.Sphere, "EggSac" + e, new Vector3((e - 1) * r * 0.6f, h * 0.72f, -r * (0.5f + 0.25f * (e % 2))), Vector3.one * 0.55f,
+                            egg, HitZone.WeakPoint, SpecimenRules.GrowthMultiplier), SpecimenPhase.Rampage, SpecimenPhase.ExposedCore);
+                    PhaseOnly(Part(PrimitiveType.Sphere, "Core", new Vector3(0f, h * 0.6f, r * 1.15f), Vector3.one * 0.55f,
+                        new Color(1f, 0.25f, 0.3f), HitZone.WeakPoint, SpecimenRules.CoreMultiplier), SpecimenPhase.ExposedCore, SpecimenPhase.ExposedCore);
+                    for (int l = 0; l < 3; l++)
+                    {
+                        float z = r * (0.6f - l * 0.6f);
+                        Part(PrimitiveType.Cube, "LegL" + l, new Vector3(-r * 1.1f, h * 0.2f, z), new Vector3(0.9f, 0.16f, 0.16f), dark, null);
+                        Part(PrimitiveType.Cube, "LegR" + l, new Vector3(r * 1.1f, h * 0.2f, z), new Vector3(0.9f, 0.16f, 0.16f), dark, null);
+                    }
+                    break;
+                }
                 default:
                 {
                     Part(PrimitiveType.Capsule, "Body", new Vector3(0f, h * 0.42f, 0f), new Vector3(r * 2f, h * 0.4f, r * 1.6f), skin, HitZone.Body);
@@ -287,6 +314,7 @@ namespace Deadfall.Enemies
                 case EnemyBodyType.Spitter: id = "enemy_spitter"; height = 1.7f; radius = 0.38f; return true;
                 case EnemyBodyType.Alpha: id = "enemy_alpha"; height = 2.15f; radius = 0.42f; return true;
                 case EnemyBodyType.Specimen: id = "enemy_specimen"; height = 3.4f; radius = 1f; return true;
+                case EnemyBodyType.Brood: id = "enemy_brood"; height = 2.6f; radius = 1.3f; return true;
                 default: id = null; height = radius = 1f; return false;
             }
         }
@@ -352,7 +380,7 @@ namespace Deadfall.Enemies
             if (phase == _phase && !announce) return;
             bool changed = phase != _phase;
             _phase = phase;
-            if (!_mirrored) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods);
+            if (!_mirrored) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.IsBrood);
             ShowPhaseParts();
             if (changed)
             {
@@ -385,7 +413,7 @@ namespace Deadfall.Enemies
             _bossMods = _definition.IsBoss ? bossMods : SpecimenModifiers.None;
             VariantRules.Apply(_stats, _traits);
             _phase = SpecimenPhase.Stalk;
-            if (_definition.IsBoss) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods);
+            if (_definition.IsBoss) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.IsBrood);
             ShowPhaseParts();
             ShowTraitMarkers();
             _exploded = false;
@@ -623,10 +651,11 @@ namespace Deadfall.Enemies
             {
                 SpecimenPhase want = SpecimenRules.PhaseFor(Health01);
                 if (want > _phase) SetPhase(want, now, false); // phases only move forward
-                if (_phase == SpecimenPhase.Rampage && now >= _nextSummonAt)
+                bool brood = _definition.IsBrood;
+                if (SpecimenRules.SummonsIn(_phase, brood) && now >= _nextSummonAt)
                 {
-                    _nextSummonAt = now + SpecimenRules.SummonIntervalSeconds;
-                    SummonRequested?.Invoke(this, SpecimenRules.SummonCount(Mathf.Max(1, CombatTargets.All.Count), _bossMods));
+                    _nextSummonAt = now + SpecimenRules.SummonInterval(_phase, brood);
+                    SummonRequested?.Invoke(this, SpecimenRules.SummonCount(Mathf.Max(1, CombatTargets.All.Count), _bossMods, brood));
                 }
             }
 
@@ -711,8 +740,8 @@ namespace Deadfall.Enemies
 
         private void Move(float speed, float acceleration)
         {
-            _agent.speed = speed;
-            _agent.acceleration = acceleration;
+            _agent.speed = speed * EventSpeedMultiplier;
+            _agent.acceleration = acceleration * EventSpeedMultiplier;
             if (!_moving)
             {
                 _agent.isStopped = false;
@@ -745,7 +774,7 @@ namespace Deadfall.Enemies
             if (victim == null || !victim.IsAlive) return;
             victim.ApplyDamage(new DamageInfo
             {
-                Amount = amount * (1f - Mathf.Clamp01(victim.DamageReduction)),
+                Amount = amount * EventDamageMultiplier * (1f - Mathf.Clamp01(victim.DamageReduction)),
                 Zone = HitZone.Body,
                 Point = targetPos + Vector3.up,
                 Direction = (targetPos - transform.position).normalized,
