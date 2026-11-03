@@ -352,6 +352,17 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Pause screen map panel: the Harrow Line toggle generates that environment; "Start this map's Operation" starts the right one.
 - [ ] Co-op: a client sees the same environment as the host, and ENDLESS on the surge panel.
 
+### 3.19 Manual checklist: M12 part 2 (weapons, Broodmother, mods, events, objectives)
+
+- [ ] Armory and drops: Vesper DMR (semi-auto rifle), Bulldog .44 (heavy pistol), Kestrel PDW (fast SMG) drop and can be equipped. Hailstorm Auto-Shotgun and Railspike Maul need their research (Hailstorm Clearance, Railspike Maul Clearance) before they appear in loadouts.
+- [ ] Each new gun fires, reloads and shows the right name on the HUD; the Maul swings slower and hits harder than the Cleaver. New guns use placeholder models for now.
+- [ ] Harrow Line Specimen surge spawns the Broodmother (BossHud names her). She keeps her distance and spits, never charges, calls Creepers and Retchers in every phase (more often when enraged), and her egg sacs take bonus damage. She uses a placeholder body until a model is made.
+- [ ] Field Mods: the new mods show up in offers (Trigger Discipline, Light Pack, Field Dressing, Hardened, Sleight, Combat Stims, Deadeye, Phoenix Rig). Three Combat Stims turn into Berserker Protocol.
+- [ ] Frenzy event: banner says FRENZY, enemies are visibly faster and hit harder for that surge, and go back to normal after it.
+- [ ] Toxic Leak event: two rooms fill with green haze and light; standing inside hurts (about 6 per second); it clears when the surge ends. A client sees the same two rooms.
+- [ ] Defend Uplink side objective: one terminal, about 30 s upload that pauses when nobody is close, Husks keep rushing it while it runs, 600 credits each.
+- [ ] Purge Hives side objective: two smaller nests in different rooms, the counter goes 0/2, 1/2, 2/2, 700 credits each.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

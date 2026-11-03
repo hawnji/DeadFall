@@ -190,14 +190,18 @@ Lobby/Relay flow, 4-player validation of every system, revives, spectate, reconn
 7. ⬜ Lobby/Relay: needs the Unity Gaming Services multiplayer package and a linked Unity Cloud project.
 8. ✅ 10 new EditMode tests in `MultiplayerRulesTests.cs`.
 
-## M12 – Modes and content 🟡
+## M12 – Modes and content ✅
 Survival, Operations, Endless complete; second environment; more weapons, bosses, mods, events, objectives.
 
 1. ✅ Environment catalog in the seed (T-66) and the second environment, Harrow Line Transit Depot.
 2. ✅ Endless mode with escalation modifiers (T-67), Endless rewards, best-surge stat and achievements.
 3. ✅ Operations per environment: Cold Start (Cinder Ridge), Last Train (Harrow Line). Survival on both.
 4. ✅ 8 new EditMode tests in `ModesContentTests.cs`.
-5. ⬜ Part 2: more weapons, a second boss (the Broodmother, Harrow Line), more Field Mods, events and objectives.
+5. ✅ Five new weapons (T-68), two of them behind research.
+6. ✅ Second boss, the Broodmother, on Harrow Line (T-69).
+7. ✅ Eight new Field Mods including the Combat Stims evolution.
+8. ✅ Events Frenzy and Toxic Leak (T-70); objectives Defend Uplink and Purge Hives (T-71).
+9. ✅ 10 new EditMode tests in `ContentPackTests.cs`. Models for the new weapons and the Broodmother are still placeholders.
 
 ## M13 – Polish and release prep ⬜
 UI/audio/animation/VFX/lighting pass, optimisation, balance, save and MP stability, build automation, release config, final checklist on standalone builds.

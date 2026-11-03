@@ -23,7 +23,7 @@ namespace Deadfall.Game
         private void OnPhaseChanged(Enemy e, SpecimenPhase phase)
         {
             _banner = phase == SpecimenPhase.Rampage ? "IT'S ENRAGED · INFECTED INCOMING"
-                : phase == SpecimenPhase.ExposedCore ? "THE CORE IS EXPOSED · SHOOT THE CHEST" : string.Empty;
+                : phase == SpecimenPhase.ExposedCore ? "THE CORE IS EXPOSED · SHOOT THE GLOWING CORE" : string.Empty;
             _bannerUntil = Time.unscaledTime + 3f;
         }
 

@@ -12,13 +12,13 @@ namespace Deadfall.Enemies
     /// </summary>
     public static class PrototypeEnemies
     {
-        private static EnemyDefinition _husk, _bolter, _bulwark, _creeper, _pyre, _retcher, _alpha, _goliath, _stalker, _specimen;
+        private static EnemyDefinition _husk, _bolter, _bulwark, _creeper, _pyre, _retcher, _alpha, _goliath, _stalker, _specimen, _brood;
         private static EnemyDefinition[] _all;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
-            _husk = _bolter = _bulwark = _creeper = _pyre = _retcher = _alpha = _goliath = _stalker = _specimen = null;
+            _husk = _bolter = _bulwark = _creeper = _pyre = _retcher = _alpha = _goliath = _stalker = _specimen = _brood = null;
             _all = null;
         }
 
@@ -166,12 +166,31 @@ namespace Deadfall.Enemies
             EnemyBodyType.Specimen, 3.4f, 1f, new Color(0.62f, 0.5f, 0.52f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
             role: EnemyRole.Boss);
 
+        /// <summary>
+        /// The Broodmother (M12), Harrow Line's Specimen: a swollen egg-bearer that never charges. She spits acid from
+        /// range in every phase and keeps calling Creepers; enraged she spits faster; with her core exposed she slows
+        /// and leaves wider pools. Same three phases and weak points as Specimen Zero.
+        /// </summary>
+        public static EnemyDefinition Broodmother => _brood != null ? _brood : _brood = EnemyDefinition.CreateRuntime(
+            "enemy.broodmother", "The Broodmother",
+            new EnemyStats
+            {
+                MaxHealth = 6800f, DamageReduction = 0.25f, ChaseSpeed = 2.8f, Acceleration = 8f, TurnSpeedDegrees = 160f, DetectRange = 999f,
+                AttackRange = 3.2f, AttackDamage = 40f, AttackWindupSeconds = 0.8f, AttackRecoverSeconds = 1f, AttackArcDegrees = 170f,
+                StaggerThreshold = 0f, StaggerSeconds = 1.2f, StaggerImmunitySeconds = 0f,
+                CanShoot = true, PreferredRange = 14f, RangedMaxRange = 28f, RangedWindupSeconds = 0.9f, RangedRecoverSeconds = 0.7f,
+                RangedCooldownSeconds = 2.6f, RangedDamage = 16f, ProjectileSpeed = 17f,
+                PoolDamagePerSecond = 12f, PoolRadius = 2.6f, PoolSeconds = 7f,
+            },
+            EnemyBodyType.Brood, 2.6f, 1.3f, new Color(0.46f, 0.5f, 0.38f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
+            role: EnemyRole.Boss);
+
         /// <summary>Fixed order: the network numbers enemy types by position here (EnemyCatalog). Append only.</summary>
         public static IReadOnlyList<EnemyDefinition> All
         {
             get
             {
-                if (_all == null || _all[0] == null) _all = new[] { Husk, Bolter, Bulwark, Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, SpecimenZero };
+                if (_all == null || _all[0] == null) _all = new[] { Husk, Bolter, Bulwark, Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, SpecimenZero, Broodmother };
                 return _all;
             }
         }

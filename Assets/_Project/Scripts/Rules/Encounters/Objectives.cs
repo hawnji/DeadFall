@@ -20,6 +20,10 @@ namespace Deadfall.Rules.Encounters
         LiftLockdown,
         /// <summary>Hold the extraction zone until the timer runs out (Operations finale).</summary>
         Extraction,
+        /// <summary>Hold the uplink terminal for a long upload while Husks rush it (M12). Appended: wire order.</summary>
+        DefendUplink,
+        /// <summary>Destroy two smaller hive nests in different rooms (M12).</summary>
+        PurgeHives,
     }
 
     public enum ObjectiveStatus : byte { Active, Complete, Failed }
@@ -257,6 +261,15 @@ namespace Deadfall.Rules.Encounters
         public const float NestHealth = 1500f;
         public const float NestSpawnSeconds = 6f;
         public const int NestMaxAlive = 5;
+        public const float UplinkSeconds = 30f;
+        /// <summary>While the uplink uploads, Husks rush the terminal this often.</summary>
+        public const float UplinkRushSeconds = 7f;
+        public const int UplinkRushCount = 2;
+        public const int Hives = 2;
+        /// <summary>Each Purge Hives nest has this share of a full nest's health.</summary>
+        public const float HiveHealthFraction = 0.6f;
+        /// <summary>The last objective kind, for validating synced state.</summary>
+        public const ObjectiveKind LastKind = ObjectiveKind.PurgeHives;
         /// <summary>Side objectives stay up for this many surges.</summary>
         public const int SideObjectiveSurges = 2;
 
@@ -309,6 +322,8 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.Keycard => "Find the keycard and open the security locker",
             ObjectiveKind.LiftLockdown => "Hack the terminal to lift the lockdown",
             ObjectiveKind.Extraction => "Hold the extraction zone",
+            ObjectiveKind.DefendUplink => "Defend the uplink while it uploads",
+            ObjectiveKind.PurgeHives => "Purge the hive nests",
             _ => k.ToString(),
         };
 
@@ -317,6 +332,7 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.RestorePower => Generators,
             ObjectiveKind.RecoverSamples => Samples,
             ObjectiveKind.Keycard => 2, // pick up, then use
+            ObjectiveKind.PurgeHives => Hives,
             _ => 1,
         };
 
@@ -328,6 +344,8 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.RetrieveDataCore => 450,
             ObjectiveKind.Keycard => 300,
             ObjectiveKind.LiftLockdown => 200,
+            ObjectiveKind.DefendUplink => 600,
+            ObjectiveKind.PurgeHives => 700,
             _ => 0,
         };
 
@@ -335,7 +353,8 @@ namespace Deadfall.Rules.Encounters
         public static bool OfferSideObjective(int upcomingSurge) => upcomingSurge >= 3 && upcomingSurge % 4 == 3;
 
         private static readonly ObjectiveKind[] SidePool =
-            { ObjectiveKind.RestorePower, ObjectiveKind.RecoverSamples, ObjectiveKind.DestroyNest, ObjectiveKind.RetrieveDataCore, ObjectiveKind.Keycard };
+            { ObjectiveKind.RestorePower, ObjectiveKind.RecoverSamples, ObjectiveKind.DestroyNest, ObjectiveKind.RetrieveDataCore, ObjectiveKind.Keycard,
+              ObjectiveKind.DefendUplink, ObjectiveKind.PurgeHives };
 
         /// <summary>Picks a side objective, never the same kind twice in a row.</summary>
         public static ObjectiveKind PickSide(DeterministicRandom rng, ObjectiveKind? last)

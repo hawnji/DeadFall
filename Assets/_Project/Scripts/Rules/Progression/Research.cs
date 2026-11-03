@@ -103,6 +103,8 @@ namespace Deadfall.Rules.Progression
             R("res.wpn_anvil", "Anvil LMG Clearance", "Unlocks the Anvil LMG for every class", ResearchCategory.Arsenal, 1000, 2, weapon: "weapon.anvil_lmg"),
             R("res.wpn_cleaver", "Tether Cleaver Clearance", "Unlocks the Tether Cleaver for every class", ResearchCategory.Arsenal, 800, 2, weapon: "weapon.tether_cleaver"),
             R("res.wpn_mule", "Mule Launcher Clearance", "Unlocks the Mule Launcher for every class", ResearchCategory.Arsenal, 1800, 5, new[] { "res.wpn_anvil" }, level: 4, weapon: "weapon.mule_launcher"),
+            R("res.wpn_hailstorm", "Hailstorm Clearance", "Unlocks the Hailstorm Auto-Shotgun for every class", ResearchCategory.Arsenal, 1400, 3, level: 3, weapon: "weapon.hailstorm"),
+            R("res.wpn_railspike", "Railspike Maul Clearance", "Unlocks the Railspike Maul for every class", ResearchCategory.Arsenal, 1100, 3, new[] { "res.wpn_cleaver" }, level: 3, weapon: "weapon.railspike_maul"),
             // Intel
             R("res.dossier_common", "Field Dossiers", "Reveals dossiers for common infected", ResearchCategory.Intel, 500, 2, dossier: 1),
             R("res.dossier_elite", "Elite Dossiers", "Reveals dossiers for elites and hunters", ResearchCategory.Intel, 1200, 6, new[] { "res.dossier_common" }, level: 3, dossier: 2),
