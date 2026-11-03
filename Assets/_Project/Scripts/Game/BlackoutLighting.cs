@@ -55,7 +55,7 @@ namespace Deadfall.Game
             if (dark)
             {
                 _saved.Clear();
-                foreach (Light l in FindObjectsOfType<Light>())
+                foreach (Light l in FindObjectsByType<Light>(FindObjectsSortMode.None))
                 {
                     if (l == null || l == _flashlight) continue;
                     _saved[l] = l.intensity;
