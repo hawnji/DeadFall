@@ -172,6 +172,7 @@ namespace Deadfall.UI
                 HudKit.Prompt(w * 0.5f, h * 0.36f + 66f, "Esc", "Resume", true);
                 if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, h * 0.36f + 66f, 150f, 40f), "Settings"))
                     _settingsPanel.Open();
+                HudKit.Label(new Rect(w - 320f, h - 30f, 300f, 20f), BuildInfo.Label, 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             }
             HudKit.End();
         }

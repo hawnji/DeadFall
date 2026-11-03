@@ -54,7 +54,7 @@ namespace Deadfall.UI
             GameSettings s = _settings.Current;
             HudKit.Begin();
             GUI.depth = -20;
-            Rect c = HudKit.Window(760f, 640f, "SETTINGS", "Changes apply right away");
+            Rect c = HudKit.Window(760f, 680f, "SETTINGS", BuildInfo.Label);
             bool changed = false;
             float colW = (c.width - 40f) * 0.5f;
             float lx = c.x, rx = c.x + colW + 40f;
@@ -92,6 +92,8 @@ namespace Deadfall.UI
                 s.QualityLevel = (q + 1) % levels.Length;
             });
             changed |= Toggle(rx, ref y2, colW, "Windowed", ref s.Windowed);
+            changed |= Toggle(rx, ref y2, colW, "Show FPS", ref s.ShowFps);
+            changed |= Toggle(lx, ref y, colW, "Damage numbers", ref s.DamageNumbers);
             HudKit.Label(new Rect(rx, y2, colW, 40f), "Window mode applies in builds only. The frame rate cap is used when VSync is off.", 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
 
             float by = c.yMax - 44f;

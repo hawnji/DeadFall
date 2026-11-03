@@ -1,3 +1,4 @@
+using Deadfall.Core;
 using Deadfall.Encounters;
 using Deadfall.Enemies;
 using Deadfall.Net;
@@ -60,6 +61,7 @@ namespace Deadfall.DebugTools
             if (Time.time > _messageUntil) LastMessage = string.Empty;
             if (_player == null) return;
             UpdateWaveKeys();
+            if (!BuildInfo.DevTools) return;
 
             bool any = _husk.WasPressedThisFrame() || _bolter.WasPressedThisFrame() || _bulwark.WasPressedThisFrame()
                        || _horde.WasPressedThisFrame() || _clear.WasPressedThisFrame() || _advanced.WasPressedThisFrame();
@@ -91,7 +93,7 @@ namespace Deadfall.DebugTools
             WaveManager waves = WaveManager.Current;
             if (waves == null) return;
             if (_ready.WasPressedThisFrame()) waves.ToggleReady();
-            if (!_run.WasPressedThisFrame()) return;
+            if (!BuildInfo.DevTools || !_run.WasPressedThisFrame()) return;
             if (!waves.IsAuthority)
             {
                 Say("The host starts and stops runs.");

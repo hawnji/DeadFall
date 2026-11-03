@@ -30,6 +30,10 @@ namespace Deadfall.Core
         /// <summary>Index into the project's quality levels; -1 keeps the project default.</summary>
         public int QualityLevel = -1;
         public bool Windowed;
+        /// <summary>Small frame-rate counter in the corner (release builds; dev builds always show the dev readout).</summary>
+        public bool ShowFps;
+        /// <summary>Floating damage numbers on hits.</summary>
+        public bool DamageNumbers = true;
 
         public void Sanitize()
         {
