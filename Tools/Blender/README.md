@@ -25,6 +25,9 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
   `Skin`, `SkinDark`, `Accent` and `AccentDim` are tinted by the game (enemy colour, class/player colour,
   facility colour, door lock colour). `ModelLibrary` builds the materials at runtime from these names, so the
   importer's material settings don't matter and URP builds don't turn pink.
+- Weapons are built from extruded side outlines (`Model.prof` / `Model.sym`) with one-segment chamfers for a faceted
+  look, and use fixed wood / steel / polymer colours instead of tint slots. `--preview` also writes a close 3/4 shot
+  of each weapon to `<folder>/weapons/`.
 - Enemy models are built at the prototype definition's height and radius for their body type and scaled by the
   game for other definitions. Glowing weak points sit where the hurtboxes are (`Enemy.BuildVisual`); the
   primitives stay as invisible hurtboxes. Specimen phase parts stay as primitives.
