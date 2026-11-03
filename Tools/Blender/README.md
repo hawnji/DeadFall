@@ -21,7 +21,7 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
 
 - Coordinates in the script are Unity space: +X right, +Y up, +Z forward, metres. Characters face +Z.
   The FBX export uses forward -Z, up Y and baked space transforms, so models import upright, facing +Z, at scale 1.
-- Material names are the colour: `C_RRGGBB` (fixed) or `G_RRGGBB` (fixed, used for glowing weak points).
+- Material names are the colour: `C_RRGGBB` (fixed) or `G_RRGGBB` (fixed and emissive: weak points, lamps, screens, LEDs).
   `Skin`, `SkinDark`, `Accent` and `AccentDim` are tinted by the game (enemy colour, class/player colour,
   facility colour, door lock colour). `ModelLibrary` builds the materials at runtime from these names, so the
   importer's material settings don't matter and URP builds don't turn pink.
@@ -43,6 +43,11 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
 | `fob_booth`, `fob_booth_wide` | `FobBuilder` facility booths (Command Center is the wide one) |
 | `fob_transport`, `fob_crates` | `FobBuilder` hangar props |
 | `prop_crate`, `prop_locker`, `prop_column`, `prop_partition` | `MapBuilder` room props |
+| `prop_lab_bench`, `prop_tank`, `prop_server_rack`, `prop_shelf`, `prop_table`, `prop_planter`, `prop_desk`, `prop_generator` | `MapBuilder.Dressing` themed furniture (fit models on collider boxes) |
+| `prop_barrel` | `MapBuilder.Dressing` barrel clusters (real size, origin on the floor) |
+| `prop_light_fixture` | `MapBuilder.Dressing` ceiling fixture under each room light (fit, long along X) |
+| `prop_fusebox`, `prop_wall_vent`, `prop_extinguisher` | `MapBuilder.Dressing` wall clutter (real size, origin at the wall, front +Z) |
+| `prop_rubble` | `MapBuilder.Dressing` corner debris (real size, no collider) |
 | `prop_door` | `SectorDoor` slab |
 | `prop_relay`, `prop_switch` | `DoorSwitch` bodies (the lamp and lever stay game-built) |
 | `supply_cache` | `SupplyCache` |

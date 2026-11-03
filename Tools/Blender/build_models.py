@@ -654,6 +654,230 @@ def supply_cache():
 
 
 
+# ----------------------------------------------------------------------------------------------- environment dressing
+# Theme props for generated rooms (MapBuilder.Dressing). Fit models are dressed onto placeholder boxes that keep the
+# collider; real-size ones (wall and floor clutter) have no collider. Glow materials (G_) render emissive.
+
+LAB_WHITE = "C_C9CCC8"
+LAB_GREY = "C_8D9294"
+RUST = "C_6E4A2E"
+PIPE_GREEN = "C_3E5C47"
+FLUID = "G_4CE08A"
+LED_G = "G_5BF08C"
+LED_A = "G_F0B54A"
+LED_R = "G_F05A4A"
+SCREEN_GLOW = "G_3F8FB8"
+LAMP = "G_F4F1E6"
+DEAD_WOOD = "C_4A3A2A"
+SOIL = "C_2E261F"
+
+
+def prop_light_fixture():
+    """Fit model, long along X (1.4 x 0.14 x 0.5): ceiling strip light, glowing face down."""
+    m = Model("prop_light_fixture", fit=True)
+    m.box((0, 0.1, 0), (1.4, 0.08, 0.5), METAL, bevel=0.01)
+    m.box((0, 0.04, 0), (1.3, 0.04, 0.38), LAMP, bevel=0.0)
+    for s in (-1, 1):
+        m.box((s * 0.68, 0.06, 0), (0.06, 0.1, 0.52), DARK, bevel=0.0)
+    for x in (-0.33, 0.33):
+        m.box((x, 0.04, 0), (0.03, 0.05, 0.4), METAL_LIGHT, bevel=0.0)  # cage bars
+    return m
+
+
+def prop_lab_bench():
+    """Fit model, long along X (2.4 x 0.95 x 0.9): lab bench with cabinets, a microscope and glowing flasks."""
+    m = Model("prop_lab_bench", fit=True)
+    m.box((0, 0.42, 0), (2.3, 0.84, 0.82), LAB_WHITE, bevel=0.02)
+    m.box((0, 0.87, 0), (2.4, 0.06, 0.9), "C_2B2E31", bevel=0.01)  # resin top
+    for i in range(4):
+        x = -0.86 + i * 0.575
+        m.box((x, 0.45, 0.415), (0.52, 0.7, 0.02), LAB_GREY, bevel=0.005)
+        m.box((x, 0.68, 0.43), (0.22, 0.03, 0.02), METAL_LIGHT, bevel=0.0)
+    m.box((0, 0.05, 0), (2.32, 0.1, 0.84), DARK, bevel=0.0)  # kick plate
+    m.box((-0.75, 0.93, -0.05), (0.18, 0.06, 0.22), LAB_GREY, bevel=0.005)  # microscope
+    m.limb((-0.75, 0.95, -0.12), (-0.75, 1.2, -0.05), (0.05, 0.05), LAB_GREY)
+    m.cyl((-0.75, 1.17, 0.02), (0.05, 0.14, 0.05), DARK, rot=(30, 0, 0), segments=8)
+    for i, x in enumerate((0.25, 0.45, 0.62)):
+        h = 0.18 + (i % 2) * 0.08
+        m.cyl((x, 0.9 + h / 2, 0.1), (0.1, h, 0.1), GLASS, segments=8)
+        m.cyl((x, 0.9 + h * 0.3, 0.1), (0.085, h * 0.5, 0.085), FLUID, segments=8)
+    m.box((0.85, 0.96, -0.2), (0.42, 0.12, 0.3), "C_2F3236", bevel=0.01)  # analyser
+    m.box((0.85, 0.99, -0.045), (0.3, 0.06, 0.01), SCREEN_GLOW, bevel=0.0)
+    return m
+
+
+def prop_tank():
+    """Fit model (1.2 x 2.4 x 1.2): specimen tank with glowing fluid."""
+    m = Model("prop_tank", fit=True)
+    m.cyl((0, 0.2, 0), (1.2, 0.4, 1.2), METAL, segments=12)
+    m.cyl((0, 0.42, 0), (1.05, 0.06, 1.05), HAZARD, segments=12)
+    m.cyl((0, 1.25, 0), (0.94, 1.6, 0.94), FLUID, segments=12)  # glass reads as the glowing fluid (opaque shader)
+    m.cyl((0, 1.9, 0), (0.96, 0.22, 0.96), GLASS, segments=12)  # air gap above the fluid line
+    m.cyl((0, 2.2, 0), (1.2, 0.4, 1.2), METAL, segments=12)
+    m.cyl((0, 2.42, 0), (0.5, 0.06, 0.5), DARK, segments=10)
+    for a in range(4):  # frame posts
+        ang = math.radians(45 + a * 90)
+        m.box((math.sin(ang) * 0.52, 1.25, math.cos(ang) * 0.52), (0.07, 1.62, 0.07), METAL_LIGHT, bevel=0.0)
+    m.box((0, 0.24, 0.6), (0.36, 0.16, 0.04), SCREEN_GLOW, bevel=0.0)
+    return m
+
+
+def prop_server_rack():
+    """Fit model (0.8 x 2.2 x 1.1), front +Z: server cabinet with blinking status lights."""
+    m = Model("prop_server_rack", fit=True)
+    m.box((0, 1.1, 0), (0.8, 2.2, 1.1), "C_1E2024", bevel=0.02)
+    m.box((0, 1.1, 0.555), (0.7, 2.0, 0.02), "C_2A2D33", bevel=0.0)
+    for i in range(9):
+        y = 0.3 + i * 0.21
+        m.box((0, y, 0.57), (0.64, 0.16, 0.02), "C_34383F", bevel=0.0)
+        for j in range(3):
+            led = (LED_G, LED_G, LED_A, LED_R)[(i * 3 + j) % 4 if (i + j) % 3 == 0 else 0]
+            m.box((0.2 + j * 0.05, y, 0.585), (0.025, 0.025, 0.01), led, bevel=0.0)
+        m.box((-0.15, y, 0.585), (0.28, 0.02, 0.01), DARK, bevel=0.0)
+    m.box((0, 0.04, 0), (0.82, 0.08, 1.12), DARK, bevel=0.0)
+    m.box((0, 2.22, 0), (0.6, 0.06, 0.9), "C_2A2D33", bevel=0.0)
+    return m
+
+
+def prop_shelf():
+    """Fit model, long along X (2.4 x 2.2 x 0.7): steel shelving with boxes and canisters."""
+    m = Model("prop_shelf", fit=True)
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            m.box((sx * 1.16, 1.1, sz * 0.31), (0.06, 2.2, 0.06), "C_355C8A", bevel=0.0)
+    for i, y in enumerate((0.12, 0.8, 1.48, 2.14)):
+        m.box((0, y, 0), (2.36, 0.04, 0.68), METAL_LIGHT, bevel=0.0)
+        m.box((0, y, 0.33), (2.36, 0.08, 0.03), HAZARD if i == 0 else "C_355C8A", bevel=0.0)
+    items = [(-0.8, 0.14, 0.5, 0.36, WOOD), (-0.2, 0.14, 0.4, 0.3, "C_8A7A5A"), (0.5, 0.14, 0.7, 0.4, OLIVE),
+             (-0.6, 0.82, 0.6, 0.32, "C_8A7A5A"), (0.3, 0.82, 0.35, 0.45, WOOD), (0.85, 0.82, 0.3, 0.25, OLIVE),
+             (-0.9, 1.5, 0.35, 0.28, OLIVE), (0.0, 1.5, 0.5, 0.36, "C_8A7A5A")]
+    for x, y, w, h, mat in items:
+        m.box((x, y + h / 2, 0), (w, h, 0.5), mat, bevel=0.015)
+    for x in (0.55, 0.75, 0.95):
+        m.cyl((x, 1.5 + 0.2, 0.05), (0.16, 0.4, 0.16), "C_B03A2E", segments=8)
+    return m
+
+
+def prop_barrel():
+    """Real size (0.6 x 0.9), origin on the floor: steel drum."""
+    m = Model("prop_barrel")
+    m.cyl((0, 0.45, 0), (0.6, 0.9, 0.6), "C_3F5A7A", segments=12)
+    for y in (0.3, 0.6):
+        m.cyl((0, y, 0), (0.62, 0.04, 0.62), "C_33495F", segments=12)
+    m.cyl((0, 0.9, 0), (0.56, 0.02, 0.56), DARK, segments=12)
+    m.cyl((0.15, 0.91, 0.1), (0.08, 0.03, 0.08), METAL_LIGHT, segments=6)
+    m.box((0, 0.45, 0.3), (0.26, 0.2, 0.02), HAZARD, bevel=0.0)
+    return m
+
+
+def prop_table():
+    """Fit model, long along X (2.2 x 0.8 x 1.6): canteen table with fixed benches, a tray and a cup."""
+    m = Model("prop_table", fit=True)
+    m.box((0, 0.74, 0), (2.2, 0.06, 0.8), "C_8E8A80", bevel=0.01)
+    for sz in (-1, 1):
+        m.box((0, 0.44, sz * 0.66), (2.1, 0.05, 0.28), "C_7A3D2E", bevel=0.01)  # benches
+        m.box((0, 0.22, sz * 0.4), (2.0, 0.04, 0.05), METAL, bevel=0.0)
+    for sx in (-0.85, 0.85):
+        m.box((sx, 0.37, 0), (0.08, 0.72, 0.08), METAL, bevel=0.0)
+        m.box((sx, 0.22, 0), (0.06, 0.06, 1.5), METAL, bevel=0.0)
+        for sz in (-1, 1):
+            m.box((sx, 0.21, sz * 0.66), (0.05, 0.42, 0.05), METAL, bevel=0.0)
+    m.box((-0.4, 0.78, 0.1), (0.42, 0.02, 0.3), "C_4F6A7A", bevel=0.0)
+    m.cyl((0.5, 0.82, -0.15), (0.08, 0.1, 0.08), LAB_WHITE, segments=8)
+    return m
+
+
+def prop_planter():
+    """Fit model (1.4 x 1.8 x 1.4): concrete planter with a dead tree."""
+    m = Model("prop_planter", fit=True)
+    m.box((0, 0.3, 0), (1.4, 0.6, 1.4), CONCRETE, bevel=0.04)
+    m.box((0, 0.58, 0), (1.2, 0.04, 1.2), SOIL, bevel=0.0)
+    m.limb((0, 0.6, 0), (0.05, 1.25, 0.02), (0.1, 0.1), DEAD_WOOD)
+    for a, b in [((0.05, 1.2, 0.02), (0.4, 1.7, 0.15)), ((0.05, 1.2, 0.02), (-0.35, 1.6, -0.1)),
+                 ((0.03, 1.0, 0.01), (-0.1, 1.45, 0.4)), ((0.04, 1.1, 0.02), (0.2, 1.5, -0.4))]:
+        m.limb(a, b, (0.05, 0.05), DEAD_WOOD)
+    return m
+
+
+def prop_desk():
+    """Fit model, long along X (2.0 x 1.2 x 0.9), front +Z: terminal desk with a glowing monitor."""
+    m = Model("prop_desk", fit=True)
+    m.box((0, 0.74, 0), (2.0, 0.05, 0.9), "C_4A4F57", bevel=0.01)
+    for sx in (-1, 1):
+        m.box((sx * 0.94, 0.37, 0), (0.08, 0.72, 0.84), "C_33373D", bevel=0.0)
+    m.box((0.6, 0.38, 0.05), (0.5, 0.66, 0.74), "C_3A3F46", bevel=0.01)  # drawers
+    for i in range(3):
+        m.box((0.6, 0.18 + i * 0.22, 0.43), (0.18, 0.02, 0.02), METAL_LIGHT, bevel=0.0)
+    m.box((-0.2, 1.0, -0.2), (0.7, 0.42, 0.05), DARK, bevel=0.01)
+    m.box((-0.2, 1.0, -0.17), (0.64, 0.36, 0.01), SCREEN_GLOW, bevel=0.0)
+    m.box((-0.2, 0.8, -0.24), (0.06, 0.12, 0.06), DARK, bevel=0.0)
+    m.box((-0.2, 0.775, 0.15), (0.5, 0.02, 0.16), DARK, bevel=0.0)  # keyboard
+    m.box((0.4, 0.82, -0.25), (0.25, 0.12, 0.3), "C_C4BFA8", bevel=0.0)  # file box
+    return m
+
+
+def prop_generator():
+    """Fit model (1.8 x 1.8 x 1.4): reactor-side generator with cooling fins, pipes and a status light."""
+    m = Model("prop_generator", fit=True)
+    m.box((0, 0.1, 0), (1.8, 0.2, 1.4), DARK, bevel=0.01)
+    m.box((0, 0.8, 0), (1.5, 1.2, 1.1), PIPE_GREEN, bevel=0.03)
+    for i in range(7):
+        m.box((-0.55 + i * 0.18, 0.85, 0.57), (0.06, 0.9, 0.06), "C_2F4636", bevel=0.0)
+    m.cyl((0, 1.55, 0), (0.7, 0.3, 0.7), METAL, segments=12)
+    m.limb((0.5, 1.4, -0.3), (0.5, 1.8, -0.3), (0.16, 0.16), RUST, kind="cyl")
+    m.limb((-0.5, 1.4, -0.3), (-0.5, 1.8, -0.3), (0.16, 0.16), RUST, kind="cyl")
+    m.box((0.6, 1.1, 0.56), (0.2, 0.14, 0.02), LED_A, bevel=0.0)
+    for i in range(4):
+        m.box((-0.45 + i * 0.3, 0.3, 0.56), (0.15, 0.2, 0.02), HAZARD if i % 2 == 0 else DARK, bevel=0.0)
+    return m
+
+
+def prop_fusebox():
+    """Real size (0.5 x 0.7 x 0.18), origin at the back centre, front +Z: wall junction box."""
+    m = Model("prop_fusebox")
+    m.box((0, 0, 0.08), (0.5, 0.7, 0.16), "C_5A6068", bevel=0.01)
+    m.box((0, 0, 0.165), (0.44, 0.64, 0.02), "C_656C75", bevel=0.0)
+    m.box((0, 0.2, 0.18), (0.2, 0.12, 0.01), HAZARD, bevel=0.0)
+    m.box((0.14, -0.2, 0.18), (0.04, 0.04, 0.01), LED_G, bevel=0.0)
+    m.cyl((0, -0.42, 0.08), (0.08, 0.16, 0.08), RUBBER, segments=6)
+    m.box((0, -0.65, 0.04), (0.06, 0.38, 0.06), RUBBER, bevel=0.0)  # conduit down
+    return m
+
+
+def prop_wall_vent():
+    """Real size (0.9 x 0.5 x 0.08), origin at the back centre, front +Z: louvred wall vent."""
+    m = Model("prop_wall_vent")
+    m.box((0, 0, 0.03), (0.9, 0.5, 0.06), METAL, bevel=0.005)
+    m.box((0, 0, 0.065), (0.8, 0.4, 0.01), DARK, bevel=0.0)
+    for i in range(5):
+        m.box((0, -0.16 + i * 0.08, 0.07), (0.78, 0.035, 0.02), METAL_LIGHT, rot=(25, 0, 0), bevel=0.0)
+    return m
+
+
+def prop_extinguisher():
+    """Real size, origin at the back centre (wall), front +Z: extinguisher on a bracket with its sign."""
+    m = Model("prop_extinguisher")
+    m.cyl((0, -0.2, 0.12), (0.16, 0.5, 0.16), "C_B03A2E", segments=10, smooth=True)
+    m.cyl((0, 0.08, 0.12), (0.06, 0.08, 0.06), DARK, segments=6)
+    m.box((0.06, 0.1, 0.14), (0.12, 0.03, 0.03), DARK, bevel=0.0)
+    m.box((0, -0.15, 0.02), (0.2, 0.06, 0.04), METAL, bevel=0.0)
+    m.box((0, 0.35, 0.01), (0.24, 0.24, 0.02), "C_B03A2E", bevel=0.0)  # sign
+    m.box((0, 0.35, 0.022), (0.14, 0.14, 0.01), LAB_WHITE, bevel=0.0)
+    return m
+
+
+def prop_rubble():
+    """Real size (about 1.3 x 0.3 x 1.0), origin on the floor: low debris pile (no collider)."""
+    m = Model("prop_rubble")
+    chunks = [((0, 0.08, 0), (0.6, 0.16, 0.5), CONCRETE, (0, 15, 0)), ((0.35, 0.06, 0.2), (0.4, 0.12, 0.35), CONCRETE_DARK, (8, 40, 5)),
+              ((-0.4, 0.05, -0.15), (0.35, 0.1, 0.3), CONCRETE, (0, -25, 10)), ((0.1, 0.18, -0.1), (0.3, 0.12, 0.25), CONCRETE_DARK, (12, 60, -8)),
+              ((-0.15, 0.03, 0.35), (0.5, 0.04, 0.12), RUST, (0, 70, 0)), ((0.45, 0.02, -0.3), (0.6, 0.03, 0.06), METAL, (0, -35, 0)),
+              ((-0.5, 0.015, 0.3), (0.25, 0.01, 0.3), LAB_WHITE, (0, 20, 0)), ((0.2, 0.015, 0.45), (0.22, 0.01, 0.28), "C_C4BFA8", (0, -50, 0))]
+    for pos, size, mat, rot in chunks:
+        m.box(pos, size, mat, rot=rot, bevel=0.01)
+    return m
+
+
 # ----------------------------------------------------------------------------------------------- weapons
 # First-person and pickup models, built from extruded side outlines (prof) with faceted chamfers.
 # Origin = the viewmodel's model origin (rear of the receiver, at the grip line); the barrel runs along +Z and the
@@ -1006,6 +1230,8 @@ BUILDERS = [
     player_body, player_head,
     lambda: fob_booth(False), lambda: fob_booth(True), fob_transport, crate_stack,
     prop_crate, prop_locker, prop_column, prop_partition, prop_door, prop_relay, prop_switch, supply_cache,
+    prop_light_fixture, prop_lab_bench, prop_tank, prop_server_rack, prop_shelf, prop_barrel, prop_table, prop_planter,
+    prop_desk, prop_generator, prop_fusebox, prop_wall_vent, prop_extinguisher, prop_rubble,
     weapon_halberd_ar, weapon_breacher_12, weapon_ranger_9, weapon_saber_7, weapon_wasp_smg, weapon_anvil_lmg,
     weapon_tether_cleaver, weapon_mule_launcher,
 ]
@@ -1017,7 +1243,10 @@ BUILDERS = [
 FIT_SIZES = {
     "prop_crate": (1.8, 1.0, 1.1), "prop_locker": (1.2, 1.8, 1.2), "prop_column": (0.8, 4.5, 0.8),
     "prop_partition": (3.6, 1.2, 0.4), "prop_door": (2.5, 2.6, 0.25), "prop_relay": (1.3, 1.6, 0.7),
-    "prop_switch": (0.7, 0.9, 0.2), "fob_transport": (3.2, 2.2, 6.0), "fob_crates": (2.4, 1.2, 1.2),
+    "prop_switch": (0.7, 0.9, 0.2),
+    "prop_light_fixture": (1.4, 0.14, 0.5), "prop_lab_bench": (2.4, 0.95, 0.9), "prop_tank": (1.2, 2.4, 1.2),
+    "prop_server_rack": (0.8, 2.2, 1.1), "prop_shelf": (2.4, 2.2, 0.7), "prop_table": (2.2, 0.8, 1.6),
+    "prop_planter": (1.4, 1.8, 1.4), "prop_desk": (2.0, 1.2, 0.9), "prop_generator": (1.8, 1.8, 1.4), "fob_transport": (3.2, 2.2, 6.0), "fob_crates": (2.4, 1.2, 1.2),
 }
 
 SHEETS = {
@@ -1025,6 +1254,9 @@ SHEETS = {
                    "enemy_spitter", "enemy_alpha", "enemy_specimen", "player"],
     "fob": ["fob_booth", "fob_booth_wide", "fob_transport", "fob_crates"],
     "map": ["prop_crate", "prop_locker", "prop_column", "prop_partition", "prop_door", "prop_relay", "prop_switch", "supply_cache"],
+    "rooms": ["prop_lab_bench", "prop_tank", "prop_server_rack", "prop_shelf", "prop_table", "prop_planter", "prop_desk",
+              "prop_generator"],
+    "clutter": ["prop_barrel", "prop_light_fixture", "prop_fusebox", "prop_wall_vent", "prop_extinguisher", "prop_rubble"],
 }
 
 

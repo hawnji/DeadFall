@@ -11,7 +11,7 @@ namespace Deadfall.Core
     /// <see cref="Enabled"/> is off) callers keep the primitives.
     /// <para>
     /// Materials are rebuilt at runtime from the material <i>names</i> (T-58): "C_RRGGBB" / "G_RRGGBB" are fixed
-    /// colours, and the slots Skin, SkinDark, Accent and AccentDim are tinted by the caller. That keeps models
+    /// colours ("G_" ones glow), and the slots Skin, SkinDark, Accent and AccentDim are tinted by the caller. That keeps models
     /// working in URP builds (see <see cref="RuntimeMaterials"/>) whatever material the importer made.
     /// </para>
     /// </summary>
@@ -24,6 +24,7 @@ namespace Deadfall.Core
 
         private static readonly Dictionary<string, GameObject> Prefabs = new Dictionary<string, GameObject>();
         private static readonly Dictionary<Color32, Material> Materials = new Dictionary<Color32, Material>();
+        private static readonly Dictionary<Color32, Material> Glows = new Dictionary<Color32, Material>();
         private static readonly List<Material> Scratch = new List<Material>(8);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -31,6 +32,7 @@ namespace Deadfall.Core
         {
             Prefabs.Clear();
             Materials.Clear();
+            Glows.Clear();
             Enabled = true;
         }
 
@@ -118,13 +120,18 @@ namespace Deadfall.Core
             }
         }
 
+        /// <summary>"G_RRGGBB" materials glow (emissive); everything else is plain lit.</summary>
+        public static bool IsGlow(string materialName) => Clean(materialName).StartsWith("G_", StringComparison.Ordinal);
+
         private static Material MaterialFor(string name, Func<string, Color?> tint)
         {
             Color32 key = ColorForName(name, tint);
-            if (Materials.TryGetValue(key, out Material m) && m != null) return m;
-            m = RuntimeMaterials.CreateLit(key);
+            bool glow = IsGlow(name);
+            Dictionary<Color32, Material> cache = glow ? Glows : Materials;
+            if (cache.TryGetValue(key, out Material m) && m != null) return m;
+            m = glow ? RuntimeMaterials.CreateEmissive(key) : RuntimeMaterials.CreateLit(key);
             m.name = "Model " + Clean(name);
-            Materials[key] = m;
+            cache[key] = m;
             return m;
         }
 
