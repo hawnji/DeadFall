@@ -68,6 +68,24 @@ namespace Deadfall.Enemies
         public static event System.Action<Enemy, SpecimenPhase> PhaseChanged;
         private NavMeshAgent _agent;
         private Transform _visual;
+        private EnemyRig _rig;
+        private static int _viewerFrame = -1;
+        private static Vector3 _viewer;
+
+        /// <summary>The camera position this frame (rigs skip far-away enemies).</summary>
+        private static Vector3 Viewer
+        {
+            get
+            {
+                if (_viewerFrame != Time.frameCount)
+                {
+                    _viewerFrame = Time.frameCount;
+                    Camera cam = Camera.main;
+                    _viewer = cam != null ? cam.transform.position : Vector3.zero;
+                }
+                return _viewer;
+            }
+        }
         private readonly List<Collider> _hurtColliders = new List<Collider>(4);
         private ICombatTarget _target;
         private float _targetDistance;
@@ -295,6 +313,7 @@ namespace Deadfall.Enemies
             if (model == null) return;
             float sr = _definition.Radius / r0, sh = _definition.Height / h0;
             model.transform.localScale = new Vector3(sr, sh, sr);
+            _rig = EnemyRig.Bind(model.transform, _visual, _definition.Height, _definition.BodyType == EnemyBodyType.Crawler);
             ModelLibrary.HideExcept(_visual, model.transform, r =>
             {
                 foreach (PhasePart p in _phaseParts) if (p.Go != null && r.transform.IsChildOf(p.Go.transform)) return true;
@@ -439,6 +458,7 @@ namespace Deadfall.Enemies
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = Vector3.one;
             _brain.Reset(now);
+            _rig?.Reset();
             Hostiles.Register(this);
         }
 
@@ -466,6 +486,7 @@ namespace Deadfall.Enemies
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = Vector3.one;
             _brain.Reset(now);
+            _rig?.Reset();
             Hostiles.Register(this);
         }
 
@@ -507,6 +528,7 @@ namespace Deadfall.Enemies
             {
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
                 _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
+                _rig?.Tick(transform.position, EnemyState.Dead, 1f, false, (float)now, Time.deltaTime, Viewer);
                 return;
             }
             // Smoothly chase the latest snapshot; snap if it jumped (spawned, teleported, or long gap).
@@ -619,6 +641,7 @@ namespace Deadfall.Enemies
                 }
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
                 _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
+                _rig?.Tick(transform.position, EnemyState.Dead, 1f, false, (float)now, Time.deltaTime, Viewer);
                 return;
             }
 
@@ -820,6 +843,7 @@ namespace Deadfall.Enemies
             }
             _visual.localRotation = rot;
             _visual.localScale = scale;
+            _rig?.Tick(transform.position, _brain.State, p, true, (float)now, Time.deltaTime, Viewer);
         }
 
         private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);

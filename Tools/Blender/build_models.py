@@ -69,6 +69,25 @@ class Model:
         self.fit = fit
         self.triangulate = triangulate  # concave outlines (prof) must be triangulated here, not by the importer
         self.parts = []
+        # Rig groups (M13 enemy animation): name -> (pivot in Unity space, parts). Each group is exported as a child
+        # object whose origin is the pivot (hip, shoulder, neck), so the game can swing it like a limb.
+        self.groups = {}
+        self._group = None
+
+    class _Group:
+        def __init__(self, model, name):
+            self.model, self.name = model, name
+
+        def __enter__(self):
+            self.model._group = self.name
+
+        def __exit__(self, *exc):
+            self.model._group = None
+
+    def rig(self, name, pivot):
+        """with m.rig("LegL", hip): parts made inside become the movable child "LegL" pivoting at hip."""
+        self.groups[name] = (pivot, self.groups.get(name, (pivot, []))[1])
+        return Model._Group(self, name)
 
     def part(self, kind, pos, size, mat, rot=(0, 0, 0), bevel=0.0, smooth=False, segments=10):
         """kind: box | sph | cyl | cone. size: full extents in Unity axes (cyl/cone run along Unity Y)."""
@@ -94,8 +113,13 @@ class Model:
         o.data.materials.append(material(mat))
         for poly in o.data.polygons:
             poly.use_smooth = smooth
-        self.parts.append(o)
+        self._add(o)
         return o
+
+    def _add(self, o):
+        self.parts.append(o)
+        if self._group is not None:
+            self.groups[self._group][1].append(o)
 
     # Short forms.
     def box(self, pos, size, mat, rot=(0, 0, 0), bevel=0.02):
@@ -143,7 +167,7 @@ class Model:
         o.data.materials.append(material(mat))
         for poly in o.data.polygons:
             poly.use_smooth = False
-        self.parts.append(o)
+        self._add(o)
         return o
 
     def sym(self, pts, half, mat, chamfer=0.003, x=0.0):
@@ -164,17 +188,35 @@ class Model:
             return self.part("cyl", mid, (thick[0], length, thick[1]), mat, rot=(pitch + 90, yaw, 0), segments=8, smooth=True)
         return self.part("box", mid, (thick[0], thick[1], length), mat, rot=(pitch, yaw, 0), bevel=min(thick) * 0.25)
 
-    def finish(self):
+    @staticmethod
+    def _join(parts, name):
         bpy.ops.object.select_all(action='DESELECT')
-        for o in self.parts:
+        for o in parts:
             o.select_set(True)
-        bpy.context.view_layer.objects.active = self.parts[0]
-        if len(self.parts) > 1:
+        bpy.context.view_layer.objects.active = parts[0]
+        if len(parts) > 1:
             bpy.ops.object.join()
         o = bpy.context.active_object
-        o.name = self.name
-        o.data.name = self.name
+        o.name = name
+        o.data.name = name
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        return o
+
+    def finish(self):
+        grouped = {id(p) for _, ps in self.groups.values() for p in ps}
+        o = Model._join([p for p in self.parts if id(p) not in grouped], self.name)
+        for gname, (pivot, ps) in self.groups.items():
+            if not ps:
+                continue
+            c = Model._join(ps, gname)
+            c.data.name = f"{self.name}_{gname}"
+            pb = to_b(pivot)
+            c.data.transform(Matrix.Translation(-pb))  # origin = pivot
+            c.location = pb
+            c.parent = o
+        bpy.ops.object.select_all(action='DESELECT')
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
         if self.triangulate:
             mod = o.modifiers.new("tri", 'TRIANGULATE')
             mod.quad_method = 'BEAUTY'
@@ -194,6 +236,8 @@ class Model:
 def export(o):
     bpy.ops.object.select_all(action='DESELECT')
     o.select_set(True)
+    for c in o.children:
+        c.select_set(True)
     bpy.context.view_layer.objects.active = o
     path = os.path.join(OUT, o.name + ".fbx")
     bpy.ops.export_scene.fbx(
@@ -253,11 +297,12 @@ def eyes(m, head_pos, head_size, spread=0.07):
 def enemy_standard():
     m = Model("enemy_standard")
     h = 1.8
-    # Legs, slightly apart and bent.
-    for s in (-1, 1):
-        m.limb((s * 0.12, 0.9, 0.0), (s * 0.13, 0.48, 0.05), (0.15, 0.16), CLOTH_DARK)
-        m.limb((s * 0.13, 0.5, 0.05), (s * 0.14, 0.08, -0.02), (0.13, 0.14), CLOTH_DARK)
-        m.box((s * 0.14, 0.04, 0.04), (0.14, 0.08, 0.26), RUBBER)
+    # Legs, slightly apart and bent (rig: LegL/LegR swing at the hips).
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.12, 0.9, 0.0)):
+            m.limb((s * 0.12, 0.9, 0.0), (s * 0.13, 0.48, 0.05), (0.15, 0.16), CLOTH_DARK)
+            m.limb((s * 0.13, 0.5, 0.05), (s * 0.14, 0.08, -0.02), (0.13, 0.14), CLOTH_DARK)
+            m.box((s * 0.14, 0.04, 0.04), (0.14, 0.08, 0.26), RUBBER)
     m.box((0, 0.93, 0), (0.42, 0.2, 0.26), CLOTH_DARK, bevel=0.04)
     # Torso leaning forward, torn shirt.
     m.box((0, 1.2, 0.03), (0.46, 0.5, 0.28), "Skin", rot=(10, 0, 0), bevel=0.07)
@@ -266,25 +311,28 @@ def enemy_standard():
     m.box((0, 1.42, 0.06), (0.52, 0.12, 0.26), "Skin", rot=(10, 0, 0), bevel=0.05)  # shoulders
     m.cyl((0, 1.5, 0.07), (0.11, 0.12, 0.11), "Skin")
     head = (0, h * 0.89, 0.05)
-    m.sph(head, (0.25, 0.29, 0.27), "SkinDark")
-    m.box((0, head[1] - 0.1, head[2] + 0.07), (0.16, 0.07, 0.12), "SkinDark", bevel=0.02)  # jaw
-    eyes(m, head, 0.27)
+    with m.rig("Head", (0, 1.5, 0.07)):
+        m.sph(head, (0.25, 0.29, 0.27), "SkinDark")
+        m.box((0, head[1] - 0.1, head[2] + 0.07), (0.16, 0.07, 0.12), "SkinDark", bevel=0.02)  # jaw
+        eyes(m, head, 0.27)
     # Arms reaching forward (the shamble), at the placeholder arm height.
     ay = h * 0.68
-    for s in (-1, 1):
-        m.limb((s * 0.27, 1.4, 0.05), (s * 0.31, ay, 0.3), (0.1, 0.1), "Skin")
-        m.limb((s * 0.31, ay, 0.3), (s * 0.3, ay - 0.04, 0.6), (0.085, 0.085), "Skin")
-        m.box((s * 0.3, ay - 0.05, 0.68), (0.1, 0.06, 0.14), "SkinDark", bevel=0.015)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.27, 1.4, 0.05)):
+            m.limb((s * 0.27, 1.4, 0.05), (s * 0.31, ay, 0.3), (0.1, 0.1), "Skin")
+            m.limb((s * 0.31, ay, 0.3), (s * 0.3, ay - 0.04, 0.6), (0.085, 0.085), "Skin")
+            m.box((s * 0.3, ay - 0.05, 0.68), (0.1, 0.06, 0.14), "SkinDark", bevel=0.015)
     return m
 
 
 def enemy_lean():
     m = Model("enemy_lean")
     h = 1.65
-    for s in (-1, 1):
-        m.limb((s * 0.1, 0.82, -0.02), (s * 0.12, 0.45, 0.12), (0.1, 0.11), CLOTH_DARK)
-        m.limb((s * 0.12, 0.45, 0.12), (s * 0.12, 0.06, -0.06), (0.09, 0.09), "Skin")
-        m.box((s * 0.12, 0.03, 0.0), (0.1, 0.06, 0.2), "SkinDark")
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.1, 0.82, -0.02)):
+            m.limb((s * 0.1, 0.82, -0.02), (s * 0.12, 0.45, 0.12), (0.1, 0.11), CLOTH_DARK)
+            m.limb((s * 0.12, 0.45, 0.12), (s * 0.12, 0.06, -0.06), (0.09, 0.09), "Skin")
+            m.box((s * 0.12, 0.03, 0.0), (0.1, 0.06, 0.2), "SkinDark")
     m.box((0, 0.84, -0.02), (0.32, 0.16, 0.2), CLOTH_DARK, bevel=0.03)
     # Hunched sprinter: long thin torso pitched forward with a visible spine.
     m.box((0, 1.08, 0.08), (0.34, 0.52, 0.2), "Skin", rot=(25, 0, 0), bevel=0.06)
@@ -292,31 +340,35 @@ def enemy_lean():
         m.box((0, 0.95 + i * 0.11, -0.06 + i * 0.05), (0.06, 0.05, 0.06), BONE, rot=(25, 0, 0), bevel=0.0)
     m.box((0, 1.0, 0.07), (0.36, 0.2, 0.22), CLOTH, rot=(25, 0, 0), bevel=0.03)
     head = (0, h * 0.86, h * 0.12)
-    m.sph(head, (0.24, 0.27, 0.27), "SkinDark")
-    m.box((0, head[1] - 0.09, head[2] + 0.09), (0.13, 0.06, 0.12), "SkinDark", bevel=0.01)
-    eyes(m, head, 0.27, 0.06)
+    with m.rig("Head", (0, 1.3, 0.14)):
+        m.sph(head, (0.24, 0.27, 0.27), "SkinDark")
+        m.box((0, head[1] - 0.09, head[2] + 0.09), (0.13, 0.06, 0.12), "SkinDark", bevel=0.01)
+        eyes(m, head, 0.27, 0.06)
     ay = h * 0.55
-    for s in (-1, 1):
-        m.limb((s * 0.2, 1.25, 0.14), (s * 0.34, ay + 0.05, 0.25), (0.07, 0.07), "Skin")
-        m.limb((s * 0.34, ay + 0.05, 0.25), (s * 0.36, ay - 0.06, 0.58), (0.06, 0.06), "Skin")
-        for c in (-1, 0, 1):  # claws
-            m.cone((s * 0.36 + c * 0.025, ay - 0.08, 0.66), (0.025, 0.14, 0.025), BONE, rot=(100, 0, 0), segments=5)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.2, 1.25, 0.14)):
+            m.limb((s * 0.2, 1.25, 0.14), (s * 0.34, ay + 0.05, 0.25), (0.07, 0.07), "Skin")
+            m.limb((s * 0.34, ay + 0.05, 0.25), (s * 0.36, ay - 0.06, 0.58), (0.06, 0.06), "Skin")
+            for c in (-1, 0, 1):  # claws
+                m.cone((s * 0.36 + c * 0.025, ay - 0.08, 0.66), (0.025, 0.14, 0.025), BONE, rot=(100, 0, 0), segments=5)
     return m
 
 
 def enemy_plated():
     m = Model("enemy_plated")
     h, r = 2.3, 0.6
-    for s in (-1, 1):
-        m.limb((s * 0.3, 1.0, 0.0), (s * 0.34, 0.5, 0.06), (0.3, 0.32), CLOTH_DARK)
-        m.limb((s * 0.34, 0.52, 0.06), (s * 0.34, 0.1, 0.0), (0.27, 0.28), "SkinDark")
-        m.box((s * 0.34, 0.06, 0.06), (0.3, 0.12, 0.42), RUBBER, bevel=0.03)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.3, 1.0, 0.0)):
+            m.limb((s * 0.3, 1.0, 0.0), (s * 0.34, 0.5, 0.06), (0.3, 0.32), CLOTH_DARK)
+            m.limb((s * 0.34, 0.52, 0.06), (s * 0.34, 0.1, 0.0), (0.27, 0.28), "SkinDark")
+            m.box((s * 0.34, 0.06, 0.06), (0.3, 0.12, 0.42), RUBBER, bevel=0.03)
     m.box((0, 1.05, 0), (0.8, 0.3, 0.6), CLOTH_DARK, bevel=0.06)
     m.box((0, 1.45, -0.02), (1.1, 0.7, 0.78), "Skin", bevel=0.14)  # huge chest
     m.box((0, 1.82, -0.04), (1.25, 0.3, 0.7), "Skin", bevel=0.12)  # shoulders
     head = (0, h * 0.88, 0.08)
-    m.sph(head, (0.3, 0.3, 0.32), "SkinDark")
-    eyes(m, head, 0.3, 0.07)
+    with m.rig("Head", (0, 1.9, 0.08)):
+        m.sph(head, (0.3, 0.3, 0.32), "SkinDark")
+        eyes(m, head, 0.3, 0.07)
     # Front plate (armour hurtbox): bolted riot-shield slabs grown into the chest.
     m.box((0, h * 0.5, r * 0.95), (r * 2.2, h * 0.53, 0.1), METAL, bevel=0.03)
     for y in (0.85, 1.15, 1.45):
@@ -330,10 +382,11 @@ def enemy_plated():
     for (x, y, d) in ((-0.18, gy + 0.12, 0.2), (0.16, gy - 0.1, 0.22), (0.0, gy + 0.02, 0.26)):
         m.sph((x, y, -r * 1.02), (d, d, d), "G_F28C26", segments=8)
     # Thick arms with fists, held low in front.
-    for s in (-1, 1):
-        m.limb((s * 0.68, 1.8, -0.02), (s * 0.74, 1.3, 0.12), (0.24, 0.24), "Skin")
-        m.limb((s * 0.74, 1.3, 0.12), (s * 0.74, 1.12, 0.55), (0.22, 0.22), "Skin")
-        m.box((s * 0.74, 1.1, 0.68), (0.26, 0.24, 0.26), "SkinDark", bevel=0.05)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.68, 1.8, -0.02)):
+            m.limb((s * 0.68, 1.8, -0.02), (s * 0.74, 1.3, 0.12), (0.24, 0.24), "Skin")
+            m.limb((s * 0.74, 1.3, 0.12), (s * 0.74, 1.12, 0.55), (0.22, 0.22), "Skin")
+            m.box((s * 0.74, 1.1, 0.68), (0.26, 0.24, 0.26), "SkinDark", bevel=0.05)
     return m
 
 
@@ -344,16 +397,19 @@ def enemy_crawler():
     m.sph((0, 0.32, -0.02), (0.46, 0.3, 0.92), "Skin")
     for i in range(5):
         m.box((0, 0.48, -0.32 + i * 0.15), (0.07, 0.06, 0.07), BONE, bevel=0.0)
-    m.sph((0, h * 0.55, 0.48), (0.22, 0.2, 0.26), "SkinDark")
-    m.box((0, h * 0.55 - 0.07, 0.56), (0.13, 0.05, 0.12), "SkinDark", bevel=0.01)
-    eyes(m, (0, h * 0.55, 0.48), 0.26, 0.05)
-    for s in (-1, 1):
+    with m.rig("Head", (0, 0.38, 0.38)):
+        m.sph((0, h * 0.55, 0.48), (0.22, 0.2, 0.26), "SkinDark")
+        m.box((0, h * 0.55 - 0.07, 0.56), (0.13, 0.05, 0.12), "SkinDark", bevel=0.01)
+        eyes(m, (0, h * 0.55, 0.48), 0.26, 0.05)
+    for s, side in ((-1, "L"), (1, "R")):
         # Front arms (placeholder arms at x = +-r, z = 0.35).
-        m.limb((s * 0.18, 0.36, 0.3), (s * 0.34, 0.3, 0.42), (0.07, 0.07), "Skin")
-        m.limb((s * 0.34, 0.3, 0.42), (s * 0.3, 0.02, 0.5), (0.06, 0.06), "Skin")
+        with m.rig("Arm" + side, (s * 0.18, 0.36, 0.3)):
+            m.limb((s * 0.18, 0.36, 0.3), (s * 0.34, 0.3, 0.42), (0.07, 0.07), "Skin")
+            m.limb((s * 0.34, 0.3, 0.42), (s * 0.3, 0.02, 0.5), (0.06, 0.06), "Skin")
         # Back legs.
-        m.limb((s * 0.16, 0.3, -0.34), (s * 0.34, 0.28, -0.42), (0.08, 0.08), "Skin")
-        m.limb((s * 0.34, 0.28, -0.42), (s * 0.32, 0.02, -0.5), (0.07, 0.07), "Skin")
+        with m.rig("Leg" + side, (s * 0.16, 0.3, -0.34)):
+            m.limb((s * 0.16, 0.3, -0.34), (s * 0.34, 0.28, -0.42), (0.08, 0.08), "Skin")
+            m.limb((s * 0.34, 0.28, -0.42), (s * 0.32, 0.02, -0.5), (0.07, 0.07), "Skin")
     m.box((0, 0.28, -0.12), (0.4, 0.16, 0.4), CLOTH_DARK, bevel=0.03)
     return m
 
@@ -361,71 +417,80 @@ def enemy_crawler():
 def enemy_bloated():
     m = Model("enemy_bloated")
     h, r = 1.75, 0.42
-    for s in (-1, 1):
-        m.limb((s * 0.18, 0.5, 0.0), (s * 0.2, 0.06, 0.02), (0.18, 0.18), "SkinDark")
-        m.box((s * 0.2, 0.04, 0.05), (0.18, 0.08, 0.28), RUBBER)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.18, 0.5, 0.0)):
+            m.limb((s * 0.18, 0.5, 0.0), (s * 0.2, 0.06, 0.02), (0.18, 0.18), "SkinDark")
+            m.box((s * 0.2, 0.04, 0.05), (0.18, 0.08, 0.28), RUBBER)
     m.sph((0, h * 0.47, 0), (r * 2.35, h * 0.52, r * 2.15), "Skin", segments=14)
     m.box((0, h * 0.3, 0.02), (r * 2.0, 0.22, r * 1.9), CLOTH, bevel=0.06)  # strained trousers
     head = (0, h * 0.88, 0.05)
-    m.sph(head, (0.25, 0.26, 0.26), "SkinDark")
-    eyes(m, head, 0.26, 0.06)
+    with m.rig("Head", (0, 1.42, 0.05)):
+        m.sph(head, (0.25, 0.26, 0.26), "SkinDark")
+        eyes(m, head, 0.26, 0.06)
     # Sac (weak point) and pustules.
     m.sph((0, h * 0.42, r * 0.95), (0.38, 0.38, 0.32), "G_FF8C1A", segments=12)
     for (x, y, z, d) in ((-0.32, 1.05, 0.22, 0.13), (0.3, 0.95, 0.26, 0.11), (0.35, 0.62, -0.2, 0.12), (-0.28, 0.7, -0.3, 0.1)):
         m.sph((x, y, z), (d, d, d), "G_FF8C1A", segments=8)
-    for s in (-1, 1):
-        m.limb((s * 0.42, 1.2, 0.0), (s * 0.55, 0.85, 0.08), (0.12, 0.12), "Skin")
-        m.limb((s * 0.55, 0.85, 0.08), (s * 0.52, 0.62, 0.2), (0.11, 0.11), "Skin")
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.42, 1.2, 0.0)):
+            m.limb((s * 0.42, 1.2, 0.0), (s * 0.55, 0.85, 0.08), (0.12, 0.12), "Skin")
+            m.limb((s * 0.55, 0.85, 0.08), (s * 0.52, 0.62, 0.2), (0.11, 0.11), "Skin")
     return m
 
 
 def enemy_spitter():
     m = Model("enemy_spitter")
     h = 1.7
-    for s in (-1, 1):
-        m.limb((s * 0.13, 0.85, 0.0), (s * 0.15, 0.46, 0.08), (0.13, 0.14), CLOTH_DARK)
-        m.limb((s * 0.15, 0.48, 0.08), (s * 0.15, 0.07, -0.02), (0.11, 0.12), "SkinDark")
-        m.box((s * 0.15, 0.04, 0.03), (0.13, 0.08, 0.24), RUBBER)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.13, 0.85, 0.0)):
+            m.limb((s * 0.13, 0.85, 0.0), (s * 0.15, 0.46, 0.08), (0.13, 0.14), CLOTH_DARK)
+            m.limb((s * 0.15, 0.48, 0.08), (s * 0.15, 0.07, -0.02), (0.11, 0.12), "SkinDark")
+            m.box((s * 0.15, 0.04, 0.03), (0.13, 0.08, 0.24), RUBBER)
     m.box((0, 0.88, 0), (0.4, 0.18, 0.26), CLOTH_DARK, bevel=0.03)
     m.box((0, 1.15, 0.04), (0.46, 0.5, 0.28), "Skin", rot=(16, 0, 0), bevel=0.07)
     m.box((0, 1.05, 0.03), (0.48, 0.24, 0.3), CLOTH, rot=(16, 0, 0), bevel=0.03)
     head = (0, h * 0.84, 0.14)
-    m.sph(head, (0.25, 0.27, 0.3), "SkinDark")
-    # Unhinged jaw.
-    m.box((0, head[1] - 0.13, head[2] + 0.1), (0.16, 0.05, 0.16), "SkinDark", rot=(25, 0, 0), bevel=0.01)
-    eyes(m, head, 0.3, 0.06)
+    with m.rig("Head", (0, 1.32, 0.12)):
+        m.sph(head, (0.25, 0.27, 0.3), "SkinDark")
+        # Unhinged jaw.
+        m.box((0, head[1] - 0.13, head[2] + 0.1), (0.16, 0.05, 0.16), "SkinDark", rot=(25, 0, 0), bevel=0.01)
+        eyes(m, head, 0.3, 0.06)
     # Throat sac (weak point).
     m.sph((0, h * 0.7, 0.28), (0.34, 0.3, 0.3), "G_B3D933", segments=12)
-    for s in (-1, 1):
-        m.limb((s * 0.26, 1.36, 0.08), (s * 0.3, 1.0, 0.1), (0.08, 0.08), "Skin")
-        m.limb((s * 0.3, 1.0, 0.1), (s * 0.28, 0.75, 0.2), (0.07, 0.07), "Skin")
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.26, 1.36, 0.08)):
+            m.limb((s * 0.26, 1.36, 0.08), (s * 0.3, 1.0, 0.1), (0.08, 0.08), "Skin")
+            m.limb((s * 0.3, 1.0, 0.1), (s * 0.28, 0.75, 0.2), (0.07, 0.07), "Skin")
     return m
 
 
 def enemy_alpha():
     m = Model("enemy_alpha")
     h, r = 2.15, 0.42
-    for s in (-1, 1):
-        m.limb((s * 0.16, 1.0, 0.0), (s * 0.18, 0.55, 0.08), (0.17, 0.18), CLOTH_DARK)
-        m.limb((s * 0.18, 0.57, 0.08), (s * 0.18, 0.08, -0.02), (0.15, 0.15), "SkinDark")
-        m.box((s * 0.18, 0.05, 0.04), (0.16, 0.1, 0.3), RUBBER)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.16, 1.0, 0.0)):
+            m.limb((s * 0.16, 1.0, 0.0), (s * 0.18, 0.55, 0.08), (0.17, 0.18), CLOTH_DARK)
+            m.limb((s * 0.18, 0.57, 0.08), (s * 0.18, 0.08, -0.02), (0.15, 0.15), "SkinDark")
+            m.box((s * 0.18, 0.05, 0.04), (0.16, 0.1, 0.3), RUBBER)
     m.box((0, 1.03, 0), (0.5, 0.2, 0.32), CLOTH_DARK, bevel=0.04)
     m.box((0, 1.38, 0.02), (0.62, 0.62, 0.38), "Skin", bevel=0.1)
     m.box((0, 1.72, 0.0), (0.92, 0.22, 0.42), "Skin", bevel=0.09)  # wide shoulders
     head = (0, h * 0.89, 0.06)
-    m.sph(head, (0.29, 0.31, 0.31), "SkinDark")
-    eyes(m, head, 0.31, 0.07)
+    with m.rig("Head", (0, 1.8, 0.06)):
+        m.sph(head, (0.29, 0.31, 0.31), "SkinDark")
+        eyes(m, head, 0.31, 0.07)
     # Crystal growth on the upper back (weak point).
     gy = h * 0.78
     m.box((0, gy, -r * 0.62), (r * 1.5, 0.24, 0.3), "G_59D9FF", bevel=0.04)
     for (x, tilt) in ((-0.22, -20), (-0.08, -8), (0.07, 6), (0.21, 18)):
         m.cone((x, gy + 0.2, -r * 0.7), (0.1, 0.38, 0.1), "G_59D9FF", rot=(-25, 0, tilt), segments=5)
     ay = h * 0.62
-    for s in (-1, 1):
-        m.limb((s * 0.48, 1.74, 0.0), (s * 0.54, ay + 0.05, 0.2), (0.14, 0.14), "Skin")
-        m.limb((s * 0.54, ay + 0.05, 0.2), (s * 0.52, ay - 0.05, 0.6), (0.12, 0.12), "Skin")
-        for c in (-1, 0, 1):
-            m.cone((s * 0.52 + c * 0.035, ay - 0.07, 0.7), (0.035, 0.18, 0.035), BONE, rot=(100, 0, 0), segments=5)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 0.48, 1.74, 0.0)):
+            m.limb((s * 0.48, 1.74, 0.0), (s * 0.54, ay + 0.05, 0.2), (0.14, 0.14), "Skin")
+            m.limb((s * 0.54, ay + 0.05, 0.2), (s * 0.52, ay - 0.05, 0.6), (0.12, 0.12), "Skin")
+            for c in (-1, 0, 1):
+                m.cone((s * 0.52 + c * 0.035, ay - 0.07, 0.7), (0.035, 0.18, 0.035), BONE, rot=(100, 0, 0), segments=5)
     return m
 
 
@@ -433,23 +498,26 @@ def enemy_specimen():
     """Body, head and arms only: the phase plates, growths and core stay game-built so they can appear by phase."""
     m = Model("enemy_specimen")
     h, r = 3.4, 1.0
-    for s in (-1, 1):
-        m.limb((s * 0.5, 1.5, 0.0), (s * 0.58, 0.75, 0.15), (0.48, 0.5), "SkinDark")
-        m.limb((s * 0.58, 0.78, 0.15), (s * 0.58, 0.12, 0.0), (0.42, 0.44), "SkinDark")
-        m.box((s * 0.58, 0.08, 0.12), (0.46, 0.16, 0.66), "SkinDark", bevel=0.06)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Leg" + side, (s * 0.5, 1.5, 0.0)):
+            m.limb((s * 0.5, 1.5, 0.0), (s * 0.58, 0.75, 0.15), (0.48, 0.5), "SkinDark")
+            m.limb((s * 0.58, 0.78, 0.15), (s * 0.58, 0.12, 0.0), (0.42, 0.44), "SkinDark")
+            m.box((s * 0.58, 0.08, 0.12), (0.46, 0.16, 0.66), "SkinDark", bevel=0.06)
     m.box((0, 1.55, 0), (1.3, 0.5, 1.0), "Skin", bevel=0.18)
     m.box((0, 2.2, 0.05), (1.8, 1.0, 1.35), "Skin", rot=(14, 0, 0), bevel=0.25)  # hunched chest
     m.box((0, 2.75, -0.1), (2.1, 0.45, 1.2), "Skin", rot=(14, 0, 0), bevel=0.2)  # shoulder mass
     for i, x in enumerate((-0.45, -0.15, 0.15, 0.45)):  # back spikes
         m.cone((x, 2.95, -0.55), (0.16, 0.6 if i in (1, 2) else 0.45, 0.16), BONE, rot=(-35, 0, x * 25), segments=6)
     head = (0, h * 0.9, 0.2)
-    m.sph(head, (0.5, 0.48, 0.55), "SkinDark")
-    m.box((0, head[1] - 0.2, head[2] + 0.18), (0.36, 0.14, 0.3), "SkinDark", bevel=0.04)
-    eyes(m, head, 0.55, 0.12)
-    for s in (-1, 1):
-        m.limb((s * 1.0, 2.75, -0.05), (s * 1.22, 2.0, 0.25), (0.42, 0.42), "Skin")
-        m.limb((s * 1.22, 2.0, 0.25), (s * 1.25, 1.6, 0.95), (0.38, 0.38), "Skin")
-        m.box((s * 1.25, 1.52, 1.2), (0.5, 0.45, 0.5), "SkinDark", bevel=0.08)
+    with m.rig("Head", (0, 2.85, 0.15)):
+        m.sph(head, (0.5, 0.48, 0.55), "SkinDark")
+        m.box((0, head[1] - 0.2, head[2] + 0.18), (0.36, 0.14, 0.3), "SkinDark", bevel=0.04)
+        eyes(m, head, 0.55, 0.12)
+    for s, side in ((-1, "L"), (1, "R")):
+        with m.rig("Arm" + side, (s * 1.0, 2.75, -0.05)):
+            m.limb((s * 1.0, 2.75, -0.05), (s * 1.22, 2.0, 0.25), (0.42, 0.42), "Skin")
+            m.limb((s * 1.22, 2.0, 0.25), (s * 1.25, 1.6, 0.95), (0.38, 0.38), "Skin")
+            m.box((s * 1.25, 1.52, 1.2), (0.5, 0.45, 0.5), "SkinDark", bevel=0.08)
     return m
 
 
@@ -464,19 +532,21 @@ def enemy_brood():
     m.limb((0, h * 0.42, r * 0.1), (0, h * 0.62, r * 0.75), (1.2, 1.1), "Skin")  # raised front body
     m.box((0, h * 0.68, r * 0.75), (1.1, 0.5, 0.9), "SkinDark", rot=(-20, 0, 0), bevel=0.15)  # chest plate
     head = (0, h * 0.78, r * 0.98)
-    m.sph(head, (0.62, 0.52, 0.66), "SkinDark")
-    for s in (-1, 1):  # mandibles
-        m.cone((s * 0.17, head[1] - 0.22, head[2] + 0.3), (0.1, 0.38, 0.1), BONE, rot=(110, 0, s * 18), segments=6)
-    eyes(m, head, 0.62, 0.11)
-    for s in (-1, 1):
+    with m.rig("Head", (0, h * 0.72, r * 0.8)):
+        m.sph(head, (0.62, 0.52, 0.66), "SkinDark")
+        for s in (-1, 1):  # mandibles
+            m.cone((s * 0.17, head[1] - 0.22, head[2] + 0.3), (0.1, 0.38, 0.1), BONE, rot=(110, 0, s * 18), segments=6)
+        eyes(m, head, 0.62, 0.11)
+    for s, side in ((-1, "L"), (1, "R")):
         for l in range(3):
             z = r * (0.6 - l * 0.6)
             hip = (s * r * 0.7, h * 0.36, z)
             knee = (s * r * 1.35, h * 0.62, z + (0.25 if l == 0 else -0.15 if l == 2 else 0.0))
             foot = (s * r * 1.75, 0.04, z + (0.45 if l == 0 else -0.35 if l == 2 else 0.0))
-            m.limb(hip, knee, (0.2, 0.22), "SkinDark")
-            m.limb(knee, foot, (0.15, 0.17), "SkinDark")
-            m.cone(foot, (0.12, 0.2, 0.12), BONE, rot=(180, 0, 0), segments=6)
+            with m.rig(f"Leg{l}{side}", hip):  # six legs: Leg0L..Leg2R, front to back
+                m.limb(hip, knee, (0.2, 0.22), "SkinDark")
+                m.limb(knee, foot, (0.15, 0.17), "SkinDark")
+                m.cone(foot, (0.12, 0.2, 0.12), BONE, rot=(180, 0, 0), segments=6)
     return m
 
 
@@ -1465,6 +1535,8 @@ def preview(objects, out_dir):
     scene.render.film_transparent = False
     for o in objects:
         o.hide_render = True
+        for c in o.children:
+            c.hide_render = True
     paths = []
     for sheet, names in SHEETS.items():
         temp = []
@@ -1477,6 +1549,13 @@ def preview(objects, out_dir):
             c.data = src.data
             c.hide_render = False
             scene.collection.objects.link(c)
+            for child in src.children:  # rig parts (limbs, heads)
+                k = child.copy()
+                k.data = child.data
+                k.parent = c
+                k.hide_render = False
+                scene.collection.objects.link(k)
+                temp.append(k)
             if name in FIT_SIZES:
                 sx, sy, sz = FIT_SIZES[name]
                 c.scale = (sx, sz, sy)
@@ -1612,7 +1691,8 @@ def main():
                 bpy.data.objects.remove(p, do_unlink=True)
             continue
         o = model.finish()
-        print("exported", export(o), len(o.data.polygons), "faces")
+        print("exported", export(o), len(o.data.polygons) + sum(len(c.data.polygons) for c in o.children), "faces",
+              f"({len(o.children)} rig parts)" if o.children else "")
         built.append(o)
     if preview_path:
         os.makedirs(preview_path, exist_ok=True)

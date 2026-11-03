@@ -93,6 +93,8 @@ Objectives (M8): F uses objective props; L toggles the flashlight. On a map, Esc
 
 Engineering (M9): B build mode (1-4 pick, R turn, click place), F repair/refill, U upgrade, X dismantle, Z drone mode. Free outside runs.
 
+Enemy animation (T-76): enemy models have movable legs, arms and heads that animate in code (walk, run, charge, attack, spit, stagger, death).
+
 Models: enemies, co-op teammates, the FOB booths and map props use low-poly models built by `Tools/Blender/build_models.py` (see `Tools/Blender/README.md`); the game falls back to primitives if a model is missing.
 
 UI: every HUD element and menu shares one modern style that scales with resolution (see T-60). Hold F near a damaged barricade to keep repairing it, no need to aim at it.
