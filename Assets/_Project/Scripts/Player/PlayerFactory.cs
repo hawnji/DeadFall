@@ -46,6 +46,7 @@ namespace Deadfall.Player
             root.AddComponent<PlayerInputReader>();
             root.AddComponent<PlayerLook>();
             root.AddComponent<PlayerMotor>();
+            root.AddComponent<Footsteps>();
             root.AddComponent<PlayerHealth>();
             var weapons = root.AddComponent<PlayerWeapons>();
             weapons.SetLoadout(loadout);
