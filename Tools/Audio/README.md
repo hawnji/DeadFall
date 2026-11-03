@@ -47,6 +47,7 @@ Files in `Resources/Audio` are stored in plain git (not LFS) so they can be push
 | SurgeClear | Surge cleared | yours | 0.8–1.2 s |
 | ObjectiveDone | Objective complete | yours | 0.6–0.9 s |
 | EventAlarm | Event warning alarm | yours | 1–2 s |
+| Footstep | Your own footsteps while walking, sprinting, crouching, and landing | yours | 0.1–0.3 s |
 | UiClick | Menu click | yours | < 0.1 s |
 | UiConfirm | Menu confirm | yours | 0.2 s |
 | UiDeny | Can't do that | yours | 0.2 s |
