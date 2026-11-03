@@ -1,3 +1,5 @@
+using Deadfall.Rules.Common;
+using Deadfall.Core;
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Rules.Combat;
@@ -33,6 +35,7 @@ namespace Deadfall.Enemies
             float flight = Mathf.Clamp(Vector3.Distance(from, to) / Mathf.Max(1f, s.ProjectileSpeed), 0.15f, 3f);
             Track(AcidGlob.Launch(from, to, flight, true, s.RangedDamage, s.PoolDamagePerSecond, s.PoolRadius, s.PoolSeconds,
                 source != null ? source.Definition.ContentId : "enemy"));
+            GameAudio.Play(SfxId.EnemySpit, from);
             FxPlayed?.Invoke(EnemyFxKind.Glob, from, to, s.PoolDamagePerSecond > 0f ? s.PoolRadius : 0f, flight);
         }
 

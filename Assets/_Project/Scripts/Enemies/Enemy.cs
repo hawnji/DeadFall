@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
@@ -770,6 +771,7 @@ namespace Deadfall.Enemies
 
         private void DealDamage(float amount, Vector3 targetPos)
         {
+            GameAudio.Play(SfxId.EnemyAttack, transform.position + Vector3.up, 1f, _definition != null && _definition.IsBoss ? 0.7f : 1f);
             IDamageable victim = _target?.Damageable;
             if (victim == null || !victim.IsAlive) return;
             victim.ApplyDamage(new DamageInfo

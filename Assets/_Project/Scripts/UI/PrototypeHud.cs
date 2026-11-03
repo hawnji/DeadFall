@@ -20,6 +20,7 @@ namespace Deadfall.UI
         private PlayerWeapons _weapons;
         private PlayerLook _look;
         private PlayerCursorLock _cursor;
+        private SettingsPanel _settingsPanel;
         private GameObject _player;
 
         private float _hitMarkerUntil;
@@ -36,6 +37,9 @@ namespace Deadfall.UI
             _weapons = player.GetComponent<PlayerWeapons>();
             _look = player.GetComponent<PlayerLook>();
             _cursor = player.GetComponent<PlayerCursorLock>();
+            _settingsPanel = GetComponent<SettingsPanel>();
+            if (_settingsPanel == null) _settingsPanel = gameObject.AddComponent<SettingsPanel>();
+            _settingsPanel.Bind(_cursor);
         }
 
         private void OnEnable()
@@ -166,6 +170,8 @@ namespace Deadfall.UI
                 HudKit.Backdrop(0.5f);
                 HudKit.Label(new Rect(0f, h * 0.36f, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
                 HudKit.Prompt(w * 0.5f, h * 0.36f + 66f, "Esc", "Resume", true);
+                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, h * 0.36f + 66f, 150f, 40f), "Settings"))
+                    _settingsPanel.Open();
             }
             HudKit.End();
         }

@@ -107,6 +107,7 @@ namespace Deadfall.DebugTools
             // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.
             net.AddComponent<SquadLife>().Bind(player);
             net.AddComponent<ReconnectDirector>().Bind(player);
+            net.AddComponent<AudioCues>().Bind(player);
 
             // M3: survival waves. Press N to start a run.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();

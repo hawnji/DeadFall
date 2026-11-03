@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Rules.Combat;
@@ -103,6 +104,7 @@ namespace Deadfall.Classes
             _nextShot = now + _shotInterval;
             Vector3 end = _target.AimPoint;
             TracerPool.Instance.Spawn(muzzle + _head.forward * 0.7f, end);
+            GameAudio.Play(SfxId.ShotTurret, muzzle);
             if (_mirror) return;
 
             LocalHitResolver.Apply(new HitClaim

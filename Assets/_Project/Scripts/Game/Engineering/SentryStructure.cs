@@ -1,3 +1,5 @@
+using Deadfall.Rules.Common;
+using Deadfall.Core;
 using Deadfall.Combat;
 using Deadfall.Rules.Combat;
 using UnityEngine;
@@ -50,6 +52,7 @@ namespace Deadfall.Game
             _nextShot = now + 1f / Mathf.Max(0.5f, Stats.Rate);
             Vector3 end = _target.AimPoint;
             TracerPool.Instance.Spawn(_head.position + _head.forward * 0.8f, end);
+            GameAudio.Play(SfxId.ShotTurret, _head.position);
             if (Mirror) return;
             Supply = Mathf.Max(0f, Supply - 1f);
             GameObject owner = OwnerObject;
