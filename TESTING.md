@@ -269,6 +269,25 @@ Two players (as §3.1):
 
 - [ ] Both start in the FOB. The host deploys from Command Center and the client goes to the same map; the client's Deploy buttons are disabled. After the run each player sees their own results, and "Return to FOB" on the host brings both back.
 
+### 3.13 Manual checklist: map rework (rooms, doors, breaches)
+
+Solo, deploy Survival from the FOB (or generate a map from the pause panel and start a run):
+
+- [ ] FOB Halcyon is smaller than before and every booth is still reachable and usable.
+- [ ] Rooms are bigger and many are L, T, Z or plus shaped; big rooms have columns or a partition wall. No floor holes or missing walls at the shaped corners; ceilings cover every floor cell.
+- [ ] Doors on the main route show a price ("Open door (750 credits)"); pressing F with enough credits opens it, without enough it says so. Later sectors cost more.
+- [ ] Some doors say they need a switch or power: find the wall panel with a lever and red lamp (one press) or the relay cabinet (F starts a 6 s restore) in an earlier room, and the door opens with an announcement.
+- [ ] Some side rooms sit behind a 500-credit door, and nothing spawns in them until it's open.
+- [ ] Outside a run (before starting) paid doors open for free.
+- [ ] Each room has boarded openings in the walls. Enemies appear behind them, tear boards off (you see boards disappear), then climb in.
+- [ ] F at a damaged opening puts one board back and pays 10 credits during a run. You can't walk or jump into an opening, even with all boards gone. Your bullets don't knock boards off.
+- [ ] Enemies come from openings near you and from others nearby, never from the far end of the map.
+- [ ] M overlay: open rooms are bright, rooms behind closed doors are dim.
+
+Two players (as §3.1):
+
+- [ ] A door opened by either player opens for both; credits come from the player who paid. Board repairs and breaks show on both screens; a client joining late sees the right doors and boards.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -331,6 +350,7 @@ Status 2026-11-02: 180/180 EditMode tests pass in the compile-check runner. Play
 - M8: objective props are placed after the NavMesh bake, so enemies can bump into them. Generators don't power doors or turrets yet. Operations open every sector at once.
 - M9: structures use the Ignore Raycast layer so player bullets pass through them; Retcher globs and Pyre blasts don't hurt structures yet. Arc Fences don't use the map's power grid.
 - M10: the sandbox pause-screen class buttons ignore class locks (dev override). The client in co-op deploys wherever the host deploys, with no ready check yet. Research doesn't affect host-run systems (Scrap, credits). Kill counts per enemy type (for dossiers) only count on the host or solo.
+- Map rework: doors, switches and barricades are placed after the NavMesh bake (like M8 props). Power relays don't link to M8 generators. An enemy that spawns while a closet is still sealed waits there until it breaks the boards, so a fully repaired room can hold a small queue.
 - Enemies use placeholder primitives and code-driven poses instead of animations.
 - M1.5 spike: remote players are smoothed toward the latest position (no interpolation buffer), so they can look slightly floaty at high ping. Strafing dummies move on each peer's own clock and can be at different spots on each screen; the host widens its hit check for them.
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.

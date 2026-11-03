@@ -1,15 +1,31 @@
+using System;
+using Deadfall.Core;
+using Deadfall.Rules.World;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace Deadfall.World
 {
     /// <summary>
-    /// A locked door between sectors. Closed, it blocks players and bullets and carves the NavMesh so enemies path
-    /// around it (T-32). Opening slides it into the ceiling and removes the carve. The map session opens doors on
-    /// every peer when a sector unlocks.
+    /// A locked door: between sectors, or into a side branch. Closed, it blocks players and bullets and carves the
+    /// NavMesh so enemies path around it (T-32). Opening slides it into the ceiling and removes the carve. What opens
+    /// it (<see cref="Lock"/>: credits at the door, a switch or a power relay elsewhere) is handled by the map
+    /// session, which also opens it on every peer. Interact (F) at the door asks the session to buy it.
     /// </summary>
-    public sealed class SectorDoor : MonoBehaviour
+    public sealed class SectorDoor : MonoBehaviour, IInteractable
     {
+        public static Func<SectorDoor, GameObject, string> PromptFor;
+        public static Action<SectorDoor, GameObject> Use;
+
+        public DoorLock Lock { get; set; }
+        public int Cost { get; set; }
+        /// <summary>A side door into a branch rather than a door between sectors.</summary>
+        public bool IsSideDoor => Sector <= 0;
+
+        public string InteractPrompt(GameObject player) => !IsOpen && PromptFor != null ? PromptFor(this, player) : string.Empty;
+        public bool CanInteract(GameObject player) => !IsOpen && Lock == DoorLock.Credits;
+        public void Interact(GameObject player) => Use?.Invoke(this, player);
+
         private const float OpenSeconds = 1.4f;
 
         private Transform _slab;

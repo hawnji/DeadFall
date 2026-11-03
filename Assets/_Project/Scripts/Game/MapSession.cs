@@ -17,17 +17,38 @@ namespace Deadfall.Game
 {
     /// <summary>
     /// Owns the generated map of a deployment: builds it from a seed (geometry, NavMesh, doors, pickups), feeds its
-    /// enemy spawn points to the <see cref="WaveManager"/>, opens sectors as surges are cleared
-    /// (<see cref="SectorSchedule"/>), and keeps clients in step. Only the seed goes over the network (T-09):
-    /// "df.map" (seed, open sectors, broken vents) on join or regenerate, "df.sector" on unlocks, "df.secret" when a
-    /// vent panel breaks. Seed 0 means "no map" (the sandbox).
+    /// breach closets to the <see cref="WaveManager"/> as spawn points, runs locked doors (bought with Field Credits
+    /// at the door, or opened by a security switch or power relay elsewhere, T-56) and breach barricades (enemies
+    /// break boards, players repair them for credits), and keeps clients in step. Only the seed goes over the
+    /// network for geometry (T-09): "df.map" (seed, broken vents) on join or regenerate, "df.doors" (open doors and
+    /// used switches), "df.breach" (board counts), "df.mapuse" (client asks the host to buy, switch or repair),
+    /// "df.sector" (go to spawn), "df.secret" when a vent panel breaks. Seed 0 means "no map" (the sandbox).
     /// </summary>
     public sealed class MapSession : MonoBehaviour
     {
         private const string MsgMap = "df.map";
         private const string MsgSector = "df.sector";
         private const string MsgSecret = "df.secret";
+        private const string MsgDoors = "df.doors";
+        private const string MsgUse = "df.mapuse";
+        private const string MsgBreach = "df.breach";
         public const int SecretStashCredits = 250;
+        /// <summary>Credits for putting one board back on a breach (T-56).</summary>
+        public const int RepairCredits = 10;
+        public const float RepairCooldown = 0.6f;
+        /// <summary>Seconds from using a power relay until its door opens.</summary>
+        public const float PowerRestoreSeconds = 6f;
+
+        private bool[] _doorOpen = System.Array.Empty<bool>();
+        private readonly HashSet<int> _usedSwitches = new HashSet<int>();
+        private readonly Dictionary<int, double> _powerAt = new Dictionary<int, double>();
+        private readonly Dictionary<ulong, double> _repairReady = new Dictionary<ulong, double>();
+        private readonly List<int> _pendingDoors = new List<int>();
+        private readonly List<int> _pendingSwitches = new List<int>();
+        private readonly List<(int, int)> _pendingBoards = new List<(int, int)>();
+        private bool _hasPendingDoors;
+        private bool _breachDirty;
+        private readonly HashSet<int> _dirtyBreaches = new HashSet<int>();
 
         private readonly MapBuilder _builder = new MapBuilder();
         private readonly RuntimeNavMesh _navMesh = new RuntimeNavMesh();
@@ -70,6 +91,16 @@ namespace Deadfall.Game
             _session.RegisterHandler(MsgMap, OnMapMessage);
             _session.RegisterHandler(MsgSector, OnSectorMessage);
             _session.RegisterHandler(MsgSecret, OnSecretMessage);
+            _session.RegisterHandler(MsgDoors, OnDoorsMessage);
+            _session.RegisterHandler(MsgUse, OnUseMessage);
+            _session.RegisterHandler(MsgBreach, OnBreachMessage);
+            SectorDoor.PromptFor = DoorPrompt;
+            SectorDoor.Use = UseDoor;
+            DoorSwitch.PromptFor = SwitchPrompt;
+            DoorSwitch.Use = UseSwitch;
+            BreachBarricade.PromptFor = BreachPrompt;
+            BreachBarricade.Use = UseBreach;
+            BreachBarricade.BrokenBoard += OnBoardBroken;
             _session.PeerConnected += OnPeerConnected;
             SecretPanel.BrokenByDamage += OnPanelBroken;
             LootNetwork.TakenOnHost += OnLootTaken;
@@ -80,12 +111,16 @@ namespace Deadfall.Game
             if (Current == this) Current = null;
             SecretPanel.BrokenByDamage -= OnPanelBroken;
             LootNetwork.TakenOnHost -= OnLootTaken;
+            BreachBarricade.BrokenBoard -= OnBoardBroken;
             if (_waves != null) _waves.PhaseChanged -= OnPhaseChanged;
             if (_session != null)
             {
                 _session.UnregisterHandler(MsgMap);
                 _session.UnregisterHandler(MsgSector);
                 _session.UnregisterHandler(MsgSecret);
+                _session.UnregisterHandler(MsgDoors);
+                _session.UnregisterHandler(MsgUse);
+                _session.UnregisterHandler(MsgBreach);
                 _session.PeerConnected -= OnPeerConnected;
             }
             Clear();
@@ -99,6 +134,20 @@ namespace Deadfall.Game
                 _waves = WaveManager.Current;
                 _waves.PhaseChanged += OnPhaseChanged;
             }
+            if (Map == null || !IsAuthority) return;
+            // Power relays: the door opens once power is back.
+            if (_powerAt.Count > 0)
+            {
+                int ready = -1;
+                foreach (KeyValuePair<int, double> kv in _powerAt) if (Time.timeAsDouble >= kv.Value) { ready = kv.Key; break; }
+                if (ready >= 0)
+                {
+                    _powerAt.Remove(ready);
+                    OpenDoor(ready, "POWER RESTORED");
+                }
+            }
+            if (_breachDirty && _session != null && _session.IsHost) SendBreaches(ulong.MaxValue, onlyDirty: true);
+            _breachDirty = false;
         }
 
         private bool IsAuthority => _session == null || _session.Role != SessionRole.Client;
@@ -141,6 +190,11 @@ namespace Deadfall.Game
             }
 
             OpenSectors = 1;
+            _doorOpen = new bool[layout.Connections.Count];
+            _usedSwitches.Clear();
+            _powerAt.Clear();
+            bool authority = IsAuthority;
+            foreach (BreachBarricade b in Map.Breaches) b.Authority = authority;
             ApplySpawnPoints();
             GameLog.Info("Map", $"Seed {seed}: {layout.Rooms.Count} rooms, {layout.SectorCount} sectors, attempt {layout.Attempt}" +
                                 $"{(layout.UsedFallback ? " (fallback layout)" : string.Empty)}, built in {LastBuildMilliseconds:0} ms, NavMesh {LastBakeMilliseconds:0} ms.");
@@ -150,7 +204,7 @@ namespace Deadfall.Game
             {
                 foreach (int c in _pendingPanels) BreakPanel(c);
                 _pendingPanels.Clear();
-                if (_pendingOpen > 1) SetOpen(_pendingOpen, false);
+                ApplyPendingState();
             }
             if (_session != null && _session.IsHost) SendMap(ulong.MaxValue);
             MapBuilt?.Invoke(Map);
@@ -166,6 +220,9 @@ namespace Deadfall.Game
             if (Map != null) _builder.Clear(Map);
             Map = null;
             Sealed = false;
+            _doorOpen = System.Array.Empty<bool>();
+            _usedSwitches.Clear();
+            _powerAt.Clear();
             _navMesh.Clear();
             LootNetwork.ClearAll();
             Deadfall.Enemies.EnemyAttacks.ClearAll();
@@ -194,45 +251,76 @@ namespace Deadfall.Game
             if (motor != null) motor.Teleport(PlayerSpawn(LocalSlot), PlayerSpawnYaw);
         }
 
-        // ---------------------------------------------------------------- sectors
+        // ---------------------------------------------------------------- doors and sectors
 
-        /// <summary>Host/offline: opens every sector (Operations runs, T-47).</summary>
+        /// <summary>Doors opened so far / locked doors on the map.</summary>
+        public int DoorsOpened { get { int n = 0; for (int i = 0; i < _doorOpen.Length; i++) if (_doorOpen[i]) n++; return n; } }
+        public int DoorCount { get { if (Map == null) return 0; int n = 0; foreach (Connection c in Map.Layout.Connections) if (c.IsDoor) n++; return n; } }
+        public bool IsDoorOpen(int connection) => connection >= 0 && connection < _doorOpen.Length && _doorOpen[connection];
+
+        /// <summary>True when the squad can walk into the room: its sector is open and no closed side door is in the way.</summary>
+        public bool IsRoomOpen(int room)
+        {
+            if (Map == null || room < 0 || room >= Map.Layout.Rooms.Count) return false;
+            return Map.Layout.Rooms[room].Sector < OpenSectors && Map.Layout.SideDoorTo(room, IsDoorOpen) < 0;
+        }
+
+        /// <summary>Doors are free outside a run, so a generated map can be explored from the pause screen (as T-51).</summary>
+        private bool DoorsFree => _waves == null || !_waves.IsRunning;
+        private ulong LocalId => _session != null ? _session.LocalClientId : 0UL;
+
+        /// <summary>Host/offline: opens every door (Operations runs, T-47).</summary>
         public void OpenAllSectors()
         {
-            if (!IsAuthority || Map == null || OpenSectors >= SectorCount) return;
-            SetOpen(SectorCount, true);
+            if (!IsAuthority || Map == null) return;
+            for (int i = 0; i < Map.Layout.Connections.Count; i++)
+                if (Map.Layout.Connections[i].IsDoor && !_doorOpen[i]) OpenDoor(i, null, sync: false);
+            SendDoors(ulong.MaxValue);
         }
 
-        /// <summary>Host/offline: opens the next sector now (debug panel).</summary>
+        /// <summary>Host/offline: opens the door into the next sector now (debug panel).</summary>
         public void OpenNextSector()
         {
-            if (!IsAuthority || Map == null || OpenSectors >= SectorCount) return;
-            SetOpen(OpenSectors + 1, true);
+            if (!IsAuthority || Map == null) return;
+            for (int i = 0; i < Map.Layout.Connections.Count; i++)
+                if (Map.Layout.Connections[i].UnlockSector == OpenSectors && !_doorOpen[i]) { OpenDoor(i, null); return; }
         }
 
-        private void SetOpen(int open, bool unlock)
+        /// <summary>
+        /// Opens a door here (host/offline, and clients applying the host's state): sector doors raise
+        /// <see cref="OpenSectors"/>, side doors open their branch. Spawn breaches behind it come into play.
+        /// </summary>
+        private void OpenDoor(int connection, string announce, bool sync = true)
+        {
+            if (Map == null || connection < 0 || connection >= _doorOpen.Length || _doorOpen[connection]) return;
+            _doorOpen[connection] = true;
+            Connection c = Map.Layout.Connections[connection];
+            bool sectorDoor = c.Locked;
+            if (sectorDoor && c.UnlockSector + 1 > OpenSectors) OpenSectors = c.UnlockSector + 1;
+            foreach (SectorDoor d in Map.Doors)
+                if (d.ConnectionIndex == connection && !Sealed) d.Open();
+            foreach (DoorSwitch sw in Map.Switches)
+                if (sw.ConnectionIndex == connection) sw.SetUsed(true);
+            ApplySpawnPoints();
+            if (announce != null) RunToasts.Show(announce, new Color(0.6f, 0.9f, 1f));
+            if (sync && _session != null && _session.IsHost) SendDoors(ulong.MaxValue);
+            SectorsChanged?.Invoke(OpenSectors, true);
+        }
+
+        /// <summary>Back to a fresh map state: every door shut, switches unused, barricades whole (new run).</summary>
+        private void ResetDoorsAndBreaches()
         {
             if (Map == null) return;
-            open = Mathf.Clamp(open, 1, Mathf.Max(1, SectorCount));
-            bool reset = open < OpenSectors;
-            OpenSectors = open;
-            foreach (SectorDoor d in Map.Doors)
-            {
-                if (d.Sector < open && !Sealed) d.Open();
-                else if (reset) d.CloseImmediate();
-            }
+            for (int i = 0; i < _doorOpen.Length; i++) _doorOpen[i] = false;
+            _usedSwitches.Clear();
+            _powerAt.Clear();
+            OpenSectors = 1;
+            foreach (SectorDoor d in Map.Doors) d.CloseImmediate();
+            foreach (DoorSwitch sw in Map.Switches) sw.SetUsed(false);
+            foreach (BreachBarricade b in Map.Breaches) b.SetBoards(BreachBarricade.MaxBoards);
             ApplySpawnPoints();
-            if (_session != null && _session.IsHost)
-            {
-                using (var w = new FastBufferWriter(8, Allocator.Temp))
-                {
-                    w.WriteValueSafe((byte)open);
-                    w.WriteValueSafe(unlock ? (byte)1 : (byte)0);
-                    _session.SendToRemoteClients(MsgSector, w, NetworkDelivery.ReliableSequenced);
-                }
-            }
-            if (unlock) GameLog.Info("Map", $"Sector {open - 1} unlocked.");
-            SectorsChanged?.Invoke(open, unlock);
+            if (_session != null && _session.IsHost) { SendDoors(ulong.MaxValue); SendBreaches(ulong.MaxValue, onlyDirty: false); }
+            SectorsChanged?.Invoke(OpenSectors, false);
         }
 
         private void ApplySpawnPoints()
@@ -241,7 +329,7 @@ namespace Deadfall.Game
             if (waves == null || Map == null) return;
             waves.ClearSpawnPoints();
             foreach (MapSpawnPoint p in Map.EnemySpawns)
-                if (p.Sector < OpenSectors) waves.AddSpawnPoint(p.Position, p.Room);
+                if (IsRoomOpen(p.Room)) waves.AddSpawnPoint(p.Position, p.Room, sheltered: true);
         }
 
         private void OnPhaseChanged(RunPhase from, RunPhase to)
@@ -249,17 +337,131 @@ namespace Deadfall.Game
             if (!IsAuthority || Map == null || _waves == null) return;
             if (from == RunPhase.NotStarted && to == RunPhase.Lull)
             {
-                // New run: back to the first sector, everyone to the airlock.
-                if (OpenSectors > 1) SetOpen(1, false);
+                // New run: doors shut, barricades whole, everyone to the airlock.
+                ResetDoorsAndBreaches();
                 MoveLocalPlayerToSpawn();
                 SendRespawnToClients();
-                return;
             }
-            if (to == RunPhase.Reward)
+        }
+
+        // ---------------------------------------------------------------- use (doors, switches, breaches)
+
+        private enum UseKind : byte { Door = 0, Switch = 1, Repair = 2 }
+
+        private string DoorPrompt(SectorDoor door, GameObject player)
+        {
+            if (Sealed) return "Sealed by the lockdown";
+            switch (door.Lock)
             {
-                int open = SectorSchedule.OpenSectors(_waves.Surge, SectorCount);
-                if (open > OpenSectors) SetOpen(open, true);
+                case DoorLock.Credits:
+                    if (DoorsFree) return "Open door (free outside a run)";
+                    int credits = _waves != null ? _waves.LocalCredits : 0;
+                    return credits >= door.Cost ? $"Open door ({door.Cost} credits)" : $"Open door ({door.Cost} credits, you have {credits})";
+                case DoorLock.Switch:
+                    return "Locked: find the security switch";
+                case DoorLock.Power:
+                    return _usedSwitches.Contains(door.ConnectionIndex) ? "Power restoring..." : "No power: restore the power relay";
+                default:
+                    return string.Empty;
             }
+        }
+
+        private string SwitchPrompt(DoorSwitch sw, GameObject player)
+        {
+            if (sw.Used || IsDoorOpen(sw.ConnectionIndex)) return string.Empty;
+            return sw.Kind == DoorLock.Power ? "Restore power to a locked door" : "Hit the security switch";
+        }
+
+        private string BreachPrompt(BreachBarricade b, GameObject player)
+        {
+            if (b.Boards >= BreachBarricade.MaxBoards) return string.Empty;
+            bool paid = _waves != null && _waves.IsRunning;
+            return paid ? $"Repair barricade (+{RepairCredits} credits)  {b.Boards}/{BreachBarricade.MaxBoards}" : $"Repair barricade  {b.Boards}/{BreachBarricade.MaxBoards}";
+        }
+
+        private void UseDoor(SectorDoor door, GameObject player) => Request(UseKind.Door, door.ConnectionIndex);
+        private void UseSwitch(DoorSwitch sw, GameObject player) => Request(UseKind.Switch, sw.ConnectionIndex);
+        private void UseBreach(BreachBarricade b, GameObject player) => Request(UseKind.Repair, b.Index);
+
+        private void Request(UseKind kind, int index)
+        {
+            if (IsAuthority) { HandleUse(LocalId, kind, index); return; }
+            using (var w = new FastBufferWriter(4, Allocator.Temp))
+            {
+                w.WriteValueSafe((byte)kind);
+                w.WriteValueSafe((ushort)index);
+                _session.SendToServer(MsgUse, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private void OnUseMessage(ulong sender, FastBufferReader r)
+        {
+            if (!IsAuthority) return;
+            r.ReadValueSafe(out byte kind);
+            r.ReadValueSafe(out ushort index);
+            HandleUse(sender, (UseKind)kind, index);
+        }
+
+        /// <summary>Host/offline: validates and applies a use from <paramref name="client"/>.</summary>
+        private void HandleUse(ulong client, UseKind kind, int index)
+        {
+            if (Map == null) return;
+            var layout = Map.Layout;
+            switch (kind)
+            {
+                case UseKind.Door:
+                {
+                    if (index < 0 || index >= layout.Connections.Count || _doorOpen[index] || Sealed) return;
+                    Connection c = layout.Connections[index];
+                    if (c.Lock != DoorLock.Credits) return;
+                    if (!DoorsFree && (_waves == null || !_waves.TrySpendCredits(client, c.Cost))) return;
+                    OpenDoor(index, c.Locked ? "SECTOR OPEN" : "Door opened");
+                    break;
+                }
+                case UseKind.Switch:
+                {
+                    if (index < 0 || index >= layout.Connections.Count || _doorOpen[index] || _usedSwitches.Contains(index)) return;
+                    Connection c = layout.Connections[index];
+                    if (c.Lock == DoorLock.Switch)
+                    {
+                        _usedSwitches.Add(index);
+                        OpenDoor(index, "SECURITY SWITCH: a door has opened");
+                    }
+                    else if (c.Lock == DoorLock.Power)
+                    {
+                        _usedSwitches.Add(index);
+                        _powerAt[index] = Time.timeAsDouble + PowerRestoreSeconds;
+                        foreach (DoorSwitch sw in Map.Switches) if (sw.ConnectionIndex == index) sw.SetUsed(true);
+                        RunToasts.Show($"Power relay engaged: door opens in {PowerRestoreSeconds:0} s", new Color(1f, 0.85f, 0.4f));
+                        if (_session != null && _session.IsHost) SendDoors(ulong.MaxValue);
+                    }
+                    break;
+                }
+                case UseKind.Repair:
+                {
+                    if (index < 0 || index >= Map.Breaches.Count) return;
+                    double now = Time.timeAsDouble;
+                    if (_repairReady.TryGetValue(client, out double ready) && now < ready) return;
+                    BreachBarricade b = Map.Breaches[index];
+                    if (!b.RepairOne()) return;
+                    _repairReady[client] = now + RepairCooldown;
+                    if (_waves != null && _waves.IsRunning) _waves.AwardCredits(client, RepairCredits, "Barricade repaired");
+                    MarkBreach(index);
+                    break;
+                }
+            }
+        }
+
+        private void OnBoardBroken(BreachBarricade b)
+        {
+            if (Map == null || !Map.Breaches.Contains(b)) return;
+            MarkBreach(b.Index);
+        }
+
+        private void MarkBreach(int index)
+        {
+            _dirtyBreaches.Add(index);
+            _breachDirty = true;
         }
 
         /// <summary>True during an Emergency Lockdown: every sector door is shut until the terminal is hacked.</summary>
@@ -276,7 +478,7 @@ namespace Deadfall.Game
             foreach (SectorDoor d in Map.Doors)
             {
                 if (sealedDoors) d.CloseImmediate();
-                else if (d.Sector < OpenSectors) d.Open();
+                else if (IsDoorOpen(d.ConnectionIndex)) d.Open();
             }
         }
 
@@ -289,7 +491,7 @@ namespace Deadfall.Game
             for (int i = 0; i < rooms.Count; i++)
             {
                 PlacedRoom r = rooms[i];
-                if (r.Sector >= OpenSectors) continue;
+                if (!IsRoomOpen(i)) continue;
                 RoomRole role = r.Template.Role;
                 if (role == RoomRole.Corridor || role == RoomRole.Secret) continue;
                 if (role == RoomRole.Spawn && !includeSpawn) continue;
@@ -309,8 +511,6 @@ namespace Deadfall.Game
             }
         }
 
-        /// <summary>Surge after which the next sector opens, or 0 if all are open.</summary>
-        public int NextUnlockSurge => Map != null && OpenSectors < SectorCount ? SectorSchedule.UnlockAfterSurge(OpenSectors) : 0;
 
         // ---------------------------------------------------------------- secrets and loot
 
@@ -346,6 +546,8 @@ namespace Deadfall.Game
         {
             if (!_session.IsHost) return;
             SendMap(clientId);
+            SendDoors(clientId);
+            SendBreaches(clientId, onlyDirty: false);
             LootNetwork.SendState(clientId);
         }
 
@@ -394,7 +596,6 @@ namespace Deadfall.Game
             {
                 // Same map already built: just catch up.
                 foreach (int c in _pendingPanels) BreakPanel(c);
-                if (_pendingOpen != OpenSectors) SetOpen(_pendingOpen, false);
                 return;
             }
             if (seed == 0 && Map == null) return;
@@ -406,8 +607,104 @@ namespace Deadfall.Game
             if (_session.Role != SessionRole.Client) return;
             r.ReadValueSafe(out byte open);
             r.ReadValueSafe(out byte flag);
-            if (flag == 2) { MoveLocalPlayerToSpawn(); return; }
-            SetOpen(open, flag == 1);
+            if (flag == 2) MoveLocalPlayerToSpawn();
+        }
+
+        private void SendDoors(ulong onlyTo)
+        {
+            if (_session == null || !_session.IsHost || Map == null) return;
+            var open = new List<int>();
+            for (int i = 0; i < _doorOpen.Length; i++) if (_doorOpen[i]) open.Add(i);
+            using (var w = new FastBufferWriter(16 + (open.Count + _usedSwitches.Count) * 2, Allocator.Temp))
+            {
+                w.WriteValueSafe(Seed);
+                w.WriteValueSafe((ushort)open.Count);
+                foreach (int i in open) w.WriteValueSafe((ushort)i);
+                w.WriteValueSafe((ushort)_usedSwitches.Count);
+                foreach (int i in _usedSwitches) w.WriteValueSafe((ushort)i);
+                if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgDoors, w, NetworkDelivery.ReliableSequenced);
+                else _session.SendToClient(MsgDoors, onlyTo, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private void SendBreaches(ulong onlyTo, bool onlyDirty)
+        {
+            if (_session == null || !_session.IsHost || Map == null) return;
+            var list = new List<int>();
+            if (onlyDirty) list.AddRange(_dirtyBreaches);
+            else for (int i = 0; i < Map.Breaches.Count; i++) list.Add(i);
+            if (onlyDirty) _dirtyBreaches.Clear();
+            if (list.Count == 0) return;
+            using (var w = new FastBufferWriter(12 + list.Count * 3, Allocator.Temp))
+            {
+                w.WriteValueSafe(Seed);
+                w.WriteValueSafe((ushort)list.Count);
+                foreach (int i in list)
+                {
+                    w.WriteValueSafe((ushort)i);
+                    w.WriteValueSafe((byte)Map.Breaches[i].Boards);
+                }
+                if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgBreach, w, NetworkDelivery.ReliableSequenced);
+                else _session.SendToClient(MsgBreach, onlyTo, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private void OnDoorsMessage(ulong sender, FastBufferReader r)
+        {
+            if (_session.Role != SessionRole.Client) return;
+            r.ReadValueSafe(out ulong seed);
+            r.ReadValueSafe(out ushort openCount);
+            _pendingDoors.Clear();
+            for (int i = 0; i < openCount; i++) { r.ReadValueSafe(out ushort c); _pendingDoors.Add(c); }
+            r.ReadValueSafe(out ushort switchCount);
+            _pendingSwitches.Clear();
+            for (int i = 0; i < switchCount; i++) { r.ReadValueSafe(out ushort c); _pendingSwitches.Add(c); }
+            _hasPendingDoors = true;
+            if (Map != null && seed == Seed) ApplyPendingState();
+        }
+
+        private void OnBreachMessage(ulong sender, FastBufferReader r)
+        {
+            if (_session.Role != SessionRole.Client) return;
+            r.ReadValueSafe(out ulong seed);
+            r.ReadValueSafe(out ushort count);
+            for (int i = 0; i < count; i++)
+            {
+                r.ReadValueSafe(out ushort index);
+                r.ReadValueSafe(out byte boards);
+                _pendingBoards.Add((index, boards));
+            }
+            if (Map != null && seed == Seed) ApplyPendingState();
+        }
+
+        /// <summary>Client: applies door, switch and barricade state from the host (now, or once the map is built).</summary>
+        private void ApplyPendingState()
+        {
+            if (Map == null) return;
+            if (_hasPendingDoors)
+            {
+                _hasPendingDoors = false;
+                bool anyClosed = false;
+                for (int i = 0; i < _doorOpen.Length; i++) if (_doorOpen[i] && !_pendingDoors.Contains(i)) anyClosed = true;
+                if (anyClosed) // the host reset the doors (new run)
+                {
+                    for (int i = 0; i < _doorOpen.Length; i++) _doorOpen[i] = false;
+                    OpenSectors = 1;
+                    foreach (SectorDoor d in Map.Doors) d.CloseImmediate();
+                    foreach (DoorSwitch sw in Map.Switches) sw.SetUsed(false);
+                    SectorsChanged?.Invoke(OpenSectors, false);
+                }
+                _usedSwitches.Clear();
+                foreach (int i in _pendingSwitches)
+                {
+                    _usedSwitches.Add(i);
+                    foreach (DoorSwitch sw in Map.Switches) if (sw.ConnectionIndex == i) sw.SetUsed(true);
+                }
+                foreach (int i in _pendingDoors) OpenDoor(i, null, sync: false);
+            }
+            foreach ((int index, int boards) in _pendingBoards)
+                if (index >= 0 && index < Map.Breaches.Count) Map.Breaches[index].SetBoards(boards);
+            _pendingBoards.Clear();
         }
 
         private void OnSecretMessage(ulong sender, FastBufferReader r)

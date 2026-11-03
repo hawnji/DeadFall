@@ -158,7 +158,7 @@ namespace Deadfall.Encounters
 
         // ---------------------------------------------------------------- setup
 
-        public void AddSpawnPoint(Vector3 position, int group) => _director.AddPoint(position, group);
+        public void AddSpawnPoint(Vector3 position, int group, bool sheltered = false) => _director.AddPoint(position, group, sheltered);
 
         /// <summary>Host/offline: gives Field Credits to a player (secret stashes, objectives). Synced to clients.</summary>
         public void AwardCredits(ulong clientId, int amount, string reason)

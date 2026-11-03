@@ -6,7 +6,8 @@ namespace Deadfall.Rules.World
     /// <summary>
     /// Builds a map layout from a kit, a graph template and a seed (GAME_DESIGN §10.1):
     /// spawn room → main route of rooms (often joined by corridor pieces) ending in the objective room → boss room
-    /// off the objective → side branches → secret vent rooms, then sectors and loot. Each attempt is checked by
+    /// off the objective → side branches → secret vent rooms, then sectors, locked doors (credits, switch or power),
+    /// loot, and breach closets for enemy spawns. Each attempt is checked by
     /// <see cref="LayoutValidator"/>; a failed attempt retries with the next sub-seed, and after
     /// <see cref="GraphTemplate.MaxAttempts"/> it falls back to <see cref="FallbackSeed"/>. Rooms form a tree
     /// (no loops yet), which keeps sector locking simple. Pure C#: every peer gets the same layout (T-09).
@@ -133,7 +134,9 @@ namespace Deadfall.Rules.World
                 }
 
                 AssignSectors(main);
+                AssignDoors();
                 AssignLoot();
+                AssignBreaches();
                 return true;
             }
 
@@ -270,6 +273,115 @@ namespace Deadfall.Rules.World
             }
 
             /// <summary>
+            /// Every door between sectors is locked: usually bought with credits (pricier deeper in), sometimes opened
+            /// by a security switch or a power relay in a main-route room of the sector before. Side branches are
+            /// often behind a cheaper credit door of their own.
+            /// </summary>
+            private void AssignDoors()
+            {
+                for (int i = 0; i < Layout.Connections.Count; i++)
+                {
+                    Connection c = Layout.Connections[i];
+                    c.SwitchRoom = -1;
+                    if (c.Secret) { Layout.Connections[i] = c; continue; }
+                    PlacedRoom a = Layout.Rooms[c.RoomA], b = Layout.Rooms[c.RoomB];
+                    if (c.UnlockSector > 0)
+                    {
+                        c.Lock = DoorLock.Credits;
+                        c.Cost = _g.SectorDoorCost + _g.SectorDoorCostStep * (c.UnlockSector - 1);
+                        if (_rng.NextFloat() < _g.SpecialDoorChance)
+                        {
+                            int room = PickSwitchRoom(c.UnlockSector - 1);
+                            if (room >= 0)
+                            {
+                                c.Lock = _rng.NextFloat() < 0.5f ? DoorLock.Switch : DoorLock.Power;
+                                c.Cost = 0;
+                                c.SwitchRoom = room;
+                            }
+                        }
+                    }
+                    else if (a.OnCriticalPath && !b.OnCriticalPath && (b.Template.Role == RoomRole.Room || b.Template.Role == RoomRole.Corridor)
+                             && _rng.NextFloat() < _g.BranchDoorChance)
+                    {
+                        c.Lock = DoorLock.Credits;
+                        c.Cost = _g.BranchDoorCost;
+                    }
+                    Layout.Connections[i] = c;
+                }
+            }
+
+            /// <summary>A main-route room of the sector, preferring real rooms over corridors and the spawn airlock.</summary>
+            private int PickSwitchRoom(int sector)
+            {
+                var rooms = new List<int>();
+                foreach (PlacedRoom r in Layout.Rooms)
+                    if (r.OnCriticalPath && r.Sector == sector && (r.Template.Role == RoomRole.Room || r.Template.Role == RoomRole.Objective)) rooms.Add(r.Index);
+                if (rooms.Count == 0)
+                    foreach (PlacedRoom r in Layout.Rooms)
+                        if (r.OnCriticalPath && r.Sector == sector) rooms.Add(r.Index);
+                return rooms.Count > 0 ? rooms[_rng.Range(0, rooms.Count)] : -1;
+            }
+
+            /// <summary>
+            /// Breach closets: for each room, up to <see cref="RoomTemplate.EnemySpawns"/> boarded openings in outer
+            /// walls with a free cell behind them, as far from the room's doorways as possible and spread apart.
+            /// </summary>
+            private void AssignBreaches()
+            {
+                var closets = new HashSet<long>();
+                foreach (PlacedRoom room in Layout.Rooms)
+                {
+                    int want = room.Template.EnemySpawns;
+                    if (want <= 0 || room.Template.Role == RoomRole.Secret) continue;
+                    var doors = new List<Cell>();
+                    for (int s = 0; s < room.Template.Sockets.Count; s++)
+                        if (Layout.IsConnected(room.Index, s, out _)) doors.Add(room.SocketCell(s));
+
+                    var cand = new List<(Cell cell, Dir dir, int score)>();
+                    foreach (Cell c in room.Cells())
+                        for (int d = 0; d < 4; d++)
+                        {
+                            var dir = (Dir)d;
+                            Cell outside = c.Step(dir);
+                            if (room.Contains(outside) || _occupied.Contains(outside.Key) || closets.Contains(outside.Key)) continue;
+                            if (IsSocketEdge(room, c, dir)) continue; // keep unused doorway spots plain wall
+                            int score = 99;
+                            foreach (Cell dc in doors) score = System.Math.Min(score, System.Math.Abs(dc.X - c.X) + System.Math.Abs(dc.Z - c.Z));
+                            cand.Add((c, dir, score));
+                        }
+                    Shuffle(cand);
+                    var chosen = new List<Cell>();
+                    for (int n = 0; n < want && cand.Count > 0; n++)
+                    {
+                        int best = -1, bestScore = int.MinValue;
+                        for (int i = 0; i < cand.Count; i++)
+                        {
+                            if (closets.Contains(cand[i].cell.Step(cand[i].dir).Key)) continue;
+                            int spread = 99;
+                            foreach (Cell ch in chosen) spread = System.Math.Min(spread, System.Math.Abs(ch.X - cand[i].cell.X) + System.Math.Abs(ch.Z - cand[i].cell.Z));
+                            if (spread < 2) continue;
+                            int sc = System.Math.Min(cand[i].score, 3) * 10 + System.Math.Min(spread, 6);
+                            if (sc > bestScore) { bestScore = sc; best = i; }
+                        }
+                        if (best < 0) break;
+                        var pick = cand[best];
+                        cand.RemoveAt(best);
+                        closets.Add(pick.cell.Step(pick.dir).Key);
+                        _occupied.Add(pick.cell.Step(pick.dir).Key);
+                        chosen.Add(pick.cell);
+                        Layout.Breaches.Add(new Breach { Room = room.Index, Inner = pick.cell, Facing = pick.dir });
+                    }
+                }
+            }
+
+            private static bool IsSocketEdge(PlacedRoom room, Cell c, Dir dir)
+            {
+                for (int s = 0; s < room.Template.Sockets.Count; s++)
+                    if (room.SocketFacing(s) == dir && room.SocketCell(s).Equals(c)) return true;
+                return false;
+            }
+
+            /// <summary>
             /// D-05: one Supply Cache per sector (so one is guaranteed in the spawn sector) on a random slot, a
             /// stash in every secret room, and roughly a third of the other slots get an ammo crate or medkit.
             /// </summary>
@@ -280,7 +392,7 @@ namespace Deadfall.Rules.World
                 {
                     var slots = new List<long>();
                     foreach (PlacedRoom r in Layout.Rooms)
-                        if (r.Sector == s && r.Template.Role != RoomRole.Secret)
+                        if (r.Sector == s && r.Template.Role != RoomRole.Secret && Layout.SideDoorTo(r.Index) < 0)
                             for (int i = 0; i < r.Template.LootSlots; i++) slots.Add(SocketKey(r.Index, i));
                     if (slots.Count == 0) continue;
                     long pick = slots[_rng.Range(0, slots.Count)];
