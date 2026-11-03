@@ -309,6 +309,7 @@ Generate a few maps (different seeds) and walk them:
 - [ ] Pipes run high along one wall in corridors and some rooms, with brackets; fuse boxes, vents and extinguishers sit on walls; grime, blood and papers on floors; rubble in some corners. Nothing floats, sticks out of a wall's back side or overlaps a door, switch or loot.
 - [ ] Furniture blocks movement and bullets; enemies path around it; nothing blocks a doorway, a breach or the room centre. You can't get stuck between pieces.
 - [ ] Lamps, screens, LEDs, tank fluid and enemy weak points glow (in the editor and in a build). A few lights stutter now and then; a blackout still dims them and restores them after.
+- [ ] Spawn closets behind the boards are near-black voids (matte, black lining inside the opening); enemies inside are hard to make out until they reach the boards, but can still be shot through the gaps.
 - [ ] Far rooms fade into a dark haze; going back to the FOB clears it and restores the normal ambient light.
 - [ ] Frame rate on a big map is similar to before (trim is static-batched); report the map build time from the log line if it grows past about 300 ms.
 
