@@ -1,89 +1,95 @@
 using Deadfall.Classes;
+using Deadfall.Core;
 using Deadfall.Rules.Classes;
 using UnityEngine;
 
 namespace Deadfall.UI
 {
     /// <summary>
-    /// Prototype class HUD (IMGUI until the real UI pass): class name and ability bar above the health bar.
-    /// The bar fills as the cooldown recovers, shows the remaining effect time while active, and reads READY [Q].
+    /// Class card above the health card (<see cref="HudKit"/> style): class name, squad doctrines (* = effect after
+    /// playtests), ability bar (fills as the cooldown recovers, drains while active) with the Q key cap, passives.
     /// </summary>
     public sealed class ClassHud : MonoBehaviour
     {
         private PlayerClass _class;
-        private GUIStyle _name, _small;
 
         public void Bind(GameObject player) => _class = player != null ? player.GetComponent<PlayerClass>() : null;
 
         private void OnGUI()
         {
             if (_class == null || _class.Class == null) return;
-            if (_name == null)
-            {
-                _name = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold };
-                _small = new GUIStyle(GUI.skin.label) { fontSize = 13 };
-                _small.normal.textColor = new Color(0.85f, 0.9f, 0.85f);
-            }
+            HudKit.Begin();
             ClassDefinition c = _class.Class;
-            float h = Screen.height;
-            const float x = 24f, width = 260f;
-            float y = h - 140f;
-
-            _name.normal.textColor = c.Color;
-            GUI.Label(new Rect(x, y - 22f, width, 22f), c.DisplayName.ToUpperInvariant(), _name);
+            float h = HudKit.H;
+            // Sits on top of the health card (PrototypeHud, 28 px margin, 66 px tall).
+            var card = new Rect(28f, h - 28f - 66f - 10f - 86f, 340f, 86f);
+            HudKit.AccentPanel(card, c.Color);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 6f, 200f, 24f), c.DisplayName.ToUpperInvariant(), 16, c.Color, TextAnchor.MiddleLeft, head: true);
 
             AbilityDefinition a = c.Ability;
-            Rect bar = new Rect(x, y, width, 18f);
-            Fill(bar, new Color(0f, 0f, 0f, 0.55f));
-            string label;
+            var bar = new Rect(card.x + 16f, card.y + 34f, card.width - 32f - 34f, 18f);
+            string label, right = string.Empty;
+            float fill;
+            Color fc;
+            bool ready = false;
             if (!_class.HasAbility || a == null)
             {
                 label = a != null ? $"{a.DisplayName}: coming soon" : "No ability";
+                fill = 0f;
+                fc = HudKit.TextDim;
             }
             else
             {
                 AbilityTimer t = _class.Timer;
                 double now = Time.timeAsDouble;
+                label = a.DisplayName;
                 switch (t.Phase)
                 {
                     case AbilityPhase.Active:
                         float left = t.ActiveRemaining(now);
-                        Fill(new Rect(bar.x + 2f, bar.y + 2f, (bar.width - 4f) * (a.DurationSeconds > 0f ? left / a.DurationSeconds : 1f), bar.height - 4f), c.Color);
-                        label = $"{a.DisplayName}  {left:0.0}s";
+                        fill = a.DurationSeconds > 0f ? left / a.DurationSeconds : 1f;
+                        fc = c.Color;
+                        right = $"{left:0.0}s";
                         break;
                     case AbilityPhase.Cooldown:
-                        Fill(new Rect(bar.x + 2f, bar.y + 2f, (bar.width - 4f) * t.CooldownProgress(now), bar.height - 4f), new Color(0.45f, 0.45f, 0.5f));
-                        label = $"{a.DisplayName}  {Mathf.CeilToInt(t.CooldownRemaining(now))}s";
+                        fill = t.CooldownProgress(now);
+                        fc = new Color(0.45f, 0.48f, 0.53f);
+                        right = $"{Mathf.CeilToInt(t.CooldownRemaining(now))}s";
                         break;
                     default:
-                        Fill(new Rect(bar.x + 2f, bar.y + 2f, bar.width - 4f, bar.height - 4f), c.Color * 0.8f);
-                        label = $"{a.DisplayName}  READY [Q]";
+                        fill = 1f;
+                        fc = c.Color * 0.85f;
+                        right = "READY";
+                        ready = true;
                         break;
                 }
             }
-            GUI.Label(new Rect(bar.x + 6f, bar.y, bar.width, bar.height), label, _small);
+            HudKit.Bar(bar, fill, fc);
+            HudKit.Label(new Rect(bar.x + 8f, bar.y, bar.width - 16f, bar.height), label, 12, Color.white, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(bar.x + 8f, bar.y, bar.width - 16f, bar.height), right, 12, Color.white, TextAnchor.MiddleRight, head: true);
+            HudKit.KeyChip(bar.xMax + 8f, bar.y - 3f, "Q", 24f, ready);
 
-            // Doctrines from the squad, above the class name.
+            // Passives on one line under the bar.
+            string passives = string.Empty;
+            for (int i = 0; i < c.Passives.Count; i++)
+            {
+                bool live = i < _class.Passives.Count && _class.Passives[i].Implemented;
+                passives += (passives.Length > 0 ? "  ·  " : string.Empty) + c.Passives[i].DisplayName + (live ? string.Empty : " (soon)");
+            }
+            HudKit.Label(new Rect(card.x + 16f, card.y + 58f, card.width - 32f, 20f), passives, 12, HudKit.TextDim, TextAnchor.MiddleLeft);
+
+            // Squad doctrines, right of the class name.
             if (_class.ActiveDoctrines.Count > 0)
             {
-                string d = "";
+                string d = string.Empty;
                 foreach (string id in _class.ActiveDoctrines)
                 {
                     bool live = id == PrototypeClasses.Vanguard || id == PrototypeClasses.CombinedArms || id == PrototypeClasses.DemolitionCrew;
-                    d += (d.Length > 0 ? "  ·  " : "") + PrototypeClasses.DoctrineName(id) + (live ? "" : " (effect after playtests)");
+                    d += (d.Length > 0 ? "  ·  " : string.Empty) + PrototypeClasses.DoctrineName(id) + (live ? string.Empty : "*");
                 }
-                GUI.Label(new Rect(x, y - 40f, 520f, 18f), "Doctrine: " + d, _small);
+                HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 24f), d, 12, HudKit.Accent, TextAnchor.MiddleRight, head: true);
             }
-
-            // Passives, one line each, under the bar's label line.
-            float py = y + 20f;
-            for (int i = 0; i < c.Passives.Count; i++)
-            {
-                PassiveDefinition pd = c.Passives[i];
-                bool live = i < _class.Passives.Count && _class.Passives[i].Implemented;
-                GUI.Label(new Rect(x, py, 420f, 18f), $"• {pd.DisplayName}{(live ? "" : " (soon)")}", _small);
-                py += 16f;
-            }
+            HudKit.End();
         }
 
         private static void Fill(Rect r, Color c)

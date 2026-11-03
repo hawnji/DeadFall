@@ -17,7 +17,7 @@ namespace Deadfall.Game
     /// The FOB screen (M10): one modal with a tab per facility. Command Center deploys, Armory picks class and
     /// loadout, Training Range holds class rank, skill tree and prestige, Research Lab / Engineering Workshop /
     /// Intelligence Center sell research (the last one also shows dossiers), Trophy Room lists challenges,
-    /// achievements and lifetime stats. Greybox IMGUI; the facility logic all lives in Rules.Progression.
+    /// achievements and lifetime stats. IMGUI in the <see cref="HudKit"/> style (window, facility tabs, skinned GUILayout body); the facility logic all lives in Rules.Progression.
     /// </summary>
     public sealed class FobPanel : MonoBehaviour
     {
@@ -89,41 +89,49 @@ namespace Deadfall.Game
             ProfileService svc = ProfileService.Current;
             if (svc == null) return;
             PlayerProfile p = svc.Data;
+            HudKit.Begin();
+            GUI.skin = HudKit.Skin;
             if (_title == null)
             {
                 _title = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold };
-                _small = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
-                _bold = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
-                _right = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
-                _tabOn = new GUIStyle(GUI.skin.button) { fontStyle = FontStyle.Bold };
+                _small = new GUIStyle(GUI.skin.label) { fontSize = 13, wordWrap = true };
+                _small.normal.textColor = HudKit.TextDim;
+                _bold = new GUIStyle(GUI.skin.label) { fontSize = 15, wordWrap = true };
+                if (HudKit.HeadFont != null) _bold.font = HudKit.HeadFont;
+                _right = new GUIStyle(_bold) { alignment = TextAnchor.MiddleRight, wordWrap = false };
+                _right.normal.textColor = HudKit.Accent;
+                _tabOn = new GUIStyle(GUI.skin.button);
             }
             GUI.depth = -20;
-            float w = Mathf.Min(820f, Screen.width - 40f), h = Mathf.Min(560f, Screen.height - 40f);
-            var area = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-            GUI.Box(area, GUIContent.none);
-            GUI.Box(area, GUIContent.none);
-            GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
+            Color accent = FobBuilder.ColorOf(_tab);
+            string wallet = $"OPERATOR {p.OperatorLevel}  ·  {p.Wallet.Requisition:N0} REQ  ·  {p.Wallet.Intel:N0} INTEL";
+            Rect c = HudKit.Window(1040f, 700f, $"FOB HALCYON  ·  {Facilities.Name(_tab).ToUpperInvariant()}", wallet, accent);
 
-            // Header: facility, operator level, wallet.
-            GUILayout.BeginHorizontal();
-            GUILayout.Label($"FOB Halcyon · {Facilities.Name(_tab)}", _title);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label($"Operator {p.OperatorLevel}  ({Mathf.RoundToInt(OperatorLevels.Progress(p.OperatorXp) * 100f)}%)   ·   {p.Wallet.Requisition} REQ   ·   {p.Wallet.Intel} Intel", _right);
-            GUILayout.EndHorizontal();
+            // Operator level progress under the title.
+            float lv = OperatorLevels.Progress(p.OperatorXp);
+            HudKit.Bar(new Rect(c.xMax - 220f, c.y - 18f, 220f, 6f), lv, HudKit.Accent);
 
-            GUILayout.BeginHorizontal();
+            // Facility tabs.
+            int count = 0;
+            foreach (FacilityId f in Facilities.All) count++;
+            float tabW = (c.width - (count - 1) * 6f) / count;
+            int ti = 0;
             foreach (FacilityId f in Facilities.All)
             {
                 bool open = Facilities.IsOpen(f, p.OperatorLevel);
-                GUI.enabled = open;
-                string label = open ? Facilities.Name(f) : $"{Facilities.Name(f)} (L{Facilities.UnlockLevel(f)})";
-                if (GUILayout.Button(label, f == _tab ? _tabOn : GUI.skin.button, GUILayout.Height(24f))) { _tab = f; _scroll = Vector2.zero; }
+                string label = open ? Facilities.Name(f) : $"{Facilities.Name(f)}  ·  L{Facilities.UnlockLevel(f)}";
+                var tr = new Rect(c.x + ti * (tabW + 6f), c.y, tabW, 38f);
+                if (HudKit.Button(tr, label, f == _tab, open, 13, FobBuilder.ColorOf(f))) { _tab = f; _scroll = Vector2.zero; }
+                ti++;
             }
-            GUI.enabled = true;
-            GUILayout.EndHorizontal();
-            if (!string.IsNullOrEmpty(svc.StatusNote)) GUILayout.Label(svc.StatusNote, _small);
-            GUILayout.Space(4f);
+            float top = c.y + 48f;
+            if (!string.IsNullOrEmpty(svc.StatusNote))
+            {
+                HudKit.Label(new Rect(c.x, top, c.width, 20f), svc.StatusNote, 13, HudKit.Warn);
+                top += 24f;
+            }
 
+            GUILayout.BeginArea(new Rect(c.x, top, c.width, c.yMax - top - 48f));
             _scroll = GUILayout.BeginScrollView(_scroll);
             switch (_tab)
             {
@@ -136,13 +144,19 @@ namespace Deadfall.Game
                 case FacilityId.TrophyRoom: Trophies(p); break;
             }
             GUILayout.EndScrollView();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(Time.unscaledTime < _noteUntil ? _note : "Esc or walk away to close.", _small);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Close", GUILayout.Width(90f), GUILayout.Height(24f))) Close();
-            GUILayout.EndHorizontal();
             GUILayout.EndArea();
+
+            // Footer: note or hint, Close.
+            HudKit.Fill(new Rect(c.x, c.yMax - 44f, c.width, 1f), new Color(1f, 1f, 1f, 0.08f));
+            bool note = Time.unscaledTime < _noteUntil;
+            if (note) HudKit.Label(new Rect(c.x, c.yMax - 36f, c.width - 140f, 34f), _note, 14, HudKit.Good, head: true);
+            else
+            {
+                HudKit.KeyChip(c.x, c.yMax - 31f, "Esc", 24f);
+                HudKit.Label(new Rect(c.x + 44f, c.yMax - 36f, 300f, 34f), "or walk away to close", 13, HudKit.TextDim);
+            }
+            if (HudKit.Button(new Rect(c.xMax - 120f, c.yMax - 36f, 120f, 34f), "CLOSE")) Close();
+            HudKit.End();
         }
 
         // ---------------------------------------------------------------- Command Center
@@ -153,7 +167,7 @@ namespace Deadfall.Game
             bool client = session != null && session.Role == SessionRole.Client;
             PlayerClass cls = PlayerClass.Local;
             string classId = cls != null && cls.Class != null ? cls.Class.ContentId : null;
-            GUILayout.Label("Deployment board", _bold);
+            GUILayout.Label("DEPLOYMENT BOARD", Section());
             GUILayout.Label($"Deploying as {(cls != null && cls.Class != null ? cls.Class.DisplayName : "no class")} (rank {p.RankOf(classId)}). Change class and weapons at the Armory.", _small);
             int players = WaveManager.Current != null ? Mathf.Max(1, WaveManager.Current.PlayerCount) : 1;
             GUILayout.Label(session != null && session.IsHost ? $"Squad: {players} in session. Everyone deploys with the host." : client ? "You are in someone's squad. The host launches." : "Solo. Host from the pause screen to bring a squad.", _small);
@@ -181,13 +195,24 @@ namespace Deadfall.Game
             }
         }
 
+        private GUIStyle _section;
+
+        /// <summary>Small caps accent heading for GUILayout sections.</summary>
+        private GUIStyle Section()
+        {
+            if (_section != null) return _section;
+            _section = new GUIStyle(_bold) { fontSize = 13, wordWrap = false, margin = new RectOffset(4, 4, 10, 4) };
+            _section.normal.textColor = HudKit.Accent;
+            return _section;
+        }
+
         private void Mission(string name, string desc, System.Action deploy)
         {
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, _bold);
+            GUILayout.Label(name, _title);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Deploy", GUILayout.Width(110f), GUILayout.Height(26f))) deploy();
+            if (GUILayout.Button("DEPLOY", GUILayout.Width(130f), GUILayout.Height(34f))) deploy();
             GUILayout.EndHorizontal();
             GUILayout.Label(desc, _small);
             GUILayout.EndVertical();
@@ -212,7 +237,7 @@ namespace Deadfall.Game
         {
             PlayerClass cls = PlayerClass.Local;
             bool running = WaveManager.Current != null && WaveManager.Current.IsRunning;
-            GUILayout.Label("Class", _bold);
+            GUILayout.Label("CLASS", Section());
             GUILayout.BeginHorizontal();
             foreach (ClassDefinition c in PrototypeClasses.All)
             {
@@ -239,7 +264,7 @@ namespace Deadfall.Game
             string[] current = (string[])svc.LoadoutFor(classId, def).Clone();
             List<LoadoutOption> options = ProfileService.LoadoutOptions();
             GUILayout.Space(6f);
-            GUILayout.Label($"{cls.Class.DisplayName} loadout (two primaries, sidearm, melee)", _bold);
+            GUILayout.Label($"{cls.Class.DisplayName.ToUpperInvariant()} LOADOUT  ·  TWO PRIMARIES, SIDEARM, MELEE", Section());
             bool changed = false;
             string[] slotNames = { "Primary", "Primary", "Sidearm", "Melee" };
             for (int i = 0; i < LoadoutRules.Size; i++)
@@ -379,7 +404,7 @@ namespace Deadfall.Game
         {
             foreach (ResearchCategory cat in categories)
             {
-                GUILayout.Label(cat.ToString(), _bold);
+                GUILayout.Label(cat.ToString().ToUpperInvariant(), Section());
                 foreach (ResearchDef r in ProfileService.ResearchProjects)
                 {
                     if (r.Category != cat) continue;
@@ -425,7 +450,7 @@ namespace Deadfall.Game
 
         private void Workshop(ProfileService svc, PlayerProfile p)
         {
-            GUILayout.Label("Structures (built in the field with Scrap, B to open build mode)", _bold);
+            GUILayout.Label("STRUCTURES  ·  BUILT IN THE FIELD WITH SCRAP (B)", Section());
             foreach (StructureDef d in StructureCatalog.All)
             {
                 GUILayout.BeginVertical(GUI.skin.box);
@@ -442,7 +467,7 @@ namespace Deadfall.Game
         private void Intelligence(ProfileService svc, PlayerProfile p)
         {
             int tier = ResearchRules.DossierTier(ProfileService.ResearchProjects, p.Research);
-            GUILayout.Label("Dossiers", _bold);
+            GUILayout.Label("DOSSIERS", Section());
             GUILayout.Label($"Research reveals dossiers by tier; killing {DossierRules.KillsToReveal} of a type reveals its file too.", _small);
             foreach (EnemyDefinition e in PrototypeEnemies.All)
             {
@@ -471,12 +496,12 @@ namespace Deadfall.Game
 
         private void Trophies(PlayerProfile p)
         {
-            GUILayout.Label("Lifetime", _bold);
+            GUILayout.Label("LIFETIME", Section());
             GUILayout.Label($"Runs: {p.Stat(StatKeys.RunsStarted)} started, {p.Stat(StatKeys.RunsWon)} won ({p.Stat(StatKeys.OperationsWon)} Operations), {p.Stat(StatKeys.RunsFailed)} failed. " +
                             $"Kills: {p.Stat(StatKeys.Kills)} ({p.Stat(StatKeys.CritKills)} critical, {p.Stat(StatKeys.MeleeKills)} melee). Surges cleared: {p.Stat(StatKeys.SurgesCleared)}. " +
                             $"Objectives: {p.Stat(StatKeys.Objectives)}. Specimens: {p.Stat(StatKeys.Specimens)}. Structures: {p.Stat(StatKeys.StructuresBuilt)}.", _small);
             GUILayout.Space(4f);
-            GUILayout.Label("Challenges", _bold);
+            GUILayout.Label("CHALLENGES", Section());
             foreach (ChallengeDef c in ProfileService.Challenges)
             {
                 if (c.Kind != ChallengeKind.Challenge) continue;
@@ -491,7 +516,7 @@ namespace Deadfall.Game
                 GUILayout.EndHorizontal();
             }
             GUILayout.Space(4f);
-            GUILayout.Label("Achievements", _bold);
+            GUILayout.Label("ACHIEVEMENTS", Section());
             foreach (ChallengeDef c in ProfileService.Challenges)
             {
                 if (c.Kind != ChallengeKind.Achievement) continue;
@@ -501,7 +526,7 @@ namespace Deadfall.Game
             }
             GUI.color = Color.white;
             GUILayout.Space(4f);
-            GUILayout.Label("Prestige", _bold);
+            GUILayout.Label("PRESTIGE", Section());
             foreach (ClassDefinition c in PrototypeClasses.All)
             {
                 int pr = p.PrestigeOf(c.ContentId);

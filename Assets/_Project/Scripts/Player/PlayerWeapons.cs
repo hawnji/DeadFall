@@ -228,6 +228,8 @@ namespace Deadfall.Player
         public WeaponDefinition CurrentDefinition => _current >= 0 ? _slots[_current].Definition : null;
         public int Magazine => CurrentFirearm?.Magazine ?? 0;
         public int Reserve => CurrentFirearm?.Reserve ?? 0;
+        /// <summary>Magazine capacity of the current firearm with its mods (0 for melee).</summary>
+        public int MagazineCapacity => CurrentFirearm?.Capacity ?? 0;
         public bool IsReloading => CurrentFirearm != null && CurrentFirearm.IsReloading;
         public float ReloadProgress => CurrentFirearm != null && CurrentFirearm.IsReloading ? CurrentFirearm.StateProgress(Time.timeAsDouble) : 0f;
         public float EquipProgress => _equipEnd > _equipStart ? Mathf.Clamp01((float)((Time.timeAsDouble - _equipStart) / (_equipEnd - _equipStart))) : 1f;

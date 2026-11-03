@@ -26,6 +26,14 @@ namespace Deadfall.DebugTools
 
         private void OnGUI()
         {
+            Deadfall.Core.HudKit.Begin();
+            GUI.skin = Deadfall.Core.HudKit.Skin;
+            DrawGui();
+            Deadfall.Core.HudKit.End();
+        }
+
+        private void DrawGui()
+        {
             if (_class == null) return;
             bool paused = _cursor == null || !_cursor.IsLocked;
             if (!paused) return;
@@ -34,14 +42,17 @@ namespace Deadfall.DebugTools
             {
                 _box = new GUIStyle(GUI.skin.box);
                 _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };
+                if (Deadfall.Core.HudKit.HeadFont != null) _title.font = Deadfall.Core.HudKit.HeadFont;
+                _title.normal.textColor = Deadfall.Core.HudKit.Accent;
                 _desc = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
+                _desc.normal.textColor = Deadfall.Core.HudKit.TextDim;
             }
             GUI.depth = -10;
-            const float w = 300f, h = 380f;
-            var area = new Rect(24f, Screen.height * 0.5f - h * 0.5f, w, h);
-            GUI.Box(area, GUIContent.none, _box);
+            const float w = 320f, h = 420f;
+            var area = new Rect(24f, Deadfall.Core.HudKit.H * 0.5f - h * 0.5f, w, h);
+            Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 12f, area.y + 10f, w - 24f, h - 20f));
-            GUILayout.Label("Class", _title);
+            GUILayout.Label("CLASS", _title);
             foreach (ClassDefinition c in PrototypeClasses.All)
             {
                 bool current = _class.Class == c;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Deadfall.Core;
 using Deadfall.Enemies;
 using Deadfall.Rules.Combat;
 using UnityEngine;
@@ -15,8 +16,6 @@ namespace Deadfall.Game
         private float _nextScan;
         private string _banner = string.Empty;
         private float _bannerUntil;
-        private GUIStyle _name, _sub, _bannerStyle;
-        private Texture2D _white;
 
         private void OnEnable() => Enemy.PhaseChanged += OnPhaseChanged;
         private void OnDisable() => Enemy.PhaseChanged -= OnPhaseChanged;
@@ -47,41 +46,40 @@ namespace Deadfall.Game
 
         private void OnGUI()
         {
-            if (_white == null)
-            {
-                _white = Texture2D.whiteTexture;
-                _name = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                _sub = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
-                _bannerStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            }
-            if (Time.unscaledTime < _bannerUntil && _banner.Length > 0)
-            {
-                GUI.color = new Color(1f, 0.45f, 0.35f, Mathf.Clamp01((_bannerUntil - Time.unscaledTime) / 0.5f));
-                GUI.Label(new Rect(0f, Screen.height * 0.3f, Screen.width, 32f), _banner, _bannerStyle);
-                GUI.color = Color.white;
-            }
             Enemy b = _boss;
-            if (b == null || !b.IsAlive) return;
-            float w = Mathf.Min(560f, Screen.width - 80f);
-            float x = (Screen.width - w) * 0.5f, y = 130f;
-            GUI.Label(new Rect(x, y - 26f, w, 24f), b.Definition.DisplayName.ToUpperInvariant(), _name);
-            GUI.color = new Color(0f, 0f, 0f, 0.6f);
-            GUI.DrawTexture(new Rect(x, y, w, 12f), _white);
-            GUI.color = b.Definition.IsBoss ? new Color(0.85f, 0.2f, 0.25f) : new Color(0.75f, 0.45f, 0.95f);
-            GUI.DrawTexture(new Rect(x + 1f, y + 1f, (w - 2f) * b.Health01, 10f), _white);
-            GUI.color = Color.white;
-            if (b.Definition.IsBoss)
+            bool banner = Time.unscaledTime < _bannerUntil && _banner.Length > 0;
+            if (!banner && (b == null || !b.IsAlive)) return;
+            HudKit.Begin();
+            float sw = HudKit.W;
+            if (banner)
             {
-                // Phase thresholds as ticks on the bar.
-                GUI.DrawTexture(new Rect(x + w * SpecimenRules.RampageAt, y, 2f, 12f), _white);
-                GUI.DrawTexture(new Rect(x + w * SpecimenRules.ExposedAt, y, 2f, 12f), _white);
-                string mods = SpecimenRules.Describe(b.BossModifiers);
-                GUI.Label(new Rect(x, y + 14f, w, 18f), SpecimenRules.Name(b.Phase) + (mods.Length > 0 ? "  ·  " + mods : string.Empty), _sub);
+                float a = Mathf.Clamp01((_bannerUntil - Time.unscaledTime) / 0.5f);
+                HudKit.Label(new Rect(0f, HudKit.H * 0.3f + 60f, sw, 36f), _banner, 24, new Color(HudKit.Bad.r, HudKit.Bad.g, HudKit.Bad.b, a), TextAnchor.MiddleCenter, head: true);
             }
-            else
+            if (b != null && b.IsAlive)
             {
-                GUI.Label(new Rect(x, y + 14f, w, 18f), "Hunting the squad", _sub);
+                float w = Mathf.Min(640f, sw - 80f);
+                float x = (sw - w) * 0.5f, y = 182f;
+                Color c = b.Definition.IsBoss ? new Color(0.9f, 0.22f, 0.25f) : new Color(0.72f, 0.45f, 0.95f);
+                var card = new Rect(x - 16f, y - 34f, w + 32f, 72f);
+                HudKit.Panel(card);
+                HudKit.Label(new Rect(x, y - 30f, w, 26f), b.Definition.DisplayName.ToUpperInvariant(), 18, Color.white, TextAnchor.MiddleLeft, head: true);
+                HudKit.Label(new Rect(x, y - 30f, w, 26f), $"{Mathf.CeilToInt(b.Health01 * 100f)}%", 15, c, TextAnchor.MiddleRight, head: true);
+                HudKit.Bar(new Rect(x, y, w, 14f), b.Health01, c);
+                if (b.Definition.IsBoss)
+                {
+                    // Phase thresholds as ticks on the bar.
+                    HudKit.Fill(new Rect(x + w * SpecimenRules.RampageAt - 1f, y - 2f, 2f, 18f), Color.white);
+                    HudKit.Fill(new Rect(x + w * SpecimenRules.ExposedAt - 1f, y - 2f, 2f, 18f), Color.white);
+                    string mods = SpecimenRules.Describe(b.BossModifiers);
+                    HudKit.Label(new Rect(x, y + 16f, w, 20f), SpecimenRules.Name(b.Phase) + (mods.Length > 0 ? "  ·  " + mods : string.Empty), 12, HudKit.TextDim, TextAnchor.MiddleLeft);
+                }
+                else
+                {
+                    HudKit.Label(new Rect(x, y + 16f, w, 20f), "Hunting the squad", 12, HudKit.TextDim, TextAnchor.MiddleLeft);
+                }
             }
+            HudKit.End();
         }
     }
 }

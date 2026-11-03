@@ -20,6 +20,14 @@ namespace Deadfall.DebugTools
 
         private void OnGUI()
         {
+            Deadfall.Core.HudKit.Begin();
+            GUI.skin = Deadfall.Core.HudKit.Skin;
+            DrawGui();
+            Deadfall.Core.HudKit.End();
+        }
+
+        private void DrawGui()
+        {
             SandboxBootstrap boot = SandboxBootstrap.Current;
             if (boot == null) return;
             if (_cursor == null && PlayerIdentityLocal() != null) _cursor = PlayerIdentityLocal().GetComponent<PlayerCursorLock>();
@@ -28,14 +36,17 @@ namespace Deadfall.DebugTools
             if (_title == null)
             {
                 _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };
+                if (Deadfall.Core.HudKit.HeadFont != null) _title.font = Deadfall.Core.HudKit.HeadFont;
+                _title.normal.textColor = Deadfall.Core.HudKit.Accent;
                 _small = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
+                _small.normal.textColor = Deadfall.Core.HudKit.TextDim;
             }
             GUI.depth = -10;
-            const float w = 280f, h = 290f;
-            var area = new Rect(Screen.width - w - 24f, Screen.height * 0.5f - h * 0.5f, w, h);
-            GUI.Box(area, GUIContent.none);
+            const float w = 300f, h = 330f;
+            var area = new Rect(Deadfall.Core.HudKit.W - w - 24f, Deadfall.Core.HudKit.H * 0.5f - h * 0.5f, w, h);
+            Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 12f, area.y + 10f, w - 24f, h - 20f));
-            GUILayout.Label("Map", _title);
+            GUILayout.Label("MAP", _title);
 
             MapSession map = boot.MapSession;
             SessionService session = SessionService.Current;

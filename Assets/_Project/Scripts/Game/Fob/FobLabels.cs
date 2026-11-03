@@ -5,11 +5,10 @@ using UnityEngine;
 
 namespace Deadfall.Game
 {
-    /// <summary>Floating facility names over the FOB consoles (greybox signage), greyed while a facility is locked.</summary>
+    /// <summary>Floating facility name plates over the FOB consoles (<see cref="HudKit"/> style), greyed while a facility is locked.</summary>
     public sealed class FobLabels : MonoBehaviour
     {
         private static readonly List<FobTerminal> Terminals = new List<FobTerminal>();
-        private GUIStyle _style;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => Terminals.Clear();
@@ -25,7 +24,7 @@ namespace Deadfall.Game
             if (UiModal.Active || Terminals.Count == 0) return;
             Camera cam = Camera.main;
             if (cam == null) return;
-            if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            HudKit.Begin();
             PlayerProfile p = ProfileService.Profile;
             int level = p != null ? p.OperatorLevel : 1;
             foreach (FobTerminal t in Terminals)
@@ -33,17 +32,22 @@ namespace Deadfall.Game
                 if (t == null) continue;
                 Vector3 world = t.transform.position + Vector3.up * 2.6f;
                 Vector3 to = world - cam.transform.position;
-                if (to.sqrMagnitude > 30f * 30f || Vector3.Dot(to, cam.transform.forward) <= 0f) continue;
-                Vector3 s = cam.WorldToScreenPoint(world);
+                float dist = to.magnitude;
+                if (dist > 30f || Vector3.Dot(to, cam.transform.forward) <= 0f) continue;
+                Vector2 s = HudKit.FromScreen(cam.WorldToScreenPoint(world));
                 bool open = Facilities.IsOpen(t.Facility, level);
-                string text = open ? Facilities.Name(t.Facility) : $"{Facilities.Name(t.Facility)}\n(operator level {Facilities.UnlockLevel(t.Facility)})";
-                var r = new Rect(s.x - 120f, Screen.height - s.y - 20f, 240f, 40f);
-                GUI.color = new Color(0f, 0f, 0f, 0.7f);
-                GUI.Label(new Rect(r.x + 1f, r.y + 1f, r.width, r.height), text, _style);
-                GUI.color = open ? FobBuilder.ColorOf(t.Facility) : new Color(0.6f, 0.6f, 0.6f);
-                GUI.Label(r, text, _style);
+                Color c = open ? FobBuilder.ColorOf(t.Facility) : new Color(0.6f, 0.6f, 0.6f);
+                float fade = Mathf.Clamp01((30f - dist) / 8f);
+                string name = Facilities.Name(t.Facility).ToUpperInvariant();
+                string sub = open ? (dist < 6f ? "Press F at the console" : null) : $"Operator level {Facilities.UnlockLevel(t.Facility)}";
+                float w = Mathf.Max(HudKit.TextWidth(name, 16, head: true), sub != null ? HudKit.TextWidth(sub, 12) : 0f) + 36f;
+                var r = new Rect(s.x - w * 0.5f, s.y - 22f, w, sub != null ? 48f : 32f);
+                HudKit.Panel(r, 0.85f * fade);
+                HudKit.Fill(new Rect(r.x + 12f, r.yMax - 3f, r.width - 24f, 2f), new Color(c.r, c.g, c.b, fade));
+                HudKit.Label(new Rect(r.x, r.y + 4f, r.width, 24f), name, 16, new Color(c.r, c.g, c.b, fade), TextAnchor.MiddleCenter, head: true);
+                if (sub != null) HudKit.Label(new Rect(r.x, r.y + 25f, r.width, 18f), sub, 12, new Color(0.8f, 0.82f, 0.85f, fade), TextAnchor.MiddleCenter);
             }
-            GUI.color = Color.white;
+            HudKit.End();
         }
     }
 }

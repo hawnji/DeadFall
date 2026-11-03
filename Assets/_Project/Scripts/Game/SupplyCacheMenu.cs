@@ -13,7 +13,6 @@ namespace Deadfall.Game
         private const string ModalId = "supply_cache";
         private static SupplyCache _open;
         private PlayerCursorLock _cursor;
-        private GUIStyle _title, _small, _price;
 
         public static bool IsOpen => _open != null;
 
@@ -57,59 +56,49 @@ namespace Deadfall.Game
         {
             SupplyCache cache = _open;
             if (cache == null) return;
-            if (_title == null)
-            {
-                _title = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold };
-                _small = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true };
-                _price = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
-            }
+            HudKit.Begin();
             GUI.depth = -20;
-            const float w = 460f, h = 360f;
-            var area = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-            GUI.Box(area, GUIContent.none);
-            GUI.Box(area, GUIContent.none);
-            GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
             WaveManager waves = WaveManager.Current;
             int credits = waves != null ? waves.LocalCredits : 0;
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Supply Cache", _title);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label($"{credits} credits", _price);
-            GUILayout.EndHorizontal();
-            if (waves == null || !waves.IsRunning) GUILayout.Label("Field Credits come from kills during a run (press N).", _small);
-            GUILayout.Space(4f);
+            int rows = cache.Stock.Count + 1;
+            Rect c = HudKit.Window(560f, 140f + rows * 78f + 40f, "SUPPLY CACHE", $"{credits:N0} CREDITS");
+            float y = c.y;
+            if (waves == null || !waves.IsRunning)
+            {
+                HudKit.Label(new Rect(c.x, y, c.width, 20f), "Field Credits come from kills during a run (press N).", 13, HudKit.TextDim);
+                y += 26f;
+            }
 
             var weapons = PlayerIdentity.Local != null ? PlayerIdentity.Local.GetComponent<PlayerWeapons>() : null;
             for (int i = 0; i < cache.Stock.Count; i++)
             {
                 SupplyCache.Offer o = cache.Stock[i];
-                GUILayout.BeginHorizontal(GUI.skin.box);
-                GUILayout.BeginVertical();
-                GUI.color = TierColor(o.Mods.Tier);
-                GUILayout.Label($"{o.Weapon.DisplayName}  ·  {o.Mods.Tier}", _title);
-                GUI.color = Color.white;
+                Color tc = TierColor(o.Mods.Tier);
+                var row = new Rect(c.x, y, c.width, 70f);
+                HudKit.Round(row, HudKit.GlassLight);
+                HudKit.Round(new Rect(row.x, row.y + 8f, 3f, row.height - 16f), tc, true);
+                HudKit.Label(new Rect(row.x + 16f, row.y + 8f, row.width - 150f, 24f), o.Weapon.DisplayName, 18, Color.white, TextAnchor.MiddleLeft, head: true);
+                float nw = HudKit.TextWidth(o.Weapon.DisplayName, 18, head: true);
+                HudKit.Label(new Rect(row.x + 24f + nw, row.y + 8f, 120f, 24f), o.Mods.Tier.ToString().ToUpperInvariant(), 12, tc, TextAnchor.MiddleLeft, head: true);
                 string replaces = weapons != null && weapons.DefinitionAt(weapons.SlotFor(o.Weapon)) is WeaponDefinition old ? $"Replaces {old.DisplayName}. " : string.Empty;
                 string att = o.Mods.Attachments.Count > 0 ? string.Join(", ", o.Mods.Attachments.ConvertAll(a => a.DisplayName)) + ". " : string.Empty;
-                GUILayout.Label($"{o.Weapon.Category}. {att}{replaces}", _small);
-                GUILayout.EndVertical();
-                GUI.enabled = credits >= o.Price;
-                if (GUILayout.Button($"{o.Price}", GUILayout.Width(80f), GUILayout.Height(40f))) RunEconomy.Current?.Buy(cache, i);
-                GUI.enabled = true;
-                GUILayout.EndHorizontal();
+                HudKit.Label(new Rect(row.x + 16f, row.y + 34f, row.width - 150f, 30f), $"{o.Weapon.Category}. {att}{replaces}", 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
+                if (HudKit.Button(new Rect(row.xMax - 118f, row.y + 15f, 104f, 40f), o.Price.ToString("N0"), false, credits >= o.Price, 17)) RunEconomy.Current?.Buy(cache, i);
+                y += 78f;
             }
-            GUILayout.BeginHorizontal(GUI.skin.box);
-            GUILayout.Label("Refill all ammo", _title);
-            GUILayout.FlexibleSpace();
-            GUI.enabled = credits >= LootRules.AmmoRefillPrice;
-            if (GUILayout.Button($"{LootRules.AmmoRefillPrice}", GUILayout.Width(80f), GUILayout.Height(30f))) RunEconomy.Current?.Buy(cache, cache.Stock.Count);
-            GUI.enabled = true;
-            GUILayout.EndHorizontal();
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Close (Esc)", GUILayout.Height(26f))) Close();
-            GUILayout.EndArea();
+            var ammo = new Rect(c.x, y, c.width, 56f);
+            HudKit.Round(ammo, HudKit.GlassLight);
+            HudKit.Label(new Rect(ammo.x + 16f, ammo.y, 300f, ammo.height), "Refill all ammo", 17, Color.white, TextAnchor.MiddleLeft, head: true);
+            if (HudKit.Button(new Rect(ammo.xMax - 118f, ammo.y + 8f, 104f, 40f), LootRules.AmmoRefillPrice.ToString("N0"), false, credits >= LootRules.AmmoRefillPrice, 17))
+                RunEconomy.Current?.Buy(cache, cache.Stock.Count);
+
+            HudKit.KeyChip(c.x, c.yMax - 26f, "Esc", 24f);
+            HudKit.Label(new Rect(c.x + 44f, c.yMax - 26f, 200f, 24f), "Close", 13, HudKit.TextDim);
+            if (HudKit.Button(new Rect(c.xMax - 120f, c.yMax - 34f, 120f, 34f), "CLOSE")) Close();
+            HudKit.End();
         }
 
         public static Color TierColor(WeaponTier t) =>
-            t == WeaponTier.Prototype ? new Color(0.85f, 0.55f, 1f) : t == WeaponTier.Refined ? new Color(0.45f, 0.75f, 1f) : Color.white;
+            t == WeaponTier.Prototype ? new Color(0.85f, 0.55f, 1f) : t == WeaponTier.Refined ? new Color(0.45f, 0.75f, 1f) : new Color(0.85f, 0.87f, 0.9f);
     }
 }

@@ -376,7 +376,7 @@ namespace Deadfall.Game
         {
             if (b.Boards >= BreachBarricade.MaxBoards) return string.Empty;
             bool paid = _waves != null && _waves.IsRunning;
-            return paid ? $"Repair barricade (+{RepairCredits} credits)  {b.Boards}/{BreachBarricade.MaxBoards}" : $"Repair barricade  {b.Boards}/{BreachBarricade.MaxBoards}";
+            return paid ? $"Repair barricade  +{RepairCredits} each  ·  {b.Boards}/{BreachBarricade.MaxBoards}" : $"Repair barricade  ·  {b.Boards}/{BreachBarricade.MaxBoards}";
         }
 
         private void UseDoor(SectorDoor door, GameObject player) => Request(UseKind.Door, door.ConnectionIndex);

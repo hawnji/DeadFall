@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Deadfall.Core;
 using UnityEngine;
 
@@ -5,7 +6,9 @@ namespace Deadfall.Player
 {
     /// <summary>
     /// Looks for an <see cref="IInteractable"/> under the crosshair (2.6 m ray, then a small sphere so small
-    /// pickups are easy to hit) and uses it on Interact. The HUD reads <see cref="Prompt"/>.
+    /// pickups are easy to hit) and uses it on Interact. When nothing is aimed at, the closest
+    /// <see cref="INearbyInteractable"/> in reach is used instead (barricades). <see cref="IHoldInteractable"/>s
+    /// repeat while Interact is held. The HUD reads <see cref="Prompt"/>, <see cref="IsHold"/> and <see cref="HoldProgress"/>.
     /// </summary>
     public sealed class PlayerInteractor : MonoBehaviour
     {
@@ -19,6 +22,13 @@ namespace Deadfall.Player
         public IInteractable Current { get; private set; }
         public string Prompt { get; private set; } = string.Empty;
         public bool CanUse { get; private set; }
+        /// <summary>The current target repeats while F is held.</summary>
+        public bool IsHold { get; private set; }
+        /// <summary>0..1 towards the next repeat while holding, or -1.</summary>
+        public float HoldProgress { get; private set; } = -1f;
+
+        private float _nextRepeat;
+        private float _lastUse;
 
         private void Awake()
         {
@@ -29,11 +39,45 @@ namespace Deadfall.Player
 
         private void Update()
         {
-            Current = Find();
+            IInteractable previous = Current;
+            Current = Find() ?? FindNearby();
             Prompt = Current != null ? Current.InteractPrompt(gameObject) ?? string.Empty : string.Empty;
             CanUse = Current != null && Current.CanInteract(gameObject);
-            if (CanUse && _input != null && _input.Current.InteractPressed && (_health == null || _health.IsAlive))
+            var hold = Current as IHoldInteractable;
+            IsHold = hold != null;
+            if (Current != previous) _nextRepeat = 0f;
+
+            bool alive = _health == null || _health.IsAlive;
+            bool pressed = _input != null && _input.Current.InteractPressed;
+            bool held = _input != null && _input.Current.InteractHeld;
+            float now = Time.time;
+            if (CanUse && alive && (pressed || (hold != null && held && now >= _nextRepeat)))
+            {
                 Current.Interact(gameObject);
+                _lastUse = now;
+                _nextRepeat = now + (hold != null ? Mathf.Max(0.1f, hold.RepeatSeconds) : 0f);
+            }
+            HoldProgress = hold != null && held && CanUse && alive
+                ? Mathf.Clamp01((now - _lastUse) / Mathf.Max(0.1f, hold.RepeatSeconds))
+                : -1f;
+        }
+
+        /// <summary>Closest usable <see cref="INearbyInteractable"/> in reach (one that can't be used only if none can).</summary>
+        private IInteractable FindNearby()
+        {
+            IReadOnlyList<INearbyInteractable> all = NearbyInteractables.All;
+            if (all.Count == 0) return null;
+            Vector3 feet = transform.position;
+            INearbyInteractable best = null;
+            float bestScore = float.MaxValue;
+            for (int i = 0; i < all.Count; i++)
+            {
+                INearbyInteractable n = all[i];
+                if (n == null || (n is Object o && o == null) || !n.InReach(feet, out float d)) continue;
+                float score = d + (n.CanInteract(gameObject) ? 0f : 100f);
+                if (score < bestScore) { bestScore = score; best = n; }
+            }
+            return best;
         }
 
         private IInteractable Find()

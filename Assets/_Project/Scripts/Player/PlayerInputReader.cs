@@ -18,6 +18,7 @@ namespace Deadfall.Player
         public bool ReloadPressed;
         public bool MeleePressed;
         public bool InteractPressed;
+        public bool InteractHeld;
         public bool AbilityPressed;
         /// <summary>-1, 0, or +1 from the scroll wheel.</summary>
         public int WeaponScroll;
@@ -117,6 +118,7 @@ namespace Deadfall.Player
                 f.ReloadPressed = _reload.WasPressedThisFrame();
                 f.MeleePressed = _melee.WasPressedThisFrame();
                 f.InteractPressed = _interact.WasPressedThisFrame();
+                f.InteractHeld = _interact.IsPressed();
                 f.AbilityPressed = _ability.WasPressedThisFrame();
 
                 float scroll = _scroll.ReadValue<float>();
@@ -135,7 +137,7 @@ namespace Deadfall.Player
             }
             if (WeaponsBlocked)
             {
-                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.AbilityPressed = false;
+                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.InteractHeld = f.AbilityPressed = false;
                 f.WeaponScroll = 0;
                 f.WeaponSlotPressed = -1;
             }

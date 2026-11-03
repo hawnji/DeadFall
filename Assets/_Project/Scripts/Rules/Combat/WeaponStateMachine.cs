@@ -63,6 +63,8 @@ namespace Deadfall.Rules.Combat
         public int Reserve { get; private set; }
         public bool IsReloading => State == WeaponState.Reloading;
         public bool IsEmpty => Magazine == 0;
+        /// <summary>Rounds a full magazine holds.</summary>
+        public int Capacity => _stats.MagazineSize;
         public bool CanReload => Magazine < _stats.MagazineSize && (Reserve > 0 || FreeReloads);
 
         // ---- handling modifiers (class passives, abilities, attachments). They change timing, never the stats asset.

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Deadfall.Core;
 using UnityEngine;
 
 namespace Deadfall.Game
@@ -8,7 +9,6 @@ namespace Deadfall.Game
     {
         private struct Toast { public string Text; public float Until; public Color Color; }
         private static readonly List<Toast> Items = new List<Toast>();
-        private GUIStyle _style;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => Items.Clear();
@@ -22,20 +22,22 @@ namespace Deadfall.Game
         private void OnGUI()
         {
             if (Items.Count == 0) return;
-            if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.MiddleRight };
+            HudKit.Begin();
             float now = Time.unscaledTime;
             Items.RemoveAll(t => t.Until < now);
-            float y = Screen.height - 140f;
+            // Stacked pills above the weapon card (bottom right).
+            float y = HudKit.H - 28f - 84f - 14f - 34f;
             for (int i = Items.Count - 1; i >= 0; i--)
             {
                 Toast t = Items[i];
-                Color c = t.Color;
-                c.a = Mathf.Clamp01((t.Until - now) / 0.5f);
-                GUI.color = c;
-                GUI.Label(new Rect(Screen.width - 524f, y, 500f, 22f), t.Text, _style);
-                y -= 22f;
+                float a = Mathf.Clamp01((t.Until - now) / 0.5f);
+                float tw = HudKit.TextWidth(t.Text, 14) + 34f;
+                var r = new Rect(HudKit.W - 28f - tw, y, tw, 30f);
+                HudKit.AccentPanel(r, t.Color, a);
+                HudKit.Label(new Rect(r.x + 16f, r.y, r.width - 24f, r.height), t.Text, 14, new Color(t.Color.r, t.Color.g, t.Color.b, a), TextAnchor.MiddleLeft);
+                y -= 36f;
             }
-            GUI.color = Color.white;
+            HudKit.End();
         }
     }
 }

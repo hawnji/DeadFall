@@ -33,8 +33,7 @@ namespace Deadfall.DebugTools
         private float _smoothedDt = 1f / 60f;
         private float _worstDt;
         private float _worstResetAt;
-        private bool _showHelp = true;
-        private GUIStyle _style, _numStyle;
+        private bool _showHelp;
         private SandboxEnemySpawner _spawner;
 
         public void Bind(GameObject player, Vector3 spawnPos, float spawnYaw)
@@ -142,7 +141,7 @@ namespace Deadfall.DebugTools
             if (_cursor == null && _player != null) _cursor = _player.GetComponent<PlayerCursorLock>();
             if (_cursor == null || _cursor.IsLocked || UiModal.Active) return;
             bool on = QualitySettings.vSyncCount > 0;
-            if (!GUI.Button(new Rect(24f, Screen.height - 54f, 200f, 30f), on ? "VSync: On (click to turn off)" : "VSync: Off (click to turn on)")) return;
+            if (!HudKit.Button(new Rect(HudKit.W * 0.5f - 130f, HudKit.H - 84f, 260f, 36f), on ? "VSYNC ON  ·  CLICK TO TURN OFF" : "VSYNC OFF  ·  CLICK TO TURN ON", false, true, 13)) return;
             if (ServiceRegistry.TryGet(out ISettingsService settings))
             {
                 settings.Current.VSync = !on;
@@ -158,12 +157,13 @@ namespace Deadfall.DebugTools
 
         private void OnGUI()
         {
-            if (_style == null)
-            {
-                _style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-                _style.normal.textColor = new Color(0.8f, 1f, 0.8f);
-                _numStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            }
+            HudKit.Begin();
+            DrawGui();
+            HudKit.End();
+        }
+
+        private void DrawGui()
+        {
 
             int cap = Application.targetFrameRate;
             string capText = QualitySettings.vSyncCount > 0 ? "vsync" : cap > 0 ? cap.ToString() : "off";
@@ -191,7 +191,9 @@ namespace Deadfall.DebugTools
                         "\nF12 next advanced enemy (Ctrl: variant) · F5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap" +
                         "\nN start / stop survival run · G ready (ends the lull)" +
                         "\nQ class ability · Esc to pick a class";
-            GUI.Label(new Rect(12, 8, 900, 220), text, _style);
+            else text += "\nH: controls";
+            // Small dev readout under the location card (top left), out of the way of the real HUD.
+            HudKit.Label(new Rect(30f, 108f, 900f, 220f), text, 12, new Color(0.72f, 0.9f, 0.75f, 0.85f), TextAnchor.UpperLeft, wrap: false);
 
             Camera cam = Camera.main;
             if (cam == null) return;
@@ -202,8 +204,10 @@ namespace Deadfall.DebugTools
                 Vector3 world = n.Position + Vector3.up * (0.8f - life) * 0.6f;
                 Vector3 sp = cam.WorldToScreenPoint(world);
                 if (sp.z <= 0f) continue;
-                _numStyle.normal.textColor = n.Crit ? new Color(1f, 0.85f, 0.2f, Mathf.Clamp01(life * 2f)) : new Color(1f, 1f, 1f, Mathf.Clamp01(life * 2f));
-                GUI.Label(new Rect(sp.x - 40, Screen.height - sp.y - 12, 80, 24), Mathf.RoundToInt(n.Amount).ToString(), _numStyle);
+                Vector2 p = HudKit.FromScreen(sp);
+                float a = Mathf.Clamp01(life * 2f);
+                Color c = n.Crit ? new Color(HudKit.Warn.r, HudKit.Warn.g, HudKit.Warn.b, a) : new Color(1f, 1f, 1f, a);
+                HudKit.Label(new Rect(p.x - 50f, p.y - 14f, 100f, 28f), Mathf.RoundToInt(n.Amount).ToString(), n.Crit ? 22 : 17, c, TextAnchor.MiddleCenter, head: true);
             }
         }
     }
