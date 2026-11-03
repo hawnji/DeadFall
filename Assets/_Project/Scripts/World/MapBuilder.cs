@@ -179,16 +179,31 @@ namespace Deadfall.World
             var t = new GameObject($"Closet #{index}").transform;
             t.SetParent(_root, false);
             var center = new Vector3((c.X + 0.5f) * _cs, 0f, (c.Z + 0.5f) * _cs);
-            Color dark = new Color(0.22f, 0.2f, 0.2f);
-            Box(t, "Floor", center + Vector3.down * 0.1f, new Vector3(_cs, 0.2f, _cs), new Color(0.24f, 0.22f, 0.21f));
-            Box(t, "Ceiling", center + Vector3.up * (_h + 0.1f), new Vector3(_cs, 0.2f, _cs), dark);
+            // Near-black, fully matte surfaces: light spilling through the boards finds almost nothing to bounce off,
+            // so the closet reads as a dark void and enemies inside are hard to make out until they reach the boards.
+            Color dark = ClosetBlack;
+            Matte(Box(t, "Floor", center + Vector3.down * 0.1f, new Vector3(_cs, 0.2f, _cs), new Color(0.03f, 0.028f, 0.027f)));
+            Matte(Box(t, "Ceiling", center + Vector3.up * (_h + 0.1f), new Vector3(_cs, 0.2f, _cs), dark));
             Dir back = br.Facing.Opposite();
+            int first = t.childCount;
             for (int d = 0; d < 4; d++)
             {
                 var dir = (Dir)d;
                 if (dir == back) continue;
                 BuildWall(t, c, dir, Opening.None, _h, dark);
             }
+            for (int i = first; i < t.childCount; i++) Matte(t.GetChild(i).gameObject);
+
+            // A black lining just inside the opening (sides and above), so the boards frame a void, not a lit box.
+            Vector3 inward = new Vector3(-br.Facing.Dx(), 0f, -br.Facing.Dz()); // closet -> room
+            bool alongX = br.Facing == Dir.North || br.Facing == Dir.South;
+            Vector3 mouth = EdgeMid(br.Inner, br.Facing) - inward * 0.35f;
+            float w = BreachBarricade.OpeningWidth, oh = BreachBarricade.OpeningHeight;
+            Vector3 axis = alongX ? Vector3.right : Vector3.forward;
+            Vector3 Size(float along, float height, float depth) => alongX ? new Vector3(along, height, depth) : new Vector3(depth, height, along);
+            for (int side = -1; side <= 1; side += 2)
+                Matte(Box(t, "Lining", mouth + axis * (side * (w * 0.5f + 0.05f)) + Vector3.up * (oh * 0.5f), Size(0.1f, oh, 0.5f), dark, collider: false));
+            Matte(Box(t, "Lining", mouth + Vector3.up * (oh + 0.05f), Size(w + 0.2f, 0.1f, 0.5f), dark, collider: false));
         }
 
         public void Clear(BuiltMap map)
@@ -515,6 +530,23 @@ namespace Deadfall.World
                     Yaw = toCenter.sqrMagnitude > 0.01f ? Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg : 0f,
                 });
             }
+        }
+
+        private static readonly Color ClosetBlack = new Color(0.012f, 0.012f, 0.014f);
+
+        /// <summary>No specular highlights or reflections on this box (closet surfaces).</summary>
+        private static void Matte(GameObject go)
+        {
+            Renderer r = go != null ? go.GetComponent<Renderer>() : null;
+            if (r == null) return;
+            Material m = r.sharedMaterial;
+            if (m == null) return;
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
+            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+            if (m.HasProperty("_EnvironmentReflections")) m.SetFloat("_EnvironmentReflections", 0f);
+            m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
         }
 
         private Material Mat(Color color)
