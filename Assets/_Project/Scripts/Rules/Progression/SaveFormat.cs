@@ -55,6 +55,7 @@ namespace Deadfall.Rules.Progression
             Line(sb, "skills", List(p.Skills));
             Line(sb, "research", List(p.Research));
             Line(sb, "done", List(p.Completed));
+            if (p.BankedRuns.Count > 0) Line(sb, "banked", List(p.BankedRuns.ToArray()));
             foreach (KeyValuePair<string, string[]> kv in Sorted(p.Loadouts)) if (IsId(kv.Key)) Line(sb, "loadout." + kv.Key, List(kv.Value));
             foreach (KeyValuePair<string, long> kv in Sorted(p.Stats)) if (IsId(kv.Key)) Line(sb, "stat." + kv.Key, kv.Value);
             foreach (KeyValuePair<string, long> kv in Sorted(p.WeaponXp)) if (IsId(kv.Key)) Line(sb, "wxp." + kv.Key, kv.Value);
@@ -103,6 +104,7 @@ namespace Deadfall.Rules.Progression
                 else if (k == "skills") Fill(p.Skills, v);
                 else if (k == "research") Fill(p.Research, v);
                 else if (k == "done") Fill(p.Completed, v);
+                else if (k == "banked") { foreach (string id in Split(v)) if (IsId(id) && !p.BankedRuns.Contains(id)) p.BankedRuns.Add(id); }
                 else if (k.StartsWith("cur.", StringComparison.Ordinal)) p.Wallet.Set(k.Substring(4), Long(v));
                 else if (k.StartsWith("cxp.", StringComparison.Ordinal)) p.ClassXp[k.Substring(4)] = Long(v);
                 else if (k.StartsWith("prestige.", StringComparison.Ordinal)) p.Prestige[k.Substring(9)] = (int)Math.Min(int.MaxValue, Long(v));

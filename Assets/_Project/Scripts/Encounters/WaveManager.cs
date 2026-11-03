@@ -291,7 +291,7 @@ namespace Deadfall.Encounters
                 Now = now,
                 AllSpawned = _director.AllSpawned,
                 Alive = _director.Alive,
-                AnyPlayerAlive = AnyPlayerAlive(),
+                AnyPlayerAlive = AnyPlayerAlive() || (SquadCanRecover != null && SquadCanRecover()),
                 AllReady = AllReady(),
             });
             if (events != SurgeRunEvents.None) HandleEvents(events, now);
@@ -386,6 +386,23 @@ namespace Deadfall.Encounters
                 PlayerIdentity id = PlayerIdentity.Of(t.TargetTransform.gameObject);
                 if (id != null && !id.IsLocal && !_players.Contains(id.ClientId)) _players.Add(id.ClientId);
             }
+        }
+
+        /// <summary>
+        /// M11: true while nobody is up but the squad can still come back (downed players with self-revive kits).
+        /// Set by the squad-life system; keeps the run from failing as soon as the last player goes down.
+        /// </summary>
+        public static Func<bool> SquadCanRecover;
+
+        /// <summary>Host: a player rejoined under a new id (D-16); their Field Credits move with them.</summary>
+        public void TransferCredits(ulong fromClientId, ulong toClientId)
+        {
+            if (!IsAuthority || fromClientId == toClientId) return;
+            int amount = _credits.Get(fromClientId);
+            if (amount <= 0) return;
+            _credits.Set(fromClientId, 0);
+            _credits.Add(toClientId, amount);
+            _stateDirty = true;
         }
 
         private static bool AnyPlayerAlive()

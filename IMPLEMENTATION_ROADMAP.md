@@ -178,8 +178,17 @@ Not in scope yet: co-op ready check at the deployment board (the host deploys an
 5. ✅ FOB Halcyon is smaller (40×30 m).
 6. ✅ 5 new EditMode tests in `LayoutTests.cs`.
 
-## M11 – Multiplayer completion ⬜
+## M11 – Multiplayer completion ✅ (except Lobby/Relay)
 Lobby/Relay flow, 4-player validation of every system, revives, spectate, reconnect window, host-drop handling, reward duplication tests, bandwidth profiling.
+
+1. ✅ Downs and revives (D-01, T-61): downed state with crawl and sidearm, 30/20/10 s bleed-out, 4 s teammate revive through the host, 3 squad self-revive kits.
+2. ✅ Squad wipe and returns (D-02, T-62): wipe only when nobody can recover; eliminated players spectate and return after the surge or the next objective with their base loadout.
+3. ✅ Reconnect window and host drop (D-16, T-63): 90 s held slot, credits and state restored on rejoin, Connection Lost panel with automatic retries, no host migration.
+4. ✅ Reward duplication (T-64): run ids, banked once, saved in the profile; tests.
+5. ✅ Bandwidth profiling (T-65): per-message payload counters in the dev readout and co-op panel.
+6. ✅ 4-player validation checklist (`TESTING.md` §3.17), to run in the editor.
+7. ⬜ Lobby/Relay: needs the Unity Gaming Services multiplayer package and a linked Unity Cloud project.
+8. ✅ 10 new EditMode tests in `MultiplayerRulesTests.cs`.
 
 ## M12 – Modes and content ⬜
 Survival, Operations, Endless complete; second environment; more weapons, bosses, mods, events, objectives.

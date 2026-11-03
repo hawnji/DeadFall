@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Enemies;
+using Deadfall.Game;
 using Deadfall.Net;
 using Deadfall.Player;
 using Deadfall.Rules.Combat;
@@ -56,6 +57,7 @@ namespace Deadfall.DebugTools
         private readonly Dictionary<string, WeaponDefinition> _weapons = new Dictionary<string, WeaponDefinition>();
         private readonly List<Vector3> _pendingShots = new List<Vector3>(MaxShotsPerMessage * 2);
         private readonly MeleeStats _quickMelee = new MeleeStats();
+        private readonly List<ulong> _expired = new List<ulong>(2);
 
         private SessionService _session;
         private GameObject _player;
@@ -101,6 +103,7 @@ namespace Deadfall.DebugTools
             _session.RegisterHandler(MsgPlayerLeft, OnPlayerLeft);
             _session.RegisterHandler(MsgPlayerDamage, OnPlayerDamage);
             EventBus<ShotTraced>.Subscribe(OnLocalShot);
+            ReconnectDirector.GhostReleased += OnGhostReleased;
             foreach (TrainingDummy d in TrainingDummy.All)
                 if (d != null) d.HealthChanged += OnDummyHealthChanged;
         }
@@ -108,6 +111,7 @@ namespace Deadfall.DebugTools
         private void OnDisable()
         {
             EventBus<ShotTraced>.Unsubscribe(OnLocalShot);
+            ReconnectDirector.GhostReleased -= OnGhostReleased;
             foreach (TrainingDummy d in TrainingDummy.All)
                 if (d != null) d.HealthChanged -= OnDummyHealthChanged;
             if (_session == null) return;
@@ -166,13 +170,30 @@ namespace Deadfall.DebugTools
 
         private void OnPeerDisconnected(ulong clientId)
         {
-            RemoveProxy(clientId);
+            // D-16: mid-run, a dropped player stays downed in place while their slot is held for a rejoin.
+            bool hold = ReconnectDirector.Current != null && ReconnectDirector.Current.WillHold(clientId);
+            if (hold && _proxies.TryGetValue(clientId, out RemotePlayerProxy proxy) && proxy != null)
+                proxy.MarkDisconnected((float)Deadfall.Rules.Common.ReconnectLedger<int>.WindowSeconds);
+            else RemoveProxy(clientId);
             _budgets.Remove(clientId);
+            SendPlayerLeft(clientId, hold);
+        }
+
+        private void SendPlayerLeft(ulong clientId, bool held)
+        {
             using (var w = new FastBufferWriter(16, Allocator.Temp))
             {
                 w.WriteValueSafe(clientId);
+                w.WriteValueSafe((byte)(held ? 1 : 0));
                 _session.SendToRemoteClients(MsgPlayerLeft, w, NetworkDelivery.ReliableSequenced);
             }
+        }
+
+        /// <summary>Host: a held slot was claimed by a rejoin or ran out; the stand-in goes for everyone.</summary>
+        private void OnGhostReleased(ulong oldClientId)
+        {
+            RemoveProxy(oldClientId);
+            if (_session.IsHost) SendPlayerLeft(oldClientId, false);
         }
 
         // ---------------------------------------------------------------- per frame
@@ -182,6 +203,11 @@ namespace Deadfall.DebugTools
             float dt = Time.deltaTime;
             foreach (RemotePlayerProxy p in _proxies.Values)
                 if (p != null) p.Tick(dt);
+            // Held slots that were never claimed (the host also releases them; this covers a lost message).
+            _expired.Clear();
+            foreach (KeyValuePair<ulong, RemotePlayerProxy> kv in _proxies)
+                if (kv.Value != null && kv.Value.Disconnected && kv.Value.GhostSecondsLeft <= 0f && !_session.IsHost) _expired.Add(kv.Key);
+            foreach (ulong id in _expired) RemoveProxy(id);
 
             if (!CanSend() || _player == null) return;
             if (Time.unscaledTime < _nextStateTime) return;
@@ -213,15 +239,17 @@ namespace Deadfall.DebugTools
             byte flags = 0;
             if (_motor != null && _motor.IsCrouched) flags |= 1;
             if (_status != null && _status.IsDead) flags |= 2;
+            if (_status != null && _status.IsDowned) flags |= 4;
             float health01 = _health != null ? _health.Normalized : 1f;
             int weaponIndex = _playerWeapons != null ? WeaponCatalog.IndexOf(_playerWeapons.CurrentDefinition) : -1;
             byte weapon = weaponIndex >= 0 && weaponIndex < byte.MaxValue ? (byte)weaponIndex : byte.MaxValue;
-            WriteState(_session.LocalClientId, pos, yaw, pitch, flags, health01, weapon, ulong.MaxValue);
+            byte bleed = _health != null && _health.IsDowned ? (byte)Mathf.RoundToInt(_health.BleedOut01 * 255f) : (byte)0;
+            WriteState(_session.LocalClientId, pos, yaw, pitch, flags, health01, weapon, ulong.MaxValue, bleed);
         }
 
         /// <param name="weapon">Index in <see cref="WeaponCatalog.All"/> of the weapon in hand (255: none/unknown), so
         /// teammates are drawn holding it.</param>
-        private void WriteState(ulong id, Vector3 pos, float yaw, float pitch, byte flags, float health01, byte weapon, ulong except)
+        private void WriteState(ulong id, Vector3 pos, float yaw, float pitch, byte flags, float health01, byte weapon, ulong except, byte bleed)
         {
             using (var w = new FastBufferWriter(64, Allocator.Temp))
             {
@@ -232,6 +260,7 @@ namespace Deadfall.DebugTools
                 w.WriteValueSafe(flags);
                 w.WriteValueSafe(health01);
                 w.WriteValueSafe(weapon);
+                w.WriteValueSafe(bleed);
                 if (_session.IsHost) _session.SendToRemoteClients(MsgPlayerState, w, NetworkDelivery.UnreliableSequenced, except);
                 else _session.SendToServer(MsgPlayerState, w, NetworkDelivery.UnreliableSequenced);
             }
@@ -246,16 +275,18 @@ namespace Deadfall.DebugTools
             r.ReadValueSafe(out byte flags);
             r.ReadValueSafe(out float health01);
             r.ReadValueSafe(out byte weapon);
+            r.ReadValueSafe(out byte bleed);
             if (!IsFinite(pos) || !IsFinite(yaw) || !IsFinite(pitch)) return;
 
             if (_session.IsHost)
             {
                 id = sender; // never trust the id a client writes about itself
-                WriteState(id, pos, yaw, pitch, flags, health01, weapon, sender); // relay to everyone else
+                WriteState(id, pos, yaw, pitch, flags, health01, weapon, sender, bleed); // relay to everyone else
             }
             if (id == _session.LocalClientId) return;
             RemotePlayerProxy proxy = GetOrCreateProxy(id);
-            proxy.SetTarget(pos, yaw, pitch, (flags & 1) != 0, (flags & 2) != 0, health01);
+            if (proxy.Disconnected) return; // a held slot; the player comes back under a new id
+            proxy.SetTarget(pos, yaw, pitch, (flags & 1) != 0, (flags & 2) != 0, health01, (flags & 4) != 0, bleed / 255f);
             proxy.SetWeapon(weapon == byte.MaxValue ? null : WeaponCatalog.At(weapon));
         }
 
@@ -263,7 +294,10 @@ namespace Deadfall.DebugTools
         {
             if (_session.IsHost) return;
             r.ReadValueSafe(out ulong id);
-            RemoveProxy(id);
+            r.ReadValueSafe(out byte held);
+            if (held != 0 && _proxies.TryGetValue(id, out RemotePlayerProxy proxy) && proxy != null)
+                proxy.MarkDisconnected((float)Deadfall.Rules.Common.ReconnectLedger<int>.WindowSeconds);
+            else RemoveProxy(id);
         }
 
         private RemotePlayerProxy GetOrCreateProxy(ulong id)

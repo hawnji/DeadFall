@@ -104,8 +104,11 @@ namespace Deadfall.DebugTools
             for (int i = _numbers.Count - 1; i >= 0; i--)
                 if (Time.time > _numbers[i].Until) _numbers.RemoveAt(i);
 
-            // Auto-respawn a few seconds after death so testing never stalls.
-            if (_health != null && !_health.IsAlive && _respawnAt < 0f) _respawnAt = Time.time + 3f;
+            // Outside a run, get back up a few seconds after going down so testing never stalls. During a run the
+            // squad rules decide (revives, kits, return after the surge: M11).
+            bool inRun = Deadfall.Encounters.WaveManager.Current != null && Deadfall.Encounters.WaveManager.Current.IsRunning;
+            if (inRun) _respawnAt = -1f;
+            else if (_health != null && !_health.IsAlive && _respawnAt < 0f) _respawnAt = Time.time + 3f;
             if (_respawnAt > 0f && Time.time >= _respawnAt)
             {
                 _respawnAt = -1f;
@@ -183,6 +186,8 @@ namespace Deadfall.DebugTools
                         $"at once {plan.Concurrency}, dirs {waves.Director.ActiveGroups.Count}, hp x{plan.HealthScale:0.00}" +
                         (waves.Director.Skipped > 0 ? $", {waves.Director.Skipped} skipped" : "");
             }
+            Deadfall.Net.SessionService session = Deadfall.Net.SessionService.Current;
+            if (session != null && session.IsActive) text += "\n" + session.Stats.Summary();
             if (_spawner == null) _spawner = GetComponent<SandboxEnemySpawner>();
             if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
             if (_showHelp)

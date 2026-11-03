@@ -20,7 +20,8 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M8 – Objectives, events, environment | Done (editor check held until M10): side objectives, Operation Cold Start with extraction, Blackout / Stalker / Lockdown events |
 | M9 – Engineering | Done (editor check held until M10): Scrap, build mode, Sentry, Drone, Arc Fence, Barricade, upgrades, repairs |
 | M10 – FOB and permanent progression | Done (editor check: `TESTING.md` §3.12): FOB Halcyon with seven facilities, loadouts, skill trees, research, challenges, achievements, prestige, versioned saves |
-| M11–M13 | See `IMPLEMENTATION_ROADMAP.md` |
+| M11 – Multiplayer completion | Done except Lobby/Relay (editor check: `TESTING.md` §3.17): downs, revives, self-revive kits, spectating, returns after surges, 90 s rejoin window, single reward banking, bandwidth counters |
+| M12–M13 | See `IMPLEMENTATION_ROADMAP.md` |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 
@@ -97,6 +98,8 @@ UI: every HUD element and menu shares one modern style that scales with resoluti
 Environments: generated rooms are themed by type (lab, servers, storage, canteen, atrium, reactor, containment) with tiles, trim, sector-coloured stripes, beams, pipes, fixtures, furniture and clutter; maps have a light haze and a few failing lights.
 
 Map rework: doors show their price or what they need (switch, power relay); F opens them, pulls switches and starts relays. Enemies break in through boarded openings; F at one repairs a board for 10 credits during a run.
+
+Co-op life (M11): at 0 HP you are downed, not dead. Teammates hold F near you for 4 s to revive you; while down you can hold F to spend one of the squad's 3 self-revive kits. Bleed out and you spectate until the surge ends. A dropped client can rejoin within 90 s.
 
 FOB and progression (M10): F at a facility console opens it. Command Center deploys (Operation or Survival) and has a dev button that grants currency and levels; Armory sets class and loadout; Training Range holds skill trees and prestige; Research Lab, Engineering Workshop and Intelligence Center sell research; Trophy Room shows challenges. Runs end on a results screen with "Return to FOB".
 

@@ -27,6 +27,17 @@ namespace Deadfall.Core
     /// An interactable that also works from nearby without aiming at it (barricades). <c>PlayerInteractor</c> uses
     /// the closest one in reach when nothing is under the crosshair.
     /// </summary>
+    /// <summary>
+    /// An interactable used once after Interact is held without a break for <see cref="ChannelSeconds"/>
+    /// (teammate revives). Letting go, or losing the target, starts over. <see cref="OnChannel"/> runs each frame
+    /// of the hold so the target can react (a revive pauses the bleed-out).
+    /// </summary>
+    public interface IChannelInteractable : IInteractable
+    {
+        float ChannelSeconds { get; }
+        void OnChannel(GameObject interactor, bool active);
+    }
+
     public interface INearbyInteractable : IInteractable
     {
         /// <summary>True when a player standing at <paramref name="feet"/> can use it; <paramref name="distance"/> ranks candidates.</summary>

@@ -119,6 +119,13 @@ namespace Deadfall.Player
                 mi.SprintHeld = f.SprintHeld;
                 mi.JumpPressed = f.JumpPressed;
                 mi.CrouchHeld = f.CrouchHeld;
+                if (_status != null && _status.IsDowned)
+                {
+                    // Downed (D-01): stay low and crawl; no sprint or jump.
+                    mi.SprintHeld = false;
+                    mi.JumpPressed = false;
+                    mi.CrouchHeld = true;
+                }
             }
             Simulate(mi, Time.deltaTime);
         }
@@ -137,6 +144,7 @@ namespace Deadfall.Player
             IsSprinting = input.SprintHeld && forwardish && !_isCrouched && !blocked;
 
             float speed = IsSprinting ? c.SprintSpeed : _isCrouched ? c.CrouchSpeed : c.WalkSpeed;
+            if (_status != null && _status.IsDowned) speed = c.CrouchSpeed * Deadfall.Rules.Combat.DownedRules.CrawlMultiplier;
             if (_status != null)
             {
                 speed *= _status.WeaponMoveMultiplier * _status.BonusMoveMultiplier;

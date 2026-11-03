@@ -49,6 +49,10 @@ namespace Deadfall.Net
         public ulong LocalClientId => _network != null && IsActive ? _network.LocalClientId : NetworkManager.ServerClientId;
         /// <summary>Human-readable reason for the last failure or disconnect, empty when none.</summary>
         public string LastError { get; private set; } = string.Empty;
+        /// <summary>The last session ended because a connected client lost the host (not because we left). D-16 rejoin.</summary>
+        public bool WasDropped { get; private set; }
+        /// <summary>Bytes sent and received per message name (M11 bandwidth profiling).</summary>
+        public NetStats Stats { get; } = new NetStats();
         public string Address { get; private set; } = DefaultAddress;
         public ushort Port { get; private set; } = DefaultPort;
         /// <summary>Number of remote players connected to this host (host only).</summary>
@@ -117,6 +121,8 @@ namespace Deadfall.Net
             EnsureNetworkManager();
             Port = port;
             Address = "0.0.0.0";
+            WasDropped = false;
+            Stats.Reset();
             _transport.SetConnectionData("127.0.0.1", port, "0.0.0.0");
             LastError = string.Empty;
             if (!_network.StartHost())
@@ -138,6 +144,8 @@ namespace Deadfall.Net
             EnsureNetworkManager();
             Address = address;
             Port = port;
+            WasDropped = false;
+            Stats.Reset();
             _transport.SetConnectionData(address, port);
             LastError = string.Empty;
             _clientConnected = false;
@@ -155,7 +163,16 @@ namespace Deadfall.Net
         }
 
         /// <summary>Leaves or closes the session. Safe to call when offline.</summary>
-        public void Stop() => EndSession(string.Empty);
+        public void Stop()
+        {
+            WasDropped = false;
+            EndSession(string.Empty);
+        }
+
+        /// <summary>Joins the last host again (D-16 rejoin after a drop).</summary>
+        public bool Rejoin() => !IsActive && StartClient(Address, Port);
+
+        private void Update() => Stats.Tick(Time.unscaledTime);
 
         private void EndSession(string reason)
         {
@@ -233,6 +250,7 @@ namespace Deadfall.Net
             }
             if (Role != SessionRole.Client) return;
             // On a client this fires for our own connection: either the host went away or we never got in.
+            WasDropped = _clientConnected;
             string why = _network.DisconnectReason;
             if (string.IsNullOrEmpty(why))
                 why = _clientConnected ? "The host closed the session or the connection dropped." : $"Could not reach a host at {Address}:{Port}.";
@@ -275,6 +293,7 @@ namespace Deadfall.Net
             if (cmm == null) return;
             cmm.RegisterNamedMessageHandler(messageName, (sender, reader) =>
             {
+                Stats.Received(messageName, reader.Length);
                 try
                 {
                     handler(sender, reader);
@@ -291,6 +310,7 @@ namespace Deadfall.Net
         public void SendToServer(string messageName, FastBufferWriter writer, NetworkDelivery delivery)
         {
             if (!IsConnectedClient) return;
+            Stats.Sent(messageName, writer.Length);
             _network.CustomMessagingManager.SendNamedMessage(messageName, NetworkManager.ServerClientId, writer, delivery);
         }
 
@@ -298,6 +318,7 @@ namespace Deadfall.Net
         public void SendToClient(string messageName, ulong clientId, FastBufferWriter writer, NetworkDelivery delivery)
         {
             if (!IsHost || clientId == _network.LocalClientId) return;
+            Stats.Sent(messageName, writer.Length);
             _network.CustomMessagingManager.SendNamedMessage(messageName, clientId, writer, delivery);
         }
 
@@ -313,6 +334,7 @@ namespace Deadfall.Net
                 if (id != _network.LocalClientId && id != exceptClientId) _sendList.Add(id);
             }
             if (_sendList.Count == 0) return;
+            Stats.Sent(messageName, writer.Length * _sendList.Count);
             _network.CustomMessagingManager.SendNamedMessage(messageName, _sendList, writer, delivery);
         }
     }

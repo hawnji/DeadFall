@@ -110,12 +110,7 @@ namespace Deadfall.UI
                 HudKit.Label(new Rect(card.x + 16f, card.y + 6f, 200f, 24f), "HEALTH", 13, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
                 HudKit.Label(new Rect(card.x + 16f, card.y + 2f, card.width - 32f, 32f), Mathf.CeilToInt(_health.Current).ToString(), 28, Color.white, TextAnchor.MiddleRight, head: true);
                 HudKit.Bar(new Rect(card.x + 16f, card.y + 40f, card.width - 32f, 14f), n, hc, 10, null, _ghostHealth);
-                if (!_health.IsAlive)
-                {
-                    HudKit.Backdrop(0.35f);
-                    HudKit.Label(new Rect(0f, h * 0.33f, w, 60f), "YOU DIED", 54, HudKit.Bad, TextAnchor.MiddleCenter, head: true);
-                    HudKit.Label(new Rect(0f, h * 0.33f + 58f, w, 28f), "Your squad can still bring you back", 18, HudKit.TextDim, TextAnchor.MiddleCenter);
-                }
+                // Downed and eliminated screens are drawn by the squad HUD (M11).
             }
 
             // Weapon card (bottom right).
