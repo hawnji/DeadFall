@@ -59,14 +59,14 @@ namespace Deadfall.World
     }
 
     /// <summary>
-    /// Turns a <see cref="Layout"/> into greybox geometry: floor, ceiling and walls per room cell edge (doorways where
-    /// sockets connect, boarded openings at breaches, solid wall elsewhere), lights, columns and cover props, sealed
+    /// Turns a <see cref="Layout"/> into geometry: floor, ceiling and walls per room cell edge (doorways where
+    /// sockets connect, boarded openings at breaches, solid wall elsewhere), lights, columns, cover props and themed set dressing (MapBuilder.Dressing.cs), sealed
     /// closets behind breaches, and points for player spawns, enemy spawns (the closets) and loot. Locked doors,
     /// their switches and the breach barricades are built by <see cref="BuildDoors"/> after the NavMesh bake, so the
     /// bake sees every opening open and those carve it while closed (T-32).
     /// Everything is deterministic from the layout seed, so every peer builds the same map.
     /// </summary>
-    public sealed class MapBuilder
+    public sealed partial class MapBuilder
     {
         public const float WallThickness = 0.3f;
         public const float DoorWidth = 2.4f;
@@ -224,10 +224,9 @@ namespace Deadfall.World
             Transform t = go.transform;
 
             RoomRole role = room.Template.Role;
-            Color floor = role == RoomRole.Corridor ? new Color(0.27f, 0.28f, 0.3f) : new Color(0.31f, 0.32f, 0.33f);
-            if (role == RoomRole.Spawn) floor = new Color(0.28f, 0.34f, 0.3f);
-            if (role == RoomRole.Objective) floor = new Color(0.36f, 0.32f, 0.24f);
-            if (role == RoomRole.Boss) floor = new Color(0.34f, 0.24f, 0.24f);
+            Theme theme = ThemeFor(room);
+            Color floor = theme.FloorAlt * 0.55f; // shows as grout between the tiles (DressRoom)
+            floor.a = 1f;
             float ceilingY = role == RoomRole.Secret ? 1.6f : _h;
 
             // Floor and ceiling as one box per run of cells in each row (shaped rooms leave their notches empty).
@@ -246,10 +245,10 @@ namespace Deadfall.World
             }
             // A square of the sector colour in the middle helps reading the map while sectors are new.
             Vector3 mid = map.RoomCenter(room.Index);
-            Box(t, "SectorMark", new Vector3(mid.x, 0.005f, mid.z), new Vector3(1.2f, 0.01f, 1.2f), SectorColor(room.Sector), collider: false);
+            Box(t, "SectorMark", new Vector3(mid.x, 0.026f, mid.z), new Vector3(1.2f, 0.01f, 1.2f), SectorColor(room.Sector), collider: false);
 
             // Walls: one segment per boundary cell edge.
-            Color wall = new Color(0.36f, 0.37f, 0.4f);
+            Color wall = theme.Wall;
             for (int x = 0; x < room.Width; x++)
                 for (int z = 0; z < room.Depth2; z++)
                 {
@@ -263,10 +262,10 @@ namespace Deadfall.World
                     }
                 }
 
-            // Light.
-            // Lights: one for small rooms, a few spread over the cells of big ones.
+            // Lights: one for small rooms, a few spread over the cells of big ones. Some flicker.
             int lights = Mathf.Clamp(room.Template.CellCount / 10, 1, 4);
             var lightCells = new List<Cell>(room.Cells());
+            var lightPoints = new List<Vector3>(lights);
             for (int li = 0; li < lights; li++)
             {
                 Cell lc = lights == 1 ? room.CenterCell : lightCells[(li * lightCells.Count) / lights + lightCells.Count / (lights * 2)];
@@ -277,11 +276,14 @@ namespace Deadfall.World
                 light.type = LightType.Point;
                 light.shadows = LightShadows.None;
                 light.range = lights == 1 ? Mathf.Max(b.size.x, b.size.z) * 0.85f + 2f : 16f;
-                light.intensity = role == RoomRole.Corridor ? 1.1f : 1.5f;
-                light.color = role == RoomRole.Boss ? new Color(1f, 0.75f, 0.7f) : new Color(0.95f, 0.97f, 1f);
+                light.intensity = (role == RoomRole.Corridor ? 1.1f : 1.5f) * theme.LightScale;
+                light.color = theme.Light;
+                lightPoints.Add(lightGo.transform.position);
+                if (LightFlicker.ShouldFlicker(layout.Seed, room.Index, li)) lightGo.AddComponent<LightFlicker>();
             }
 
-            BuildProps(layout, room, t, b);
+            DressRoom(layout, map, room, t, ceilingY, theme, lightPoints);
+            BuildProps(layout, room, t, b, theme);
         }
 
         private enum Opening { None, Door, Vent, Breach }
@@ -327,7 +329,7 @@ namespace Deadfall.World
         /// few crates and lockers. Everything stays clear of doorways, breaches, the room's centre (objective props)
         /// and the wall strip where loot and switches go.
         /// </summary>
-        private void BuildProps(Layout layout, PlacedRoom room, Transform parent, Bounds b)
+        private void BuildProps(Layout layout, PlacedRoom room, Transform parent, Bounds b, Theme theme)
         {
             RoomRole role = room.Template.Role;
             if (role == RoomRole.Corridor || role == RoomRole.Secret || room.Template.CellCount < 9) return;
@@ -335,10 +337,22 @@ namespace Deadfall.World
             List<Vector3> keepClear = DoorPoints(layout, room);
             Vector3 mid = new Vector3((room.CenterCell.X + 0.5f) * _cs, 0f, (room.CenterCell.Z + 0.5f) * _cs);
 
+            var placedProps = new List<Vector4>(); // xyz = floor point, w = footprint radius
+
             bool Clear(Vector3 p, float doorRadius)
             {
                 if ((p - mid).sqrMagnitude < 9f) return false;
                 foreach (Vector3 d in keepClear) if ((p - d).sqrMagnitude < doorRadius * doorRadius) return false;
+                return true;
+            }
+
+            bool Spaced(Vector3 p, float radius)
+            {
+                foreach (Vector4 q in placedProps)
+                {
+                    float min = radius + q.w + 0.9f; // a walkable gap between pieces
+                    if ((new Vector3(q.x, 0f, q.z) - p).sqrMagnitude < min * min) return false;
+                }
                 return true;
             }
 
@@ -358,6 +372,7 @@ namespace Deadfall.World
                         if (!Clear(p, 3.2f) || rng.NextFloat() < 0.3f) continue;
                         float w = role == RoomRole.Boss ? 1.2f : 0.8f;
                         ModelLibrary.Skin(Box(parent, "Column", p + Vector3.up * (_h * 0.5f), new Vector3(w, _h, w), col), "prop_column");
+                        placedProps.Add(new Vector4(p.x, 0f, p.z, w * 0.75f));
                         placed++;
                     }
                 // Rooms too narrow for corner columns get a low partition wall instead.
@@ -368,25 +383,49 @@ namespace Deadfall.World
                     {
                         Vector3 size = room.Width >= room.Depth2 ? new Vector3(0.4f, 1.2f, _cs * 0.9f) : new Vector3(_cs * 0.9f, 1.2f, 0.4f);
                         ModelLibrary.Skin(Box(parent, "Partition", p + Vector3.up * 0.6f, size, new Color(0.35f, 0.36f, 0.38f)), "prop_partition", longAlongX: true);
+                        placedProps.Add(new Vector4(p.x, 0f, p.z, _cs * 0.45f));
                     }
                 }
             }
 
-            int count = role == RoomRole.Boss ? 4 : rng.Range(2, 5);
             var cells = new List<Cell>(room.Cells());
+            bool Interior(Cell c) => room.Contains(c.Step(Dir.North)) && room.Contains(c.Step(Dir.South)) && room.Contains(c.Step(Dir.East)) && room.Contains(c.Step(Dir.West));
+
+            // Themed furniture first (about one piece per six interior cells), squared to the room.
+            int interiorCells = 0;
+            foreach (Cell c in cells) if (Interior(c)) interiorCells++;
+            int furniture = Mathf.Min(theme.Furniture.Length, Mathf.Max(1, interiorCells / 3));
+            for (int f = 0; f < furniture; f++)
+            {
+                string id = theme.Furniture[f];
+                float radius = FootprintRadius(id);
+                for (int tries = 0; tries < 16; tries++)
+                {
+                    Cell c = cells[rng.Range(0, cells.Count)];
+                    // Interior cells only (the wall strip is for loot, switches and the build ghost's clearance).
+                    if (!Interior(c)) continue;
+                    var p = new Vector3((c.X + rng.Range(0.3f, 0.7f)) * _cs, 0f, (c.Z + rng.Range(0.3f, 0.7f)) * _cs);
+                    if (!Clear(p, 3f + radius * 0.5f) || !Spaced(p, radius)) continue;
+                    float yaw = (room.Width >= room.Depth2 ? 0f : 90f) + rng.Range(0, 2) * 180f + rng.Range(-3f, 3f);
+                    PlaceFurniture(parent, id, p, yaw);
+                    placedProps.Add(new Vector4(p.x, 0f, p.z, radius));
+                    break;
+                }
+            }
+
+            int count = role == RoomRole.Boss ? 2 : rng.Range(1, 4);
             for (int i = 0, tries = 0; i < count && tries < 40; tries++)
             {
                 Cell c = cells[rng.Range(0, cells.Count)];
-                // Interior cells only (the wall strip is for loot, switches and the build ghost's clearance).
-                bool interior = room.Contains(c.Step(Dir.North)) && room.Contains(c.Step(Dir.South)) && room.Contains(c.Step(Dir.East)) && room.Contains(c.Step(Dir.West));
-                if (!interior) continue;
+                if (!Interior(c)) continue;
                 var p = new Vector3((c.X + rng.Range(0.25f, 0.75f)) * _cs, 0f, (c.Z + rng.Range(0.25f, 0.75f)) * _cs);
-                if (!Clear(p, 3f)) continue;
+                if (!Clear(p, 3f) || !Spaced(p, 1f)) continue;
                 bool tall = rng.NextFloat() < 0.3f;
                 var size = tall ? new Vector3(1.2f, 1.8f, 1.2f) : new Vector3(rng.Range(1.2f, 2.4f), rng.Range(0.8f, 1.1f), rng.Range(0.8f, 1.4f));
                 GameObject prop = Box(parent, tall ? "Locker" : "Crate", p + Vector3.up * (size.y * 0.5f), size, new Color(0.4f, 0.37f, 0.32f));
                 prop.transform.rotation = Quaternion.Euler(0f, rng.Range(0, 4) * 90f + rng.Range(-8f, 8f), 0f);
                 ModelLibrary.Skin(prop, tall ? "prop_locker" : "prop_crate");
+                placedProps.Add(new Vector4(p.x, 0f, p.z, Mathf.Max(size.x, size.z) * 0.5f));
                 i++;
             }
         }

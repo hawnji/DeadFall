@@ -92,6 +92,8 @@ Engineering (M9): B build mode (1-4 pick, R turn, click place), F repair/refill,
 
 Models: enemies, co-op teammates, the FOB booths and map props use low-poly models built by `Tools/Blender/build_models.py` (see `Tools/Blender/README.md`); the game falls back to primitives if a model is missing.
 
+Environments: generated rooms are themed by type (lab, servers, storage, canteen, atrium, reactor, containment) with tiles, trim, sector-coloured stripes, beams, pipes, fixtures, furniture and clutter; maps have a light haze and a few failing lights.
+
 Map rework: doors show their price or what they need (switch, power relay); F opens them, pulls switches and starts relays. Enemies break in through boarded openings; F at one repairs a board for 10 credits during a run.
 
 FOB and progression (M10): F at a facility console opens it. Command Center deploys (Operation or Survival) and has a dev button that grants currency and levels; Armory sets class and loadout; Training Range holds skill trees and prestige; Research Lab, Engineering Workshop and Intelligence Center sell research; Trophy Room shows challenges. Runs end on a results screen with "Return to FOB".
