@@ -64,7 +64,6 @@ namespace Deadfall.UI
             y += 34f;
             changed |= Volume(lx, ref y, colW, "Master", ref s.MasterVolume);
             changed |= Volume(lx, ref y, colW, "Effects", ref s.EffectsVolume);
-            changed |= Volume(lx, ref y, colW, "Ambience", ref s.AmbienceVolume);
             changed |= Volume(lx, ref y, colW, "Interface", ref s.InterfaceVolume);
 
             y += 12f;

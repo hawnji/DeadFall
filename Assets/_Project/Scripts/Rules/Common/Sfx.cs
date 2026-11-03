@@ -18,7 +18,6 @@ namespace Deadfall.Rules.Common
         EnemyGrowl, EnemyAttack, EnemyDeath, EnemySpit, BossRoar,
         Explosion, BarricadeBreak, Pickup, Credits,
         SurgeStart, SurgeClear, ObjectiveDone, EventAlarm,
-        AmbienceIndustrial, AmbienceTunnel, AmbienceFob,
     }
 
     public enum SfxBus : byte { Effects, Interface, Ambience }
@@ -210,8 +209,6 @@ namespace Deadfall.Rules.Common
                     i.Spatial = false; i.MaxVoices = 2; i.Volume = 0.6f; break;
                 case SfxId.SurgeStart: case SfxId.SurgeClear: case SfxId.ObjectiveDone: case SfxId.EventAlarm:
                     i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.7f; i.PitchJitter = 0f; break;
-                case SfxId.AmbienceIndustrial: case SfxId.AmbienceTunnel: case SfxId.AmbienceFob:
-                    i.Bus = SfxBus.Ambience; i.Spatial = false; i.MaxVoices = 1; i.PitchJitter = 0f; i.Volume = 0.5f; i.LoopSeconds = 12f; break;
             }
             return i;
         }
@@ -325,24 +322,6 @@ namespace Deadfall.Rules.Common
                     new SfxLayer { Wave = SfxWave.Square, Duration = 1.6f, Attack = 0.02f, Decay = 0f, Freq0 = 465f, Freq1 = 465f, Gain = 0.3f, Cutoff0 = 2500f, Cutoff1 = 2500f, Tremolo = 2.5f, TremoloDepth = 1f },
                 };
 
-                case SfxId.AmbienceIndustrial: return new[]
-                {
-                    new SfxLayer { Wave = SfxWave.Noise, Duration = 12f, Gain = 0.6f, Cutoff0 = 380f, Cutoff1 = 380f, Tremolo = 0.08f, TremoloDepth = 0.5f },
-                    new SfxLayer { Wave = SfxWave.Sine, Duration = 12f, Freq0 = 50f, Freq1 = 50f, Gain = 0.35f, Tremolo = 0.25f, TremoloDepth = 0.3f },
-                    new SfxLayer { Wave = SfxWave.Sine, Duration = 12f, Freq0 = 75.5f, Freq1 = 75.5f, Gain = 0.15f },
-                };
-                case SfxId.AmbienceTunnel: return new[]
-                {
-                    new SfxLayer { Wave = SfxWave.Noise, Duration = 12f, Gain = 0.7f, Cutoff0 = 220f, Cutoff1 = 220f, Tremolo = 0.05f, TremoloDepth = 0.6f },
-                    new SfxLayer { Wave = SfxWave.Sine, Duration = 12f, Freq0 = 41f, Freq1 = 41f, Gain = 0.3f, Tremolo = 0.17f, TremoloDepth = 0.4f },
-                    new SfxLayer { Wave = SfxWave.Noise, Duration = 12f, Gain = 0.12f, Cutoff0 = 2400f, Cutoff1 = 2400f, Tremolo = 0.33f, TremoloDepth = 0.9f },
-                };
-                case SfxId.AmbienceFob: return new[]
-                {
-                    new SfxLayer { Wave = SfxWave.Sine, Duration = 12f, Freq0 = 60f, Freq1 = 60f, Gain = 0.3f },
-                    new SfxLayer { Wave = SfxWave.Sine, Duration = 12f, Freq0 = 120f, Freq1 = 120f, Gain = 0.1f },
-                    new SfxLayer { Wave = SfxWave.Noise, Duration = 12f, Gain = 0.25f, Cutoff0 = 600f, Cutoff1 = 600f, Tremolo = 0.1f, TremoloDepth = 0.3f },
-                };
             }
             return Array.Empty<SfxLayer>();
         }
