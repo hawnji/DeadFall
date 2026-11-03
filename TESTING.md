@@ -385,6 +385,18 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] The Broodmother uses her spider-like model; the carapace, egg sacs and core still appear by phase and take hits.
 - [ ] Full standalone pass: a 2-player co-op run in release builds from FOB to extraction, then quit and relaunch to check the profile and settings were kept.
 
+### 3.22 Manual checklist: enemy animation
+
+- [ ] Husks, Bolters, Spitters, Alphas, Bloaters, Bulwarks and Specimen Zero swing their legs and arms while walking; faster enemies stride faster, and standing enemies sway slightly instead of freezing.
+- [ ] Charging enemies (Bulwark, Goliath, Specimen in Rampage) brace in the wind-up, then sprint with arms thrown back.
+- [ ] Melee attacks: arms rise in the wind-up and slam down when the hit lands.
+- [ ] Spitters and Retchers throw their head back before spitting. Exploders spread their arms and shake as they swell.
+- [ ] Staggered enemies flail; dead enemies go limp as they fall.
+- [ ] Creepers scuttle on four limbs and rear up to attack. The Broodmother walks on alternating legs and raises her front legs before attacking.
+- [ ] Limbs stay attached at the hips and shoulders (no floating or detached parts), including on scaled variants.
+- [ ] A client sees the same animation as the host.
+- [ ] With a full horde (F8 a few times), frame rate holds up.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
