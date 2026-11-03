@@ -102,6 +102,10 @@ namespace Deadfall.World
                 map.RoomBounds.Add(b);
                 if (first) { all = b; first = false; } else all.Encapsulate(b);
             }
+            // Breach closets sit outside the rooms; the NavMesh bake uses these bounds, so they must be inside.
+            foreach (Breach br in layout.Breaches)
+                all.Encapsulate(new Bounds(new Vector3((br.Closet.X + 0.5f) * _cs, all.center.y, (br.Closet.Z + 0.5f) * _cs),
+                    new Vector3(_cs, all.size.y, _cs)));
             map.Bounds = all;
 
             foreach (PlacedRoom room in layout.Rooms) BuildRoom(layout, map, room);
