@@ -419,7 +419,8 @@ def player_body():
 
 
 def player_head():
-    """Eye-height origin, pitches with the aim: helmet, visor, forearms and a rifle where the placeholder gun was."""
+    """Eye-height origin, pitches with the aim: helmet, visor and forearms. The game adds the weapon model the
+    teammate is holding at (0.25, -0.27, 0.18) (RemotePlayerProxy.WeaponAnchor)."""
     m = Model("player_head")
     m.sph((0, 0.02, -0.03), (0.3, 0.28, 0.32), "C_C9A88A")  # face/head under the helmet
     m.sph((0, 0.08, -0.04), (0.34, 0.24, 0.36), ARMOR, smooth=True)  # helmet dome
@@ -427,14 +428,7 @@ def player_head():
     m.box((0, 0.17, -0.04), (0.06, 0.05, 0.3), "Accent", bevel=0.0)  # stripe
     m.box((0, 0.0, 0.14), (0.26, 0.08, 0.06), GLASS, bevel=0.015)  # visor
     m.box((0.17, 0.06, 0.0), (0.04, 0.08, 0.08), DARK, bevel=0.01)  # headset
-    # Rifle (placeholder gun at (0.25, -0.25, 0.35), 0.6 long).
-    g = (0.25, -0.25, 0.35)
-    m.box(g, (0.07, 0.1, 0.46), DARK, bevel=0.01)
-    m.box((g[0], g[1] - 0.02, g[2] + 0.33), (0.035, 0.035, 0.22), METAL, bevel=0.0)  # barrel
-    m.box((g[0], g[1] + 0.08, g[2] + 0.02), (0.04, 0.05, 0.16), METAL, bevel=0.005)  # sight
-    m.box((g[0], g[1] - 0.12, g[2] + 0.06), (0.05, 0.14, 0.07), DARK, rot=(15, 0, 0), bevel=0.005)  # magazine
-    m.box((g[0], g[1] - 0.05, g[2] - 0.28), (0.06, 0.12, 0.16), RUBBER, bevel=0.01)  # stock
-    # Forearms and gloves holding it.
+    # Forearms and gloves holding the weapon.
     m.limb((0.24, -0.38, -0.05), (0.25, -0.3, 0.22), (0.09, 0.09), OLIVE)
     m.box((0.25, -0.31, 0.24), (0.08, 0.08, 0.1), RUBBER, bevel=0.01)
     m.limb((-0.12, -0.36, 0.1), (0.2, -0.32, 0.46), (0.085, 0.085), OLIVE)
@@ -830,6 +824,14 @@ def preview(objects, out_dir):
             if name == "player":
                 w = place("player_body", x)
                 place("player_head", x, 1.68)
+                gun = by_name.get("weapon_halberd_ar")
+                if gun is not None:  # what a teammate holds (RemotePlayerProxy.WeaponAnchor)
+                    g = gun.copy()
+                    g.data = gun.data
+                    g.hide_render = False
+                    scene.collection.objects.link(g)
+                    g.location = (x - 0.25, -0.18, 1.68 - 0.27)
+                    temp.append(g)
                 tallest = max(tallest, 2.0)
             else:
                 w = place(name, x)

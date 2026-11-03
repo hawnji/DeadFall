@@ -298,7 +298,7 @@ Two players (as §3.1):
 - [ ] Generated maps: columns, partitions, crates and lockers show models and keep their collision; partitions running both ways look right. Doors show the blast door with the lock colour band and still slide open. Switch panels and power relays show their models with the lever and lamp still working. Supply Caches show the footlocker.
 - [ ] Weapons: every gun and melee weapon shows its model in first person (hip, aim, reload, swap, sprint, melee poses still work), with the barrel pointing forward and no clipping into the camera. Muzzle flashes and tracers start at the muzzle. Aiming puts the sight near the crosshair. Weapon drops show the spinning model above the tier-coloured disc and can still be picked up.
 - [ ] Nothing is pink in a player build.
-- [ ] Two players: the teammate shows a soldier with their player colour on shoulders, chest and helmet; the head, arms and rifle tilt with their aim; crouching shortens the body.
+- [ ] Two players: the teammate shows a soldier with their player colour on shoulders, chest and helmet; the head, arms and weapon tilt with their aim; crouching shortens the body. The teammate holds the model of the weapon they have out, and it changes when they swap (melee included).
 
 ## 4. Regression map
 

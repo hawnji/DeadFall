@@ -21,6 +21,12 @@ namespace Deadfall.DebugTools
 
         private Transform _body;
         private Transform _bodyModel;
+        private GameObject _weaponModel;
+        private WeaponDefinition _weaponShown;
+        private bool _hasModels;
+
+        /// <summary>Where the held weapon's model origin sits under the aim (matches player_head's hands).</summary>
+        private static readonly Vector3 WeaponAnchor = new Vector3(0.25f, -0.27f, 0.18f);
         private Transform _aim;
         private Renderer[] _renderers;
         private Vector3 _targetPos;
@@ -109,6 +115,8 @@ namespace Deadfall.DebugTools
             if (bodyModel != null && headModel != null)
             {
                 proxy._bodyModel = bodyModel.transform;
+                proxy._hasModels = true;
+                proxy.SetWeapon(WeaponCatalog.HalberdAR); // until their first state message says otherwise
                 body.GetComponent<Renderer>().enabled = false;
                 head.GetComponent<Renderer>().enabled = false;
                 visor.GetComponent<Renderer>().enabled = false;
@@ -131,6 +139,17 @@ namespace Deadfall.DebugTools
                 new Color(0.6f, 0.35f, 0.9f), new Color(0.3f, 0.8f, 0.75f),
             };
             return palette[(int)(id % (ulong)palette.Length)];
+        }
+
+        /// <summary>Shows the model of the weapon this teammate is holding (null keeps the current one).</summary>
+        public void SetWeapon(WeaponDefinition def)
+        {
+            if (!_hasModels || def == null || def == _weaponShown) return;
+            if (_weaponModel != null) Destroy(_weaponModel);
+            _weaponShown = def;
+            _weaponModel = ModelLibrary.Spawn(def.ContentId.Replace('.', '_'), _aim, slot => ModelLibrary.SlotFromAccent(slot, def.PlaceholderColor));
+            if (_weaponModel != null) _weaponModel.transform.localPosition = WeaponAnchor;
+            _renderers = GetComponentsInChildren<Renderer>();
         }
 
         public void SetTarget(Vector3 position, float yaw, float pitch, bool crouched, bool dead, float health01)

@@ -62,6 +62,7 @@ namespace Deadfall.DebugTools
         private PlayerLook _look;
         private PlayerMotor _motor;
         private PlayerStatus _status;
+        private PlayerWeapons _playerWeapons;
         private PlayerHealth _health;
         private IHitResolver _offlineResolver;
         private float _nextStateTime;
@@ -76,6 +77,7 @@ namespace Deadfall.DebugTools
             _motor = player.GetComponent<PlayerMotor>();
             _status = player.GetComponent<PlayerStatus>();
             _health = player.GetComponent<PlayerHealth>();
+            _playerWeapons = player.GetComponent<PlayerWeapons>();
         }
 
         private void Awake()
@@ -212,10 +214,14 @@ namespace Deadfall.DebugTools
             if (_motor != null && _motor.IsCrouched) flags |= 1;
             if (_status != null && _status.IsDead) flags |= 2;
             float health01 = _health != null ? _health.Normalized : 1f;
-            WriteState(_session.LocalClientId, pos, yaw, pitch, flags, health01, ulong.MaxValue);
+            int weaponIndex = _playerWeapons != null ? WeaponCatalog.IndexOf(_playerWeapons.CurrentDefinition) : -1;
+            byte weapon = weaponIndex >= 0 && weaponIndex < byte.MaxValue ? (byte)weaponIndex : byte.MaxValue;
+            WriteState(_session.LocalClientId, pos, yaw, pitch, flags, health01, weapon, ulong.MaxValue);
         }
 
-        private void WriteState(ulong id, Vector3 pos, float yaw, float pitch, byte flags, float health01, ulong except)
+        /// <param name="weapon">Index in <see cref="WeaponCatalog.All"/> of the weapon in hand (255: none/unknown), so
+        /// teammates are drawn holding it.</param>
+        private void WriteState(ulong id, Vector3 pos, float yaw, float pitch, byte flags, float health01, byte weapon, ulong except)
         {
             using (var w = new FastBufferWriter(64, Allocator.Temp))
             {
@@ -225,6 +231,7 @@ namespace Deadfall.DebugTools
                 w.WriteValueSafe(pitch);
                 w.WriteValueSafe(flags);
                 w.WriteValueSafe(health01);
+                w.WriteValueSafe(weapon);
                 if (_session.IsHost) _session.SendToRemoteClients(MsgPlayerState, w, NetworkDelivery.UnreliableSequenced, except);
                 else _session.SendToServer(MsgPlayerState, w, NetworkDelivery.UnreliableSequenced);
             }
@@ -238,15 +245,18 @@ namespace Deadfall.DebugTools
             r.ReadValueSafe(out float pitch);
             r.ReadValueSafe(out byte flags);
             r.ReadValueSafe(out float health01);
+            r.ReadValueSafe(out byte weapon);
             if (!IsFinite(pos) || !IsFinite(yaw) || !IsFinite(pitch)) return;
 
             if (_session.IsHost)
             {
                 id = sender; // never trust the id a client writes about itself
-                WriteState(id, pos, yaw, pitch, flags, health01, sender); // relay to everyone else
+                WriteState(id, pos, yaw, pitch, flags, health01, weapon, sender); // relay to everyone else
             }
             if (id == _session.LocalClientId) return;
-            GetOrCreateProxy(id).SetTarget(pos, yaw, pitch, (flags & 1) != 0, (flags & 2) != 0, health01);
+            RemotePlayerProxy proxy = GetOrCreateProxy(id);
+            proxy.SetTarget(pos, yaw, pitch, (flags & 1) != 0, (flags & 2) != 0, health01);
+            proxy.SetWeapon(weapon == byte.MaxValue ? null : WeaponCatalog.At(weapon));
         }
 
         private void OnPlayerLeft(ulong sender, FastBufferReader r)
