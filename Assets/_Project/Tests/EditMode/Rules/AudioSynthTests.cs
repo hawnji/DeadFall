@@ -52,17 +52,12 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
-        public void AmbienceLoopsWithoutASeam()
+        public void LoopsRenderWithoutASeam()
         {
-            foreach (SfxId id in new[] { SfxId.AmbienceIndustrial, SfxId.AmbienceTunnel, SfxId.AmbienceFob })
-            {
-                SfxInfo info = SfxBank.Info(id);
-                Assert.AreEqual(SfxBus.Ambience, info.Bus);
-                Assert.Greater(info.LoopSeconds, 0f);
-                float[] d = SfxSynth.RenderLoop(SfxBank.Recipe(id), 5, info.LoopSeconds);
-                Assert.AreEqual((int)(info.LoopSeconds * SfxSynth.SampleRate), d.Length);
-                Assert.Less(Math.Abs(d[d.Length - 1] - d[0]), 0.08f, $"{id} has a seam");
-            }
+            var bed = new[] { new SfxLayer { Wave = SfxWave.Noise, Duration = 4f, Gain = 0.6f, Cutoff0 = 400f, Cutoff1 = 400f, Tremolo = 0.2f, TremoloDepth = 0.4f } };
+            float[] d = SfxSynth.RenderLoop(bed, 5, 4f);
+            Assert.AreEqual(4 * SfxSynth.SampleRate, d.Length);
+            Assert.Less(Math.Abs(d[d.Length - 1] - d[0]), 0.08f);
         }
 
         [Test]

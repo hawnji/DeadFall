@@ -218,7 +218,7 @@ namespace Deadfall.Audio
             // Warm one clip a frame so the first gunshot does not hitch.
             if (_warmIndex < SfxBank.All.Length) ClipsOf(SfxBank.All[_warmIndex++]);
 
-            float amb = BusVolume(SfxBus.Ambience) * InfoOf(_ambience == SfxId.None ? SfxId.AmbienceFob : _ambience).Volume;
+            float amb = BusVolume(SfxBus.Ambience) * (_ambience == SfxId.None ? 0.5f : InfoOf(_ambience).Volume);
             _ambBlend = Mathf.MoveTowards(_ambBlend, 1f, Time.unscaledDeltaTime / AmbienceFade);
             AudioSource live = _ambUsingA ? _ambA : _ambB;
             AudioSource old = _ambUsingA ? _ambB : _ambA;

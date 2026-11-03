@@ -12,8 +12,7 @@ namespace Deadfall.Game
 {
     /// <summary>
     /// Turns game events into sounds (M13): the local player's gunfire, hit markers, damage, downs and revives,
-    /// enemy deaths and idle growls, surge horns, credit ticks, boss phase roars, and the ambience bed for where the
-    /// player is (FOB hum, Cinder Ridge industrial, Harrow Line tunnels). Sounds tied to one object (explosions,
+    /// enemy deaths and idle growls, surge horns, credit ticks, boss phase roars,. Sounds tied to one object (explosions,
     /// spit, turrets, barricades, remote shots, UI buttons) are played where they happen instead.
     /// </summary>
     public sealed class AudioCues : MonoBehaviour
@@ -160,12 +159,6 @@ namespace Deadfall.Game
         {
             if (WaveManager.Current != _waves) BindWaves(WaveManager.Current);
             if (ObjectiveDirector.Current != _objectives) BindObjectives(ObjectiveDirector.Current);
-
-            MapSession map = MapSession.Current;
-            SfxId bed = map != null && map.HasMap
-                ? (map.Environment != null && map.Environment.Id == "env.harrow_line" ? SfxId.AmbienceTunnel : SfxId.AmbienceIndustrial)
-                : SfxId.AmbienceFob;
-            GameAudio.SetAmbience(bed);
 
             TickGrowls();
         }
