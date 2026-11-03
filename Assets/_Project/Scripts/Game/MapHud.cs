@@ -1,13 +1,13 @@
 using Deadfall.Combat;
+using Deadfall.Core;
 using Deadfall.World;
 using UnityEngine;
 
 namespace Deadfall.Game
 {
-    /// <summary>Map line under the wave HUD (room name, sectors, next unlock) and a banner when a sector opens.</summary>
+    /// <summary>Location card (top left: map, sector, room, sectors and doors open) and a banner when a sector opens.</summary>
     public sealed class MapHud : MonoBehaviour
     {
-        private GUIStyle _line, _banner;
         private float _bannerUntil;
         private string _bannerText = string.Empty;
         private MapSession _bound;
@@ -37,29 +37,40 @@ namespace Deadfall.Game
         {
             MapSession s = MapSession.Current;
             if (s == null || !s.HasMap) return;
-            if (_line == null)
-            {
-                _line = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.UpperLeft };
-                _banner = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            }
+            HudKit.Begin();
             BuiltMap map = s.Map;
-            string room = string.Empty;
+            string room = "Outside";
+            int sector = -1;
             PlayerIdentity me = PlayerIdentity.Local;
             if (me != null)
             {
                 int r = map.RoomAt(me.transform.position);
-                if (r >= 0) room = map.Layout.Rooms[r].Template.DisplayName + "  ·  ";
+                if (r >= 0)
+                {
+                    room = map.Layout.Rooms[r].Template.DisplayName;
+                    sector = map.Layout.Rooms[r].Sector;
+                }
             }
-            string next = $"  ·  doors {s.DoorsOpened}/{s.DoorCount} open";
-            GUI.Label(new Rect(24f, Screen.height - 104f, 700f, 22f), $"Cinder Ridge  ·  {room}sectors {s.OpenSectors}/{s.SectorCount}{next}", _line);
+            // Location card, top left.
+            Color sc = sector >= 0 ? MapBuilder.SectorColor(sector) : HudKit.TextDim;
+            var card = new Rect(28f, 24f, 300f, 74f);
+            HudKit.AccentPanel(card, sc);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 20f), "CINDER RIDGE" + (sector >= 0 ? $"  ·  SECTOR {sector}" : string.Empty), 12, sc, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 24f, card.width - 32f, 26f), room, 19, Color.white, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 50f, card.width - 32f, 18f),
+                $"Sectors {s.OpenSectors}/{s.SectorCount}   ·   Doors {s.DoorsOpened}/{s.DoorCount}", 12, HudKit.TextDim, TextAnchor.MiddleLeft);
 
             if (Time.unscaledTime < _bannerUntil)
             {
                 float a = Mathf.Clamp01((_bannerUntil - Time.unscaledTime) / 0.6f);
-                GUI.color = new Color(0.55f, 0.95f, 0.6f, a);
-                GUI.Label(new Rect(0f, Screen.height * 0.22f, Screen.width, 40f), _bannerText, _banner);
-                GUI.color = Color.white;
+                float w = HudKit.W;
+                float tw = HudKit.TextWidth(_bannerText, 28, head: true) + 60f;
+                var b = new Rect((w - tw) * 0.5f, HudKit.H * 0.3f, tw, 48f);
+                HudKit.Panel(b, a);
+                HudKit.Fill(new Rect(b.x + 16f, b.yMax - 3f, b.width - 32f, 3f), new Color(HudKit.Good.r, HudKit.Good.g, HudKit.Good.b, a));
+                HudKit.Label(b, _bannerText, 28, new Color(HudKit.Good.r, HudKit.Good.g, HudKit.Good.b, a), TextAnchor.MiddleCenter, head: true);
             }
+            HudKit.End();
         }
     }
 }

@@ -10,10 +10,11 @@ namespace Deadfall.World
     /// A boarded opening between a room and the sealed closet behind it, where wave enemies appear. While any board
     /// is up it carves the NavMesh, so enemies in the closet can't path in and attack it instead (it is an
     /// <see cref="IBlocker"/>); each <see cref="HealthPerBoard"/> of damage tears off a board. Players repair one
-    /// board per use (F) and the map session pays credits for it. An invisible wall on the Ignore Raycast layer keeps
+    /// board per use (F, repeating while held, and usable from anywhere in front of the opening without aiming at it)
+    /// and the map session pays credits for it. An invisible wall on the Ignore Raycast layer keeps
     /// players out of the closet even with every board gone; bullets and enemies pass it.
     /// </summary>
-    public sealed class BreachBarricade : MonoBehaviour, IBlocker, IDamageable, IInteractable
+    public sealed class BreachBarricade : MonoBehaviour, IBlocker, IDamageable, IHoldInteractable, INearbyInteractable
     {
         public const int MaxBoards = 5;
         public const float HealthPerBoard = 60f;
@@ -93,6 +94,7 @@ namespace Deadfall.World
             b._obstacle.carving = true;
             b._obstacle.carveOnlyStationary = true;
             Blockers.Register(b);
+            NearbyInteractables.Register(b);
             return b;
         }
 
@@ -107,7 +109,29 @@ namespace Deadfall.World
             return go;
         }
 
-        private void OnDestroy() => Blockers.Unregister(this);
+        private void OnDestroy()
+        {
+            Blockers.Unregister(this);
+            NearbyInteractables.Unregister(this);
+        }
+
+        /// <summary>A little slower than the host's repair cooldown, so held repairs never get refused.</summary>
+        public float RepeatSeconds => 0.7f;
+
+        /// <summary>Room side, in front of the opening: up to <see cref="RepairReach"/> m out and a little past each post.</summary>
+        public bool InReach(Vector3 feet, out float distance)
+        {
+            distance = float.MaxValue;
+            if (!isActiveAndEnabled) return false;
+            Vector3 local = transform.InverseTransformPoint(feet); // +z points into the closet
+            if (local.z > 0.2f || local.z < -RepairReach) return false;
+            if (Mathf.Abs(local.x) > OpeningWidth * 0.5f + 0.9f) return false;
+            if (local.y < -0.6f || local.y > 1.5f) return false;
+            distance = new Vector2(Mathf.Max(0f, Mathf.Abs(local.x) - OpeningWidth * 0.5f), -local.z).magnitude;
+            return true;
+        }
+
+        public const float RepairReach = 2.6f;
 
         public float DistanceFrom(Vector3 point)
         {

@@ -59,6 +59,14 @@ namespace Deadfall.DebugTools
 
         private void OnGUI()
         {
+            Deadfall.Core.HudKit.Begin();
+            GUI.skin = Deadfall.Core.HudKit.Skin;
+            DrawGui();
+            Deadfall.Core.HudKit.End();
+        }
+
+        private void DrawGui()
+        {
             if (_sync == null || _sync.Session == null) return;
             EnsureStyles();
             GUI.depth = -10;
@@ -67,16 +75,16 @@ namespace Deadfall.DebugTools
             // Always-visible status line.
             string line = StatusText(s);
             if (!string.IsNullOrEmpty(line))
-                GUI.Label(new Rect(Screen.width - 420f, 8f, 408f, 22f), line, _status);
+                Deadfall.Core.HudKit.Label(new Rect(0f, Deadfall.Core.HudKit.H - 26f, Deadfall.Core.HudKit.W, 20f), line, 12, Deadfall.Core.HudKit.Info, TextAnchor.MiddleCenter, head: true);
 
             bool paused = _cursor == null || !_cursor.IsLocked;
             if (!paused || Deadfall.Core.UiModal.Active) return;
 
-            float w = 340f, h = 210f;
-            var area = new Rect((Screen.width - w) * 0.5f, Screen.height * 0.4f + 50f, w, h);
-            GUI.Box(area, GUIContent.none, _box);
+            float w = 360f, h = 230f;
+            var area = new Rect((Deadfall.Core.HudKit.W - w) * 0.5f, Deadfall.Core.HudKit.H * 0.4f + 50f, w, h);
+            Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
-            GUILayout.Label("Co-op test (networking spike)", _label);
+            GUILayout.Label("CO-OP", _label);
 
             if (!s.IsActive)
             {
@@ -158,6 +166,8 @@ namespace Deadfall.DebugTools
             _box = new GUIStyle(GUI.skin.box);
             _box.normal.background = bg;
             _label = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold };
+            if (Deadfall.Core.HudKit.HeadFont != null) _label.font = Deadfall.Core.HudKit.HeadFont;
+            _label.normal.textColor = Deadfall.Core.HudKit.Accent;
             _status = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.UpperRight };
             _status.normal.textColor = new Color(0.6f, 0.85f, 1f);
         }

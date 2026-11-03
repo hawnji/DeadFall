@@ -198,8 +198,17 @@ namespace Deadfall.DebugTools
             Vector3 sp = cam.WorldToScreenPoint(transform.position + Vector3.up * (_eyeHeight + 0.45f));
             if (sp.z <= 0f || sp.z > 60f) return;
             Deadfall.Classes.ClassDefinition cls = Deadfall.Classes.PrototypeClasses.ById(Deadfall.Classes.ClassRoster.ClassOf(ClientId));
-            string label = $"Player {ClientId}{(cls != null ? " · " + cls.DisplayName : "")}  {Mathf.RoundToInt(Health01 * 100f)}%{(_dead ? "  DOWN" : "")}";
-            GUI.Label(new Rect(sp.x - 100f, Screen.height - sp.y - 10f, 200f, 20f), label);
+            // Name plate: name and class over a small health bar, red when down.
+            Deadfall.Core.HudKit.Begin();
+            Vector2 p = Deadfall.Core.HudKit.FromScreen(sp);
+            float fade = Mathf.Clamp01((60f - sp.z) / 15f);
+            string label = $"PLAYER {ClientId}{(cls != null ? "  ·  " + cls.DisplayName.ToUpperInvariant() : "")}";
+            Color c = cls != null ? cls.Color : Color.white;
+            Deadfall.Core.HudKit.Label(new Rect(p.x - 110f, p.y - 26f, 220f, 18f), _dead ? label + "  ·  DOWN" : label, 12,
+                _dead ? new Color(1f, 0.4f, 0.35f, fade) : new Color(c.r, c.g, c.b, fade), TextAnchor.MiddleCenter, head: true);
+            Deadfall.Core.HudKit.Bar(new Rect(p.x - 40f, p.y - 6f, 80f, 7f), Health01, _dead ? Deadfall.Core.HudKit.Bad : Deadfall.Core.HudKit.Good,
+                0, new Color(0f, 0f, 0f, 0.5f * fade));
+            Deadfall.Core.HudKit.End();
         }
     }
 }

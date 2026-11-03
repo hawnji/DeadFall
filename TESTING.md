@@ -312,6 +312,17 @@ Generate a few maps (different seeds) and walk them:
 - [ ] Far rooms fade into a dark haze; going back to the FOB clears it and restores the normal ambient light.
 - [ ] Frame rate on a big map is similar to before (trim is static-batched); report the map build time from the log line if it grows past about 300 ms.
 
+### 3.16 Manual checklist: modern UI and hold-to-repair
+
+- [ ] Layout (1080p, then 1440p or 4K and a small window): everything scales together and nothing overlaps. Top left: location card (map, sector, room, sectors and doors). Top centre: surge panel with a coloured rule and the credits pill; boss bar below it. Top right: objectives card. Bottom left, bottom up: health card, class card (ability bar with the Q key), scrap pill with B Build. Bottom right: weapon card (big magazine count, reserve, magazine bar), toasts stacked above it.
+- [ ] Health bar is segmented, a white ghost trails damage, and the screen edge pulses red under 35% health. Damage shows a red vignette and an arc pointing at the attacker. The crosshair has a dark outline and still shows the real spread; hit markers turn yellow on crits and red on kills.
+- [ ] Prompts are pills with a key cap ([F] Take ammo). Reload shows a centred bar; an empty magazine shows [R] Reload. Credit pops rise to the right of the crosshair.
+- [ ] Fonts: Windows shows Bahnschrift headings and Segoe UI body text; elsewhere Unity's font is used and nothing is cut off.
+- [ ] FOB: facility name plates float over consoles; the FOB window has facility tabs in each facility's colour, an operator level bar, skinned buttons, boxes and scroll bars; every tab still works (deploy, class and loadout, skills, research, dossiers, trophies).
+- [ ] Supply Cache, Field Mod cards (they lift on hover), Run Results (stat tiles and banked rewards) and the pause panels use the same style and all buttons work. Teammates show a name plate with a health bar.
+- [ ] Barricades: standing anywhere in front of a damaged breach (up to about 2.5 m, a little past each post) shows "Hold · Repair barricade" without aiming at it. Holding F repairs one board about every 0.7 s with a progress line in the prompt, paying credits each time during a run, and stops at 5/5. Aiming at another interactable still takes priority. It does not trigger from the next room through a wall.
+- [ ] The dev readout (FPS, enemies) sits small under the location card; H toggles the controls list (off by default now).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

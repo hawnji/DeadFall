@@ -17,7 +17,6 @@ namespace Deadfall.Game
         private const string ModalId = "field_mods";
         private InputAction _open;
         private bool _visible;
-        private GUIStyle _hint, _name, _desc, _rarity;
 
         private void OnEnable()
         {
@@ -64,46 +63,45 @@ namespace Deadfall.Game
         {
             FieldModRunner runner = FieldModRunner.Local;
             if (runner == null || runner.PendingOffers <= 0) return;
-            if (_hint == null)
-            {
-                _hint = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-                _name = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter, wordWrap = true };
-                _desc = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.UpperCenter, wordWrap = true };
-                _rarity = new GUIStyle(GUI.skin.label) { fontSize = 11, alignment = TextAnchor.UpperCenter };
-            }
+            HudKit.Begin();
+            float sw = HudKit.W, sh = HudKit.H;
             if (!_visible)
             {
-                GUI.color = new Color(1f, 0.85f, 0.4f);
                 string n = runner.PendingOffers > 1 ? $" ({runner.PendingOffers})" : string.Empty;
-                GUI.Label(new Rect(0f, Screen.height - 150f, Screen.width, 24f), $"Field Mod ready{n}: press T", _hint);
-                GUI.color = Color.white;
+                HudKit.Prompt(sw * 0.5f, sh - 28f - 84f - 60f, "T", $"Field Mod ready{n}", true);
+                HudKit.End();
                 return;
             }
             IReadOnlyList<FieldModDef> offer = runner.CurrentOffer();
-            if (offer == null) return;
+            if (offer == null) { HudKit.End(); return; }
             GUI.depth = -20;
-            const float cardW = 220f, cardH = 230f, gap = 18f;
+            HudKit.Backdrop(0.6f);
+            const float cardW = 260f, cardH = 320f, gap = 22f;
             float total = offer.Count * cardW + (offer.Count - 1) * gap;
-            float x = (Screen.width - total) * 0.5f, y = (Screen.height - cardH) * 0.5f;
-            GUI.Label(new Rect(0f, y - 44f, Screen.width, 30f), "Choose a Field Mod", _name);
+            float x = (sw - total) * 0.5f, y = (sh - cardH) * 0.5f;
+            HudKit.Label(new Rect(0f, y - 70f, sw, 40f), "CHOOSE A FIELD MOD", 30, Color.white, TextAnchor.MiddleCenter, head: true);
+            HudKit.Label(new Rect(0f, y - 34f, sw, 22f), "Esc to decide later", 13, HudKit.TextDim, TextAnchor.MiddleCenter);
             for (int i = 0; i < offer.Count; i++)
             {
                 FieldModDef d = offer[i];
+                Color rc = RarityColor(d.Rarity);
                 var r = new Rect(x + i * (cardW + gap), y, cardW, cardH);
-                GUI.color = RarityColor(d.Rarity);
-                GUI.Box(r, GUIContent.none);
-                GUI.Box(r, GUIContent.none);
-                GUI.color = Color.white;
-                GUI.Label(new Rect(r.x + 10f, r.y + 14f, r.width - 20f, 20f), d.Rarity + (d.ClassId != null ? "  ·  class" : string.Empty), _rarity);
-                GUI.color = RarityColor(d.Rarity);
-                GUI.Label(new Rect(r.x + 10f, r.y + 34f, r.width - 20f, 46f), d.DisplayName, _name);
-                GUI.color = Color.white;
-                GUI.Label(new Rect(r.x + 12f, r.y + 84f, r.width - 24f, 80f), d.Description, _desc);
+                bool hover = r.Contains(Event.current.mousePosition);
+                if (hover) r.y -= 6f;
+                HudKit.Round(new Rect(r.x - 2f, r.y + 6f, r.width + 4f, r.height + 2f), new Color(0f, 0f, 0f, 0.4f));
+                HudKit.Round(r, new Color(0.07f, 0.08f, 0.1f, 0.97f));
+                HudKit.Round(new Rect(r.x, r.y, r.width, 6f), rc, true);
+                HudKit.Outline(r, new Color(rc.r, rc.g, rc.b, hover ? 0.9f : 0.35f));
+                HudKit.Label(new Rect(r.x + 16f, r.y + 18f, r.width - 32f, 18f), (d.Rarity + (d.ClassId != null ? "  ·  class" : string.Empty)).ToUpperInvariant(), 12, rc, TextAnchor.MiddleCenter, head: true);
+                HudKit.Label(new Rect(r.x + 16f, r.y + 42f, r.width - 32f, 56f), d.DisplayName, 22, Color.white, TextAnchor.MiddleCenter, head: true, wrap: true);
+                HudKit.Fill(new Rect(r.x + r.width * 0.5f - 24f, r.y + 104f, 48f, 2f), new Color(rc.r, rc.g, rc.b, 0.7f));
+                HudKit.Label(new Rect(r.x + 18f, r.y + 116f, r.width - 36f, 110f), d.Description, 14, HudKit.Text, TextAnchor.UpperCenter, wrap: true);
                 int have = runner.Inventory.Stacks(d.Id);
                 string stack = d.Stack == StackRule.Unique ? "Unique" : d.Stack == StackRule.Evolves ? $"Evolves at {d.EvolveAt} ({have} now)" : $"Stacks {have}/{d.MaxStacks}";
-                GUI.Label(new Rect(r.x + 10f, r.y + 164f, r.width - 20f, 20f), stack, _rarity);
-                if (GUI.Button(new Rect(r.x + 30f, r.y + cardH - 40f, r.width - 60f, 28f), "Take")) runner.Pick(i);
+                HudKit.Label(new Rect(r.x + 16f, r.y + cardH - 82f, r.width - 32f, 20f), stack, 12, HudKit.TextDim, TextAnchor.MiddleCenter);
+                if (HudKit.Button(new Rect(r.x + 24f, r.y + cardH - 54f, r.width - 48f, 38f), "TAKE", hover, true, 16, rc)) runner.Pick(i);
             }
+            HudKit.End();
         }
 
         private static Color RarityColor(ModRarity r) =>

@@ -92,6 +92,8 @@ Engineering (M9): B build mode (1-4 pick, R turn, click place), F repair/refill,
 
 Models: enemies, co-op teammates, the FOB booths and map props use low-poly models built by `Tools/Blender/build_models.py` (see `Tools/Blender/README.md`); the game falls back to primitives if a model is missing.
 
+UI: every HUD element and menu shares one modern style that scales with resolution (see T-60). Hold F near a damaged barricade to keep repairing it, no need to aim at it.
+
 Environments: generated rooms are themed by type (lab, servers, storage, canteen, atrium, reactor, containment) with tiles, trim, sector-coloured stripes, beams, pipes, fixtures, furniture and clutter; maps have a light haze and a few failing lights.
 
 Map rework: doors show their price or what they need (switch, power relay); F opens them, pulls switches and starts relays. Enemies break in through boarded openings; F at one repairs a board for 10 credits during a run.
