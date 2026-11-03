@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Deadfall.Audio
 {
     /// <summary>
-    /// Plays every sound (M13). Clips are synthesised from <see cref="SfxBank"/> recipes the first time they are
-    /// needed (and warmed over the first few frames), then played from a fixed pool of AudioSources. Each id has a
+    /// Plays every sound (M13). A recorded clip in Resources/Audio named after the id wins; otherwise clips are
+    /// synthesised from <see cref="SfxBank"/> recipes the first time they are needed (and warmed over the first few frames), then played from a fixed pool of AudioSources. Each id has a
     /// voice limit so fifty Husks do not mean fifty growls; the oldest voice of that id is reused. Volumes follow the
     /// Master, Effects, Ambience and Interface sliders in <see cref="GameSettings"/>.
     /// </summary>
@@ -114,6 +114,8 @@ namespace Deadfall.Audio
         private AudioClip[] ClipsOf(SfxId id)
         {
             if (_clips.TryGetValue(id, out AudioClip[] clips)) return clips;
+            AudioClip[] recorded = LoadRecorded(id);
+            if (recorded.Length > 0) return _clips[id] = recorded;
             SfxInfo info = InfoOf(id);
             SfxLayer[] recipe = SfxBank.Recipe(id);
             if (recipe.Length == 0) return _clips[id] = System.Array.Empty<AudioClip>();
@@ -128,6 +130,24 @@ namespace Deadfall.Audio
                 clips[v] = clip;
             }
             return _clips[id] = clips;
+        }
+
+        /// <summary>
+        /// Recorded clips override the synthesised sound (M13): <c>Resources/Audio/&lt;SfxId&gt;.wav</c> or numbered
+        /// variants <c>&lt;SfxId&gt;_1</c>, <c>_2</c>... (wav or ogg). Each play picks the next variant.
+        /// </summary>
+        private static AudioClip[] LoadRecorded(SfxId id)
+        {
+            var list = new List<AudioClip>(4);
+            AudioClip single = Resources.Load<AudioClip>("Audio/" + id);
+            if (single != null) list.Add(single);
+            for (int n = 1; n <= 12; n++)
+            {
+                AudioClip c = Resources.Load<AudioClip>($"Audio/{id}_{n}");
+                if (c == null) break;
+                list.Add(c);
+            }
+            return list.ToArray();
         }
 
         private Vector3 ListenerPosition()

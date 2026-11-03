@@ -27,3 +27,5 @@
 # Generated low-poly models (Tools/Blender/build_models.py) are small and are stored in plain git, not LFS,
 # so they can be rebuilt and pushed from environments without LFS access.
 Assets/_Project/Resources/Models/*.fbx -filter -diff -merge binary
+Assets/_Project/Resources/Audio/*.wav -filter -diff -merge binary
+Assets/_Project/Resources/Audio/*.ogg -filter -diff -merge binary
