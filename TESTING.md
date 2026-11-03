@@ -282,6 +282,7 @@ Solo, deploy Survival from the FOB (or generate a map from the pause panel and s
 - [ ] Each room has boarded openings in the walls. Enemies appear behind them, tear boards off (you see boards disappear), then climb in.
 - [ ] F at a damaged opening puts one board back and pays 10 credits during a run. You can't walk or jump into an opening, even with all boards gone. Your bullets don't knock boards off.
 - [ ] Enemies come from openings near you and from others nearby, never from the far end of the map.
+- [ ] No enemy appears inside a room hugging a wall or keeps walking into a wall (including openings on the outer edge of the map and in the start room).
 - [ ] M overlay: open rooms are bright, rooms behind closed doors are dim.
 
 Two players (as §3.1):

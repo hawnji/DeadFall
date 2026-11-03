@@ -26,7 +26,8 @@ namespace Deadfall.Enemies
         private const float CorpseSeconds = 4f;
         private const float StrikeRangeSlack = 0.5f;
         private const float ChargeContactSlack = 0.9f;
-        private const float BlockerSearchRange = 25f;
+        /// <summary>A blocker counts as cutting the path when it is this close to where the partial path ends.</summary>
+        private const float PathEndBlockerRange = 3f;
 
         private static readonly Dictionary<Color, Material> SharedMaterials = new Dictionary<Color, Material>();
 
@@ -563,7 +564,9 @@ namespace Deadfall.Enemies
             if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.hasPath
                 && _agent.pathStatus == NavMeshPathStatus.PathPartial)
             {
-                IBlocker blocker = Blockers.Nearest(transform.position, BlockerSearchRange);
+                // Only the blocker that actually cuts the path (near where the partial path ends), never one through
+                // a wall that is merely close in a straight line.
+                IBlocker blocker = Blockers.Nearest(_agent.pathEndPosition, PathEndBlockerRange);
                 if (blocker != null)
                 {
                     _target = blocker;

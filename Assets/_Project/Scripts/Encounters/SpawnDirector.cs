@@ -178,8 +178,10 @@ namespace Deadfall.Encounters
                 float health = _plan.HealthScale;
                 // Specimens and hunters are one enemy for the whole squad, so they get tougher per player instead.
                 if (def.Role == EnemyRole.Boss || def.Role == EnemyRole.Hunter) health *= SpecimenRules.PlayerHealthScale(_players.Count);
+                // Closets are 4 m cells behind a wall: a small search radius keeps an enemy from being snapped
+                // through the wall into the room when the closet has no NavMesh.
                 enemy = manager.Spawn(def, pos, yaw, health, _plan.TraitsAt(_next),
-                    def.IsBoss ? _plan.BossModifiers : SpecimenModifiers.None);
+                    def.IsBoss ? _plan.BossModifiers : SpecimenModifiers.None, _points[point].Sheltered ? 1.2f : 3f);
             }
             if (enemy == null)
             {

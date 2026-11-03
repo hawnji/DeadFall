@@ -97,15 +97,15 @@ namespace Deadfall.Enemies
         }
 
         /// <summary>
-        /// Spawns an enemy at the nearest NavMesh point within 3 m of <paramref name="position"/>.
+        /// Spawns an enemy at the nearest NavMesh point within <paramref name="sampleRadius"/> (3 m) of <paramref name="position"/>.
         /// Returns null at the cap or when there is no NavMesh nearby. <paramref name="healthScale"/> multiplies max
         /// health (surge scaling).
         /// </summary>
         public Enemy Spawn(EnemyDefinition definition, Vector3 position, float yaw, float healthScale = 1f,
-            EnemyTraits traits = EnemyTraits.None, SpecimenModifiers bossMods = SpecimenModifiers.None)
+            EnemyTraits traits = EnemyTraits.None, SpecimenModifiers bossMods = SpecimenModifiers.None, float sampleRadius = 3f)
         {
             if (definition == null || _mirrorMode || AliveCount >= MaxAlive) return null;
-            if (!NavMesh.SamplePosition(position, out NavMeshHit hit, 3f, NavMesh.AllAreas)) return null;
+            if (!NavMesh.SamplePosition(position, out NavMeshHit hit, sampleRadius, NavMesh.AllAreas)) return null;
 
             if (!_pools.TryGetValue(definition, out Stack<Enemy> pool))
             {
