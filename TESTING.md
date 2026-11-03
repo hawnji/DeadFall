@@ -363,6 +363,19 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Defend Uplink side objective: one terminal, about 30 s upload that pauses when nobody is close, Husks keep rushing it while it runs, 600 credits each.
 - [ ] Purge Hives side objective: two smaller nests in different rooms, the counter goes 0/2, 1/2, 2/2, 700 credits each.
 
+### 3.20 Manual checklist: M13 part 1 (audio and settings)
+
+- [ ] FOB has a low hum; deploying to Cinder Ridge switches to an industrial rumble, Harrow Line to a deeper tunnel wind. The beds crossfade, and loop without an audible seam.
+- [ ] Each weapon class sounds different: pistol, SMG, rifle, shotgun, heavy, launcher. Firing full auto does not distort or cut out other sounds.
+- [ ] Reload, empty-click (dry fire) and melee swing sounds play. Hit, crit and kill markers each have their own tick.
+- [ ] Nearby enemies growl now and then (a big horde should not become a wall of noise), and deaths, enemy attacks, Retcher spit, explosions, barricade breaks and turret fire play from where they happen and fade with distance.
+- [ ] Surge start horn, surge clear chime, objective complete chime, event alarm on event warnings, credit ticks, boss roars on Specimen phase changes.
+- [ ] Taking damage plays a thud; being downed plays a falling tone; being revived plays a rising chime.
+- [ ] A client hears teammates' gunfire from their position.
+- [ ] Pause (Esc): a Settings button sits next to Resume. The window has Audio, Controls and Video. Every slider drags and clicks, volumes change sounds already playing, FOV and sensitivity apply immediately, VSync and frame cap work, Quality cycles the project's levels.
+- [ ] Settings are kept after restarting the game. Esc while the window is open closes it and resumes. Reset to defaults works.
+- [ ] Windowed toggle works in a standalone build (it does nothing in the editor).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

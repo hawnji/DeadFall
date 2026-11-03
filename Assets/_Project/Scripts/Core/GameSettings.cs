@@ -7,7 +7,7 @@ namespace Deadfall.Core
     [Serializable]
     public sealed class GameSettings
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int Version = CurrentVersion;
         /// <summary>Degrees of rotation per mouse count at sensitivity 1.</summary>
@@ -21,6 +21,15 @@ namespace Deadfall.Core
         /// <summary>0 = unlimited. Used only with VSync off.</summary>
         public int FrameRateCap;
         public float MasterVolume = 1f;
+        /// <summary>Gunfire, enemies, explosions (M13).</summary>
+        public float EffectsVolume = 1f;
+        /// <summary>Background beds.</summary>
+        public float AmbienceVolume = 0.7f;
+        /// <summary>Menu clicks and HUD cues.</summary>
+        public float InterfaceVolume = 0.8f;
+        /// <summary>Index into the project's quality levels; -1 keeps the project default.</summary>
+        public int QualityLevel = -1;
+        public bool Windowed;
 
         public void Sanitize()
         {
@@ -29,6 +38,11 @@ namespace Deadfall.Core
             FieldOfView = Mathf.Clamp(FieldOfView, 70f, 110f);
             FrameRateCap = Mathf.Clamp(FrameRateCap, 0, 1000);
             MasterVolume = Mathf.Clamp01(MasterVolume);
+            EffectsVolume = Mathf.Clamp01(EffectsVolume);
+            AmbienceVolume = Mathf.Clamp01(AmbienceVolume);
+            InterfaceVolume = Mathf.Clamp01(InterfaceVolume);
+            // v1 files have no per-bus volumes or display fields; JsonUtility leaves the defaults, which is right.
+            QualityLevel = Mathf.Clamp(QualityLevel, -1, 32);
             Version = CurrentVersion;
         }
     }

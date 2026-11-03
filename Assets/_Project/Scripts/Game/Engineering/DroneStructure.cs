@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
@@ -80,6 +81,7 @@ namespace Deadfall.Game
             _nextShot = now + 1f / ShotsPerSecond;
             Vector3 end = _target.AimPoint;
             TracerPool.Instance.Spawn(transform.position, end);
+            GameAudio.Play(SfxId.ShotTurret, transform.position, 0.7f, 1.2f);
             if (Mirror) return;
             GameObject attacker = owner != null ? owner : gameObject;
             LocalHitResolver.Apply(new HitClaim

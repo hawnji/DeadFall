@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using System;
 using Deadfall.Combat;
 using Deadfall.Core;
@@ -154,6 +155,7 @@ namespace Deadfall.World
             if (boards != Boards)
             {
                 SetBoards(boards);
+                GameAudio.Play(SfxId.BarricadeBreak, transform.position);
                 BrokenBoard?.Invoke(this);
             }
             return applied;

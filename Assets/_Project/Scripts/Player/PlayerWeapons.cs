@@ -353,7 +353,7 @@ namespace Deadfall.Player
             if (_meleePending && now >= _meleeHitTime) ResolveMelee();
 
             // Reload
-            if (slot.Firearm != null && f.ReloadPressed && !IsMeleeing) slot.Firearm.StartReload(now);
+            if (slot.Firearm != null && f.ReloadPressed && !IsMeleeing && slot.Firearm.StartReload(now)) GameAudio.Play2D(SfxId.Reload);
 
             // Fire
             int shots = 0;
@@ -362,7 +362,11 @@ namespace Deadfall.Player
                 bool allowed = !IsMeleeing && sprintRecovered && (_motor == null || !_motor.IsSprinting);
                 FireResult result = allowed ? slot.Firearm.TryFire(now, f.FirePressed, f.FireHeld) : slot.Firearm.TryFire(now, false, false);
                 shots = result.ShotsFired;
-                if (result.DryFire && slot.Firearm.CanReload) slot.Firearm.StartReload(now);
+                if (result.DryFire)
+                {
+                    if (slot.Firearm.CanReload && slot.Firearm.StartReload(now)) GameAudio.Play2D(SfxId.Reload);
+                    else if (f.FirePressed) GameAudio.Play2D(SfxId.DryFire);
+                }
                 for (int i = 0; i < shots; i++) FireOneShot(slot);
                 if (shots > 0)
                 {
@@ -492,6 +496,7 @@ namespace Deadfall.Player
         private void StartMelee(MeleeStats stats, double now, Slot slot)
         {
             slot.Firearm?.CancelReload();
+            GameAudio.Play2D(SfxId.MeleeSwing, 1f, stats != null && stats.Damage > 60f ? 0.8f : 1f);
             _activeMeleeBonus = _nextMeleeBonus;
             _nextMeleeBonus = null;
             if (_activeMeleeBonus.HasValue)

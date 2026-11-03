@@ -22,7 +22,7 @@ A class-based military zombie survival FPS for PC. Two to four players deploy fr
 | M10 – FOB and permanent progression | Done (editor check: `TESTING.md` §3.12): FOB Halcyon with seven facilities, loadouts, skill trees, research, challenges, achievements, prestige, versioned saves |
 | M11 – Multiplayer completion | Done except Lobby/Relay (editor check: `TESTING.md` §3.17): downs, revives, self-revive kits, spectating, returns after surges, 90 s rejoin window, single reward banking, bandwidth counters |
 | M12 – Modes and content | Done (editor check: `TESTING.md` §3.18 and §3.19): second environment Harrow Line Transit Depot, Endless mode with escalation, Operation Last Train, five weapons, the Broodmother boss, eight Field Mods, Frenzy and Toxic Leak events, Defend Uplink and Purge Hives objectives |
-| M13 | See `IMPLEMENTATION_ROADMAP.md` |
+| M13 – Polish and release prep | Part 1 done (editor check: `TESTING.md` §3.20): synthesised sound effects and ambience, Settings window. Part 2 (release config, build script, models, polish) in progress |
 
 M1 adds the first-person controller, hitscan and melee combat, reloads, weapon swapping, health, a prototype HUD, and a sandbox that builds itself at runtime.
 

@@ -256,7 +256,9 @@ namespace Deadfall.Core
             Round(r, bg);
             if (on || hover) Outline(r, new Color(a.r, a.g, a.b, on ? 0.9f : 0.45f));
             Label(r, text, size, enabled ? (on ? Color.white : Text) : TextDim, TextAnchor.MiddleCenter, head: true);
-            return GUI.Button(r, GUIContent.none, GUIStyle.none) && enabled;
+            bool clicked = GUI.Button(r, GUIContent.none, GUIStyle.none);
+            if (clicked) GameAudio.Play2D(enabled ? Deadfall.Rules.Common.SfxId.UiClick : Deadfall.Rules.Common.SfxId.UiDeny);
+            return clicked && enabled;
         }
 
         /// <summary>
@@ -278,6 +280,51 @@ namespace Deadfall.Core
             Fill(new Rect(r.x + 22f, r.y + 52f, 56f, 3f), a);
             Fill(new Rect(r.x + 82f, r.y + 53f, r.width - 104f, 1f), new Color(1f, 1f, 1f, 0.08f));
             return new Rect(r.x + 22f, r.y + 66f, r.width - 44f, r.height - 82f);
+        }
+
+        /// <summary>A draggable rounded slider (settings). Returns the new value; click or drag anywhere on the track.</summary>
+        public static float Slider(Rect r, float value, float min, float max, Color? fill = null)
+        {
+            int id = GUIUtility.GetControlID(FocusType.Passive);
+            Event e = Event.current;
+            float Pick() => Mathf.Lerp(min, max, Mathf.InverseLerp(r.x + 6f, r.xMax - 6f, e.mousePosition.x));
+            switch (e.GetTypeForControl(id))
+            {
+                case EventType.MouseDown:
+                    if (r.Contains(e.mousePosition))
+                    {
+                        GUIUtility.hotControl = id;
+                        value = Pick();
+                        GUI.changed = true;
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl == id)
+                    {
+                        value = Pick();
+                        GUI.changed = true;
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == id)
+                    {
+                        GUIUtility.hotControl = 0;
+                        e.Use();
+                    }
+                    break;
+                case EventType.Repaint:
+                    float t = Mathf.InverseLerp(min, max, value);
+                    var track = new Rect(r.x, r.y + r.height * 0.5f - 4f, r.width, 8f);
+                    Round(track, Track, true);
+                    Round(new Rect(track.x, track.y, Mathf.Max(8f, track.width * t), track.height), fill ?? Accent, true);
+                    float kx = Mathf.Lerp(r.x + 6f, r.xMax - 6f, t);
+                    bool hot = GUIUtility.hotControl == id || r.Contains(e.mousePosition);
+                    Round(new Rect(kx - 8f, r.y + r.height * 0.5f - 8f, 16f, 16f), hot ? Color.white : Text, true);
+                    break;
+            }
+            return Mathf.Clamp(value, Mathf.Min(min, max), Mathf.Max(min, max));
         }
 
         /// <summary>Small caps section heading with a rule.</summary>

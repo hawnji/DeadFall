@@ -2,7 +2,8 @@
     "name": "Deadfall.Audio",
     "rootNamespace": "Deadfall.Audio",
     "references": [
-        "Deadfall.Core"
+        "Deadfall.Core",
+        "Deadfall.Rules.Common"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

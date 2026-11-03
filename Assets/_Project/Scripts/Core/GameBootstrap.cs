@@ -22,9 +22,20 @@ namespace Deadfall.Core
             var settings = new PlayerPrefsSettingsService();
             ServiceRegistry.Register<ISettingsService>(settings);
             ApplyFrameRate(settings.Current);
+            ApplyDisplay(settings.Current);
             settings.Changed += ApplyFrameRate;
+            settings.Changed += ApplyDisplay;
 
             GameLog.Verbose("Bootstrap", "Core services initialized");
+        }
+
+        private static void ApplyDisplay(GameSettings s)
+        {
+            if (s.QualityLevel >= 0 && s.QualityLevel < QualitySettings.names.Length && QualitySettings.GetQualityLevel() != s.QualityLevel)
+                QualitySettings.SetQualityLevel(s.QualityLevel, true);
+            if (Application.isEditor) return;
+            FullScreenMode mode = s.Windowed ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
+            if (Screen.fullScreenMode != mode) Screen.fullScreenMode = mode;
         }
 
         private static void ApplyFrameRate(GameSettings s)

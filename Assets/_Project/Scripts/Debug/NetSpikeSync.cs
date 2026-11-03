@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
@@ -358,6 +359,7 @@ namespace Deadfall.DebugTools
             if (_session.IsHost) SendShots(id, _relayShots, sender);
             if (id == _session.LocalClientId) return;
             for (int i = 0; i + 1 < _relayShots.Count; i += 2) TracerPool.Instance.Spawn(_relayShots[i], _relayShots[i + 1]);
+            if (_relayShots.Count >= 2) GameAudio.Play(SfxId.ShotRifle, _relayShots[0], 0.85f);
         }
 
         // ---------------------------------------------------------------- hits (client side)

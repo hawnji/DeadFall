@@ -1,3 +1,4 @@
+using Deadfall.Rules.Common;
 using Deadfall.Core;
 using UnityEngine;
 
@@ -12,6 +13,7 @@ namespace Deadfall.Combat
 
         public static void Spawn(Vector3 position, float radius)
         {
+            GameAudio.Play(SfxId.Explosion, position, Mathf.Clamp(radius / 4f, 0.5f, 1.3f), radius > 5f ? 0.8f : 1f);
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             Destroy(go.GetComponent<Collider>());
             go.name = "ExplosionFx";
