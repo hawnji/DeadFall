@@ -36,7 +36,7 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
 | Model | Used by |
 |---|---|
 | `enemy_standard`, `enemy_lean`, `enemy_plated`, `enemy_crawler`, `enemy_bloated`, `enemy_spitter`, `enemy_alpha`, `enemy_specimen` | `Enemy` (one per `EnemyBodyType`) |
-| `player_body`, `player_head` | `RemotePlayerProxy` (co-op teammates; the head, arms and rifle pitch with aim) |
+| `player_body`, `player_head` | `RemotePlayerProxy` (co-op teammates; the head and arms pitch with aim, and the game adds the model of the weapon they hold) |
 | `fob_booth`, `fob_booth_wide` | `FobBuilder` facility booths (Command Center is the wide one) |
 | `fob_transport`, `fob_crates` | `FobBuilder` hangar props |
 | `prop_crate`, `prop_locker`, `prop_column`, `prop_partition` | `MapBuilder` room props |
