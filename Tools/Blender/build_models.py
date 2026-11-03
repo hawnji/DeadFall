@@ -202,7 +202,20 @@ def export(o):
         axis_forward='-Z', axis_up='Y', bake_space_transform=True,
         mesh_smooth_type='FACE', use_mesh_modifiers=True, add_leaf_bones=False, bake_anim=False,
         path_mode='STRIP', embed_textures=False)
+    write_meta(path)
     return path
+
+
+def write_meta(fbx_path):
+    """New models get a full ModelImporter .meta (Unity rejects a bare guid-only one); existing metas keep their guid."""
+    meta = fbx_path + ".meta"
+    if os.path.exists(meta):
+        return
+    import uuid
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fbx_meta_template.txt")) as f:
+        text = f.read().replace("{guid}", uuid.uuid4().hex)
+    with open(meta, "w") as f:
+        f.write(text)
 
 
 # ----------------------------------------------------------------------------------------------- palette

@@ -14,6 +14,7 @@ blender -b --factory-startup --python Tools/Blender/build_models.py -- --preview
   On a headless Linux box the Workbench renderer needs EGL (`apt install libegl1 libgl1-mesa-dri`), and the FBX
   exporter needs `python3-numpy`.
 - `--only enemy_lean,prop_door` rebuilds just those models.
+- New models get a `.meta` from `fbx_meta_template.txt` (a full ModelImporter section; a guid-only meta makes Unity refuse the import).
 
 Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions should work.
 
