@@ -453,6 +453,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Containment Breach: one room's floor grid glows, flickers yellow, then arcs blue every 3.2 s; standing on it during an arc hurts (jumping over it doesn't), and infected caught on it are shocked and staggered. A console in that room ("Shut down the containment system", 7 s channel) ends it; otherwise it vents by itself after two surges. No other event starts while it runs.
 - [ ] A client that joins during Toxic Leak or Containment Breach sees the same rooms as the host.
 
+### 3.29 Manual checklist: boss arena hazards
+
+- [ ] While Specimen Zero or the Broodmother is still stalking, nothing happens. Once enraged (Rampage) the floor under players within ~26 m of it gets a pulsing orange (Specimen) or green (Broodmother) ring every 7 s; in the exposed-core phase every 5 s, with an extra ring beside a lone player.
+- [ ] After 1.5 s the ring bursts (25 damage inside it, nothing just outside) and leaves a burning pool for 4 s (10 damage a second inside). Moving off the ring avoids it.
+- [ ] Each Broodmother rupture hatches one Creeper (host), counted toward the surge.
+- [ ] Clients see the same rings at the same spots and only take damage themselves.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
