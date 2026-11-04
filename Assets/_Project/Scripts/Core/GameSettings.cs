@@ -23,7 +23,7 @@ namespace Deadfall.Core
         public float MasterVolume = 1f;
         /// <summary>Gunfire, enemies, explosions (M13).</summary>
         public float EffectsVolume = 1f;
-        /// <summary>Background beds.</summary>
+        /// <summary>Music (title theme) and any looping background bed. Shown as "Music" in Settings.</summary>
         public float AmbienceVolume = 0.7f;
         /// <summary>Menu clicks and HUD cues.</summary>
         public float InterfaceVolume = 0.8f;

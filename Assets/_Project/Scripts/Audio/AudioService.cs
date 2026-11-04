@@ -9,7 +9,7 @@ namespace Deadfall.Audio
     /// Plays every sound (M13). A recorded clip in Resources/Audio named after the id wins; otherwise clips are
     /// synthesised from <see cref="SfxBank"/> recipes the first time they are needed (and warmed over the first few frames), then played from a fixed pool of AudioSources. Each id has a
     /// voice limit so fifty Husks do not mean fifty growls; the oldest voice of that id is reused. Volumes follow the
-    /// Master, Effects, Ambience and Interface sliders in <see cref="GameSettings"/>.
+    /// Master, Effects, Music and Interface sliders in <see cref="GameSettings"/>.
     /// </summary>
     public sealed class AudioService : MonoBehaviour, IAudioSink
     {
@@ -33,10 +33,17 @@ namespace Deadfall.Audio
         private AudioListener _listener;
         private float _nextListenerLookup;
 
+        private const float MusicLevel = 0.8f;
+
+        // Two looping sources that crossfade: ambience beds or music (one at a time).
         private AudioSource _ambA, _ambB;
         private SfxId _ambience = SfxId.None;
-        private float _ambBlend = 1f; // 1 = A is the live bed
+        private AudioClip _music;
+        private float _ambBlend = 1f;
         private bool _ambUsingA = true;
+        private float _loopLevel;
+        private float _loopFade = AmbienceFade;
+        private float _oldStart;
         private int _warmIndex;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -220,17 +227,36 @@ namespace Deadfall.Audio
 
         public void SetAmbience(SfxId id)
         {
-            if (id == _ambience) return;
+            if (id == _ambience && _music == null) return;
             _ambience = id;
+            _music = null;
+            if (id == SfxId.None) { StartLoop(null, 0f, AmbienceFade); return; }
+            AudioClip[] clips = ClipsOf(id);
+            StartLoop(clips.Length > 0 ? clips[0] : null, InfoOf(id).Volume, AmbienceFade);
+        }
+
+        public void PlayMusic(AudioClip clip, float fadeSeconds)
+        {
+            _music = clip;
+            _ambience = SfxId.None;
+            StartLoop(clip, MusicLevel, fadeSeconds);
+        }
+
+        /// <summary>Crossfades the two loop sources: the new clip fades in on the idle one while the old fades out.</summary>
+        private void StartLoop(AudioClip clip, float level, float fade)
+        {
+            AudioSource live = _ambUsingA ? _ambA : _ambB;
+            if (clip != null && live.clip == clip && live.isPlaying) { _loopLevel = level; return; }
             AudioSource next = _ambUsingA ? _ambB : _ambA;
+            _oldStart = live.isPlaying ? live.volume : 0f;
             _ambUsingA = !_ambUsingA;
             _ambBlend = 0f;
-            if (id == SfxId.None) { next.Stop(); next.clip = null; return; }
-            AudioClip[] clips = ClipsOf(id);
-            if (clips.Length == 0) return;
-            next.clip = clips[0];
+            _loopFade = Mathf.Max(0.05f, fade);
+            _loopLevel = level;
+            next.Stop();
+            next.clip = clip;
             next.volume = 0f;
-            next.Play();
+            if (clip != null) next.Play();
         }
 
         private void Update()
@@ -238,14 +264,14 @@ namespace Deadfall.Audio
             // Warm one clip a frame so the first gunshot does not hitch.
             if (_warmIndex < SfxBank.All.Length) ClipsOf(SfxBank.All[_warmIndex++]);
 
-            float amb = BusVolume(SfxBus.Ambience) * (_ambience == SfxId.None ? 0.5f : InfoOf(_ambience).Volume);
-            _ambBlend = Mathf.MoveTowards(_ambBlend, 1f, Time.unscaledDeltaTime / AmbienceFade);
+            float bus = BusVolume(SfxBus.Ambience);
+            _ambBlend = Mathf.MoveTowards(_ambBlend, 1f, Time.unscaledDeltaTime / _loopFade);
             AudioSource live = _ambUsingA ? _ambA : _ambB;
             AudioSource old = _ambUsingA ? _ambB : _ambA;
-            live.volume = _ambience == SfxId.None ? 0f : amb * _ambBlend;
-            old.volume = old.isPlaying ? amb * (1f - _ambBlend) : 0f;
-            if (_ambBlend >= 1f && old.isPlaying) old.Stop();
-            if (_ambience == SfxId.None && live.isPlaying && old.volume <= 0f) live.Stop();
+            live.volume = live.clip != null ? bus * _loopLevel * _ambBlend : 0f;
+            old.volume = old.isPlaying ? _oldStart * (1f - _ambBlend) : 0f;
+            if (_ambBlend >= 1f && old.isPlaying) { old.Stop(); old.clip = null; }
+            if (live.clip == null && live.isPlaying) live.Stop();
 
             // Slider changes apply to voices already playing.
             foreach (Voice v in _voices)

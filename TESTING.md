@@ -405,6 +405,10 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Host co-op starts hosting and enters the game. The second copy's Join co-op connects to 127.0.0.1 and enters the game once connected. A wrong address shows an error and Cancel stops the attempt.
 - [ ] Settings opens the settings window and Done returns to the title.
 - [ ] Quit closes a build. In the editor it shows as disabled.
+- [ ] The title theme ("Rotting Circuitry") fades in with the title, loops, follows the Music slider in Settings, and fades out when you enter the game.
+- [ ] Pause shows "Quit to title". The first click arms it ("Click again to quit") for 3 seconds, and the second click returns to the title.
+- [ ] Quitting to title from a map run puts you back at the FOB with a fresh loadout and full health. In co-op the session ends. The host's clients drop to their own FOB, so check that they can still play or quit to title too.
+- [ ] Play solo after quitting to title works normally (no double HUD, no frozen input).
 - [ ] `-skiptitle`, `-deadfall-host` or `-deadfall-join` on the command line go straight into the game.
 
 ## 4. Regression map

@@ -128,7 +128,13 @@ namespace Deadfall.DebugTools
             WorldControl.AtBase = () => !InMap;
 
             // Title screen over the FOB until the player picks Play, Host or Join.
-            new GameObject("[Title]").AddComponent<TitleScreen>().Bind(player, ui, FobOrigin);
+            new GameObject("[Title]").AddComponent<TitleScreen>().Bind(player, ui, FobOrigin, () =>
+            {
+                EnterSandbox();
+                run.ResetRunState();
+                var health = player.GetComponent<PlayerHealth>();
+                if (health != null) health.ResetLife();
+            });
         }
 
         private void GoToRange()

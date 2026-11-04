@@ -9,6 +9,8 @@ namespace Deadfall.Core
         void Play(SfxId id, Vector3 position, float volume, float pitch);
         void Play2D(SfxId id, float volume, float pitch);
         void SetAmbience(SfxId id);
+        /// <summary>Crossfades to a looping music track (null fades music out).</summary>
+        void PlayMusic(AudioClip clip, float fadeSeconds);
     }
 
     /// <summary>
@@ -30,5 +32,16 @@ namespace Deadfall.Core
 
         /// <summary>Switches the looping background bed (<see cref="SfxId.None"/> fades it out).</summary>
         public static void SetAmbience(SfxId id) => Sink?.SetAmbience(id);
+
+        /// <summary>Loops a track from Resources (e.g. "Music/TitleTheme"), following the Music slider.</summary>
+        public static void PlayMusic(string resourcePath, float fadeSeconds = 1.5f)
+        {
+            if (Sink == null) return;
+            AudioClip clip = Resources.Load<AudioClip>(resourcePath);
+            if (clip == null) { Debug.LogWarning($"[Audio] Music '{resourcePath}' not found in Resources."); return; }
+            Sink.PlayMusic(clip, fadeSeconds);
+        }
+
+        public static void StopMusic(float fadeSeconds = 1.5f) => Sink?.PlayMusic(null, fadeSeconds);
     }
 }

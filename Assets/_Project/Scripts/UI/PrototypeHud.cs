@@ -27,6 +27,7 @@ namespace Deadfall.UI
         private bool _hitMarkerCrit;
         private bool _hitMarkerKill;
         private float _damageFlashUntil;
+        private float _quitConfirmUntil;
         private Vector3 _lastDamageDir;
 
 
@@ -172,6 +173,17 @@ namespace Deadfall.UI
                 HudKit.Prompt(w * 0.5f, h * 0.36f + 66f, "Esc", "Resume", true);
                 if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, h * 0.36f + 66f, 150f, 40f), "Settings"))
                     _settingsPanel.Open();
+                if (TitleScreen.Current != null)
+                {
+                    // Two clicks: the first arms it for a few seconds, so a stray click doesn't end a run.
+                    bool armed = now < _quitConfirmUntil;
+                    if (HudKit.Button(new Rect(w * 0.5f - 130f, h * 0.36f + 122f, 260f, 40f), armed ? "Click again to quit" : "Quit to title", on: armed, accent: HudKit.Bad))
+                    {
+                        if (armed) { _quitConfirmUntil = 0f; TitleScreen.Current.ReturnToTitle(); }
+                        else _quitConfirmUntil = now + 3f;
+                    }
+                    if (armed) HudKit.Label(new Rect(0f, h * 0.36f + 168f, w, 22f), "Leaves co-op and ends the current run.", 13, HudKit.TextDim, TextAnchor.MiddleCenter);
+                }
                 HudKit.Label(new Rect(w - 320f, h - 30f, 300f, 20f), BuildInfo.Label, 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             }
             HudKit.End();
