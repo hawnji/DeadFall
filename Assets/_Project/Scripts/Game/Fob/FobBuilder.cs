@@ -118,7 +118,7 @@ namespace Deadfall.Game
             go.transform.localScale = size;
             if (!collider) Object.Destroy(go.GetComponent<Collider>());
             go.isStatic = true;
-            go.GetComponent<Renderer>().sharedMaterial = RuntimeMaterials.CreateLit(color);
+            if (!SurfaceArt.ApplyAuto(go, color)) go.GetComponent<Renderer>().sharedMaterial = RuntimeMaterials.CreateLit(color);
             return go;
         }
     }
