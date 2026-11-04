@@ -467,6 +467,16 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] While inside it can't be shot or targeted by sentries; it counts toward the surge. It never comes out in a closed sector.
 - [ ] Clients see it sink and rise at the same grates.
 
+### 3.31 Manual checklist: power grid
+
+- [ ] Generated maps have 2 or 3 yellow grid generators (green lamp, spinning fan), one per sector on the main route, never behind a locked side door. Host and clients see them in the same spots.
+- [ ] From surge 4 a surge sometimes trips one generator 12 to 35 s in (red blinking lamp, toast). It never trips the last generator still up.
+- [ ] Pressing F on a tripped generator starts a 4 s restart that only advances with someone within 3.5 m (lamp red to yellow); it drains at half speed when everyone leaves. A client can start it too.
+- [ ] Each online generator in an open sector gives 4 power. Arc Fences draw 2 and Sentries 1; when power runs short the newest ones brown out (no arc, sentry idle, prompt says NO POWER) and come back once a generator is restarted.
+- [ ] A Blackout trips every generator in the open sectors: lights go dark, the Restore Power objective counts generator restarts (1/3 ...), and the lights come back as soon as one generator is up. The event ends when all are restarted, or at the end of the surge (all generators come back).
+- [ ] With the grid down, power-door relays refuse to work and say why. Generators in sealed sectors give no power until the sector opens.
+- [ ] Sandbox (no generated map): Blackout still places its own objective generators, and fences and sentries always have power.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

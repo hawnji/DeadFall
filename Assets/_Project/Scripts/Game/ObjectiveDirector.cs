@@ -58,6 +58,12 @@ namespace Deadfall.Game
         private double _nextNestSpawn;
         private readonly HashSet<ushort> _uplinks = new HashSet<ushort>();
         private double _nextUplinkRush;
+        private PowerGrid _grid;
+        /// <summary>This Blackout tripped the map's grid generators (its Restore Power objective counts their restarts).</summary>
+        private bool _gridBlackout;
+
+        /// <summary>The power grid drives the lights on this map (so events leave them alone).</summary>
+        private static bool GridDrivesLights => PowerGrid.Current != null && PowerGrid.Current.HasGenerators;
         private ExtractionZone _zone;
         private HoldTimer _hold;
         private Vector3 _zonePos;
@@ -115,6 +121,7 @@ namespace Deadfall.Game
             EventBus<EnemyDied>.Unsubscribe(OnEnemyDied);
             BindWaves(null);
             BindMap(null);
+            BindGrid(null);
             if (_session == null) return;
             _session.UnregisterHandler(MsgState);
             _session.UnregisterHandler(MsgUse);
@@ -135,6 +142,21 @@ namespace Deadfall.Game
                 _waves.PhaseChanged += OnPhaseChanged;
                 _waves.SurgePlanned += OnSurgePlanned;
             }
+        }
+
+        private void BindGrid(PowerGrid g)
+        {
+            if (_grid != null) _grid.GeneratorRestarted -= OnGeneratorRestarted;
+            _grid = g;
+            if (_grid != null) _grid.GeneratorRestarted += OnGeneratorRestarted;
+        }
+
+        /// <summary>Host: a grid generator came back; in a grid Blackout that counts toward Restore Power.</summary>
+        private void OnGeneratorRestarted(int index)
+        {
+            if (!IsAuthority || !_gridBlackout || ActiveEvent != RunEventKind.Blackout) return;
+            Objective o = _tracker.FindActive(ObjectiveKind.RestorePower);
+            if (o != null) _tracker.Advance(o.Id);
         }
 
         private void BindMap(MapSession m)
@@ -236,6 +258,7 @@ namespace Deadfall.Game
         {
             if (WaveManager.Current != _waves) BindWaves(WaveManager.Current);
             if (MapSession.Current != _map) BindMap(MapSession.Current);
+            if (PowerGrid.Current != _grid) BindGrid(PowerGrid.Current);
             if (!IsAuthority) return;
             _tracker.PruneFinished(); // finished objectives leave the list (the announcement already told everyone)
 
@@ -452,10 +475,21 @@ namespace Deadfall.Game
             switch (ActiveEvent)
             {
                 case RunEventKind.Blackout:
+                {
+                    // With a power grid the Blackout trips its generators (the grid turns the lights off) and Restore
+                    // Power counts their restarts; without one it places its own objective generators.
+                    int tripped = GridDrivesLights && _tracker.FindActive(ObjectiveKind.RestorePower) == null ? PowerGrid.Current.TripAll() : 0;
+                    if (tripped > 0)
+                    {
+                        _gridBlackout = true;
+                        _tracker.Add(ObjectiveKind.RestorePower, tripped, false, ObjectiveRules.Reward(ObjectiveKind.RestorePower), plan.Surge);
+                        break;
+                    }
                     BlackoutLighting.SetDark(true);
                     if (_tracker.FindActive(ObjectiveKind.RestorePower) == null && _map != null && _map.HasMap)
                         AddObjective(ObjectiveKind.RestorePower, false, plan.Surge);
                     break;
+                }
                 case RunEventKind.Stalker:
                     plan.Spawns.Insert(0, PrototypeEnemies.Stalker.ContentId);
                     plan.Traits.Insert(0, EnemyTraits.None);
@@ -496,7 +530,7 @@ namespace Deadfall.Game
         private void EndEvent()
         {
             if (ActiveEvent == RunEventKind.None) return;
-            if (ActiveEvent == RunEventKind.Blackout) BlackoutLighting.SetDark(false);
+            if (ActiveEvent == RunEventKind.Blackout) EndBlackout();
             if (ActiveEvent == RunEventKind.Lockdown && _map != null) _map.SetSealed(false);
             ClearEventEffects();
             ActiveEvent = RunEventKind.None;
@@ -736,7 +770,7 @@ namespace Deadfall.Game
             _hold = null;
             ExtractionOccupied = false;
             HasKeycard = false;
-            if (ActiveEvent == RunEventKind.Blackout || BlackoutLighting.IsDark) BlackoutLighting.SetDark(false);
+            if (ActiveEvent == RunEventKind.Blackout || BlackoutLighting.IsDark) EndBlackout();
             if (_map != null) _map.SetSealed(false);
             ClearEventEffects();
             ActiveEvent = PendingEvent = RunEventKind.None;
@@ -969,15 +1003,26 @@ namespace Deadfall.Game
             }
         }
 
+        /// <summary>
+        /// Host: lights back on. A grid Blackout brings the generators back (the grid then restores the lights);
+        /// otherwise the lights come back directly.
+        /// </summary>
+        private void EndBlackout()
+        {
+            if (_gridBlackout && PowerGrid.Current != null) PowerGrid.Current.RestoreAll();
+            _gridBlackout = false;
+            if (!GridDrivesLights) BlackoutLighting.SetDark(false);
+        }
+
         /// <summary>Client: mirrors the host's active event locally (lights, sealed doors).</summary>
         private void ApplyEvent(RunEventKind kind)
         {
             if (kind == ActiveEvent) return;
-            if (ActiveEvent == RunEventKind.Blackout) BlackoutLighting.SetDark(false);
+            if (ActiveEvent == RunEventKind.Blackout && !GridDrivesLights) BlackoutLighting.SetDark(false);
             if (ActiveEvent == RunEventKind.Lockdown && _map != null) _map.SetSealed(false);
             ClearEventEffects();
             ActiveEvent = kind;
-            if (kind == RunEventKind.Blackout) BlackoutLighting.SetDark(true);
+            if (kind == RunEventKind.Blackout && !GridDrivesLights) BlackoutLighting.SetDark(true);
             if (kind == RunEventKind.Lockdown && _map != null) _map.SetSealed(true);
             if (kind == RunEventKind.ToxicLeak) ToxicLeak.Begin(_map, _eventSurge);
             if (kind == RunEventKind.RedSky) RedSkyLighting.Set(true);

@@ -31,6 +31,8 @@ namespace Deadfall.Game
         public float Supply { get; protected set; }
         public float SupplyMax { get; private set; }
         public DroneMode Mode { get; set; }
+        /// <summary>Fed by the map's power grid (always true without one). Unpowered fences don't shock and sentries don't fire.</summary>
+        public bool Powered { get; set; } = true;
 
         public StructureDef Def => StructureCatalog.Of(Kind);
         protected StructureTier Stats => Def.Tier(Tier);
@@ -126,6 +128,7 @@ namespace Deadfall.Game
             if (d == null) return string.Empty;
             string head = $"{Def.Name} T{Tier}  {Mathf.CeilToInt(Health)}/{Mathf.CeilToInt(MaxHealth)}";
             if (SupplyMax > 0f) head += Kind == StructureKind.Sentry ? $"  ammo {Mathf.CeilToInt(Supply)}" : $"  charge {Supply01 * 100f:0}%";
+            if (!Powered) head += "  ·  NO POWER (restart a grid generator)";
             string primary = PrimaryAction(d, out int cost) switch
             {
                 StructureAction.Repair => $"F repair ({cost} Scrap)",

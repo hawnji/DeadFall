@@ -106,6 +106,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<ArenaHazards>();
             // Creepers flanking through the crawl-vent network (host).
             net.AddComponent<VentCrawlers>();
+            // The power grid: generators that feed doors, lights, fences and sentries.
+            net.AddComponent<PowerGrid>();
             // M9: Engineering structures and the squad's Scrap (host-run).
             net.AddComponent<EngineeringDirector>();
             // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.

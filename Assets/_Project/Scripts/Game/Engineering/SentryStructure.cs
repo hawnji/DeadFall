@@ -38,7 +38,7 @@ namespace Deadfall.Game
         protected override void TickVisual(float dt)
         {
             double now = Time.timeAsDouble;
-            if (Supply <= 0f) return;
+            if (Supply <= 0f || !Powered) return;
             if (now >= _nextRetarget || _target == null || !_target.IsAlive)
             {
                 _nextRetarget = now + RetargetInterval;

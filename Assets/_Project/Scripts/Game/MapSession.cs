@@ -63,6 +63,9 @@ namespace Deadfall.Game
 
         public static MapSession Current { get; private set; }
 
+        /// <summary>Power-locked doors need grid power (set by <see cref="PowerGrid"/>; null means always powered).</summary>
+        public static Func<bool> GridHasPower;
+
         public BuiltMap Map { get; private set; }
         public bool HasMap => Map != null;
         public ulong Seed => Map != null ? Map.Layout.Seed : 0UL;
@@ -367,7 +370,8 @@ namespace Deadfall.Game
                 case DoorLock.Switch:
                     return "Locked: find the security switch";
                 case DoorLock.Power:
-                    return _usedSwitches.Contains(door.ConnectionIndex) ? "Power restoring..." : "No power: restore the power relay";
+                    if (_usedSwitches.Contains(door.ConnectionIndex)) return "Power restoring...";
+                    return GridHasPower != null && !GridHasPower() ? "No grid power: restart a grid generator, then the relay" : "No power: restore the power relay";
                 default:
                     return string.Empty;
             }
@@ -376,6 +380,7 @@ namespace Deadfall.Game
         private string SwitchPrompt(DoorSwitch sw, GameObject player)
         {
             if (sw.Used || IsDoorOpen(sw.ConnectionIndex)) return string.Empty;
+            if (sw.Kind == DoorLock.Power && GridHasPower != null && !GridHasPower()) return "Power relay (the grid is down: restart a generator)";
             return sw.Kind == DoorLock.Power ? "Restore power to a locked door" : "Hit the security switch";
         }
 
@@ -436,6 +441,7 @@ namespace Deadfall.Game
                     }
                     else if (c.Lock == DoorLock.Power)
                     {
+                        if (GridHasPower != null && !GridHasPower()) return; // the relay needs the grid
                         _usedSwitches.Add(index);
                         _powerAt[index] = Time.timeAsDouble + PowerRestoreSeconds;
                         foreach (DoorSwitch sw in Map.Switches) if (sw.ConnectionIndex == index) sw.SetUsed(true);

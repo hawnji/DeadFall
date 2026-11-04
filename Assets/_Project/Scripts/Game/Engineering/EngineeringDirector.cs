@@ -196,6 +196,45 @@ namespace Deadfall.Game
 
         // ---------------------------------------------------------------- queries
 
+        private readonly List<Structure> _byAge = new List<Structure>(16);
+        private readonly List<int> _draws = new List<int>(16);
+        private readonly List<bool> _powered = new List<bool>(16);
+
+        /// <summary>Host/offline: total power the squad's structures want from the grid.</summary>
+        public int PowerDemand
+        {
+            get
+            {
+                int n = 0;
+                foreach (Structure s in _structures.Values) if (s != null) n += PowerGridRules.Draw(s.Kind);
+                return n;
+            }
+        }
+
+        /// <summary>
+        /// Host/offline: feeds structures from a grid of <paramref name="capacity"/> (int.MaxValue = no grid), oldest
+        /// first (<see cref="PowerGridRules.Allocate"/>). Returns the power in use.
+        /// </summary>
+        public int ApplyGridCapacity(int capacity)
+        {
+            if (!IsAuthority) return 0;
+            _byAge.Clear();
+            foreach (Structure s in _structures.Values) if (s != null) _byAge.Add(s);
+            _byAge.Sort((a, b) => a.Id.CompareTo(b.Id));
+            _draws.Clear();
+            foreach (Structure s in _byAge) _draws.Add(PowerGridRules.Draw(s.Kind));
+            PowerGridRules.Allocate(capacity, _draws, _powered);
+            int used = 0;
+            for (int i = 0; i < _byAge.Count; i++)
+            {
+                if (_powered[i]) used += _draws[i];
+                if (_byAge[i].Powered == _powered[i]) continue;
+                _byAge[i].Powered = _powered[i];
+                _dirty = true;
+            }
+            return used;
+        }
+
         public int CountOwned(ulong owner, StructureKind kind)
         {
             int n = 0;
@@ -465,7 +504,7 @@ namespace Deadfall.Game
                     w.WriteValueSafe((byte)s.Tier);
                     w.WriteValueSafe((byte)Mathf.CeilToInt(s.Health01 * 255f));
                     w.WriteValueSafe((byte)Mathf.RoundToInt(s.Supply01 * 255f));
-                    w.WriteValueSafe((byte)s.Mode);
+                    w.WriteValueSafe((byte)((byte)s.Mode | (s.Powered ? 0 : 2)));
                 }
                 for (; written < count; written++)
                 {
@@ -509,7 +548,8 @@ namespace Deadfall.Game
                 Structure s = Find(id);
                 if (s == null) s = Spawn(id, (StructureKind)kind, owner, engineer == 1, pos, yaw, true);
                 else if (s.Kind != StructureKind.Drone) s.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
-                s.ApplySynced(tier, health / 255f, supply / 255f, mode == 1 ? DroneMode.Repair : DroneMode.Attack);
+                s.ApplySynced(tier, health / 255f, supply / 255f, (mode & 1) == 1 ? DroneMode.Repair : DroneMode.Attack);
+                s.Powered = (mode & 2) == 0;
             }
             _scratch.Clear();
             foreach (ushort id in _structures.Keys) if (!_seen.Contains(id)) _scratch.Add(id);
