@@ -496,6 +496,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Enemies still spawn near the squad (only open rooms feed spawns) and walk the whole map; no NavMesh holes at the far edges.
 - [ ] Multiplayer: a client joins a big map and gets the same layout, doors and breach boards.
 
+### 3.34 Manual checklist: Gun Dispenser
+
+- [ ] Survival and Endless runs on a generated map: a dark cabinet with a glowing window and an orange beacon appears in the first sector. An orange "GUN DISPENSER  N m" marker shows it from up to 80 m. Operations and the sandbox have none.
+- [ ] F with 950+ Field Credits: credits go down, weapons cycle in the window for 4 s (slowing down), then one weapon sits there for 12 s with its tier colour. Only the buyer can take it ("Take ... (12 s)"); it replaces the weapon in hand like a drop. Without enough credits: "Not enough Field Credits".
+- [ ] The result is never the weapon the buyer is holding, never a melee weapon, and is a better tier on average than enemy drops.
+- [ ] Left untaken, the weapon disappears after 12 s and the dispenser is usable again.
+- [ ] After 4 or more pulls at one spot, a pull can come up empty: red window, "The Gun Dispenser is moving. Pull refunded" (credits back), and 5 s later it reappears in another open sector with a toast naming it. It never moves while only one sector is open.
+- [ ] Multiplayer: everyone sees the same spin, result, position and toasts; a client can buy, and only that client can take the weapon. A player joining mid-run sees it in the right state.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

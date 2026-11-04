@@ -57,6 +57,8 @@ namespace Deadfall.Game
         public bool HasGenerators => _generators.Count > 0;
         public int GeneratorCount => _generators.Count;
         public IReadOnlyList<GridGenerator> Generators => _generators;
+        /// <summary>Rooms holding a generator (other placements avoid them).</summary>
+        public IReadOnlyList<int> Rooms => _rooms;
 
         /// <summary>Generators online in open sectors.</summary>
         public int Online

@@ -203,5 +203,37 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.AreEqual(RunPhase.Failed, run.Phase);
             Assert.IsFalse(run.IsRunning);
         }
+    
+        [Test]
+        public void GunDispenserOnlyMovesAfterAFewUses()
+        {
+            for (int uses = 0; uses < GunDispenserRules.MinUsesBeforeMove; uses++) Assert.AreEqual(0f, GunDispenserRules.MoveChance(uses));
+            Assert.Greater(GunDispenserRules.MoveChance(GunDispenserRules.MinUsesBeforeMove), 0f);
+            Assert.Greater(GunDispenserRules.MoveChance(GunDispenserRules.MinUsesBeforeMove + 2), GunDispenserRules.MoveChance(GunDispenserRules.MinUsesBeforeMove));
+            Assert.AreEqual(GunDispenserRules.MaxMoveChance, GunDispenserRules.MoveChance(100));
+            var rng = new DeterministicRandom(5);
+            for (int i = 0; i < 200; i++) Assert.IsFalse(GunDispenserRules.RollMove(rng, 100, false), "nowhere to go");
+            int moves = 0;
+            for (int i = 0; i < 1000; i++) if (GunDispenserRules.RollMove(rng, 100, true)) moves++;
+            Assert.That(moves, Is.InRange(400, 600));
+        }
+
+        [Test]
+        public void GunDispenserNeverRepeatsTheHeldWeapon()
+        {
+            var rng = new DeterministicRandom(9);
+            var guns = new System.Collections.Generic.List<int> { 0, 2, 3, 5 };
+            var seen = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 400; i++)
+            {
+                int pick = GunDispenserRules.PickIndex(rng, guns, 3);
+                Assert.AreNotEqual(3, pick);
+                Assert.IsTrue(guns.Contains(pick));
+                seen.Add(pick);
+            }
+            Assert.AreEqual(3, seen.Count);
+            Assert.AreEqual(7, GunDispenserRules.PickIndex(rng, new System.Collections.Generic.List<int> { 7 }, 7), "only choice");
+            Assert.AreEqual(-1, GunDispenserRules.PickIndex(rng, new System.Collections.Generic.List<int>(), 0));
+        }
     }
 }
