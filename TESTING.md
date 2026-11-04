@@ -487,6 +487,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Survival: side objectives can now be Seal the cryo containers or Open the reactor coolant valves (2:30 clock). Failing them never ends the run.
 - [ ] Clients see the same end title (MISSION FAILED / OPERATION COMPLETE) as the host.
 
+### 3.33 Manual checklist: 50-room Survival maps
+
+- [ ] A Survival map (both environments) loads without a long hitch; note how long generation plus the NavMesh bake takes (the log line `Seed ...: N rooms`).
+- [ ] Rooms counted in the log are around 45 to 55, across 6 sectors; the start is still small (airlock plus one room, at most one side room).
+- [ ] Side branches now fork off other side rooms, so the map spreads out rather than running as one long line.
+- [ ] Frame rate stays at target with the whole map open (Operation mode opens every sector): roughly 4x the room lights of before.
+- [ ] Enemies still spawn near the squad (only open rooms feed spawns) and walk the whole map; no NavMesh holes at the far edges.
+- [ ] Multiplayer: a client joins a big map and gets the same layout, doors and breach boards.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

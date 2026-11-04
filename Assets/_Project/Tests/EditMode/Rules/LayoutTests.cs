@@ -31,6 +31,29 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void SurvivalMapsHaveAboutFiftyRooms()
+        {
+            foreach (EnvironmentDef env in EnvironmentCatalog.All)
+            {
+                RoomKit kit = env.CreateKit();
+                GraphTemplate g = env.CreateGraph();
+                int total = 0, maps = 0;
+                for (ulong seed = 1; seed <= 150; seed++)
+                {
+                    Layout l = LayoutGenerator.Generate(kit, g, seed);
+                    int rooms = 0;
+                    foreach (PlacedRoom r in l.Rooms) if (r.Template.Role != RoomRole.Corridor) rooms++;
+                    Assert.That(rooms, Is.InRange(40, 62), $"{env.DisplayName} seed {seed}");
+                    Assert.AreEqual(g.Sectors, l.SectorCount, $"{env.DisplayName} seed {seed}");
+                    Assert.LessOrEqual(l.Attempt, g.MaxAttempts, "retries");
+                    total += rooms;
+                    maps++;
+                }
+                Assert.That(total / (float)maps, Is.InRange(46f, 54f), env.DisplayName);
+            }
+        }
+
+        [Test]
         public void SameSeedGivesSameLayout()
         {
             for (ulong seed = 100; seed < 140; seed++)
