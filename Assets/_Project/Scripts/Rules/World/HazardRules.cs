@@ -11,6 +11,12 @@ namespace Deadfall.Rules.World
     {
         public const int ToxicRooms = 2;
         public const float ToxicDamagePerSecond = 6f;
+        /// <summary>Containment Breach floor: a cycle of calm, a warning flicker, then an arc that hurts whoever stands on it.</summary>
+        public const float BreachCycleSeconds = 3.2f;
+        public const float BreachWarnSeconds = 0.8f;
+        public const float BreachArcSeconds = 0.7f;
+        public const float BreachPlayerDamage = 16f;
+        public const float BreachEnemyDamage = 45f;
 
         public static List<int> PickToxicRooms(Layout layout, int openSectors, ulong mapSeed, int surge, int count = ToxicRooms)
         {
@@ -33,5 +39,29 @@ namespace Deadfall.Rules.World
             picked.Sort();
             return picked;
         }
+
+        /// <summary>Containment Breach: the room whose floor arcs (same pool as Toxic Leak, its own roll). -1 if none.</summary>
+        public static int PickBreachRoom(Layout layout, int openSectors, ulong mapSeed, int surge)
+        {
+            List<int> rooms = PickToxicRooms(layout, openSectors, mapSeed ^ 0xB4EAC4UL, surge, 1);
+            return rooms.Count > 0 ? rooms[0] : -1;
+        }
+
+        public enum BreachPhase { Calm, Warning, Arc }
+
+        /// <summary>Where the breach floor is in its cycle, from seconds since the event began (every peer runs the same clock).</summary>
+        public static BreachPhase BreachPhaseAt(float secondsSinceStart)
+        {
+            if (secondsSinceStart < 0f) return BreachPhase.Calm;
+            float t = secondsSinceStart % BreachCycleSeconds;
+            float arcStart = BreachCycleSeconds - BreachArcSeconds;
+            if (t >= arcStart) return BreachPhase.Arc;
+            if (t >= arcStart - BreachWarnSeconds) return BreachPhase.Warning;
+            return BreachPhase.Calm;
+        }
+
+        /// <summary>Which arc (counting from 0) a moment falls in, so each arc hurts a target once.</summary>
+        public static int BreachArcIndex(float secondsSinceStart) =>
+            secondsSinceStart < 0f ? -1 : (int)(secondsSinceStart / BreachCycleSeconds);
     }
 }

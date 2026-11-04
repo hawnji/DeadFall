@@ -225,6 +225,34 @@ namespace Deadfall.Encounters
             return spawned;
         }
 
+        /// <summary>
+        /// Lull ambush: spawns at the closest spawn points the squad can't see (breach closets on generated maps), at
+        /// least <see cref="CloseMinPlayerDistance"/> away. They count toward the coming surge. Returns how many spawned.
+        /// </summary>
+        public int SpawnAmbush(EnemyDefinition def, int count, List<Enemy> spawnedInto = null)
+        {
+            EnemyManager manager = EnemyManager.Current;
+            if (manager == null || def == null || _points.Count == 0) return 0;
+            CollectPlayers();
+            int spawned = 0;
+            for (int i = 0; i < count; i++)
+            {
+                int index = PickPoint(int.MinValue, CloseMinPlayerDistance);
+                if (index < 0) break;
+                Vector3 jitter = new Vector3(_rng.Range(-0.8f, 0.8f), 0f, _rng.Range(-0.8f, 0.8f));
+                Vector3 pos = _points[index].Position + jitter;
+                Vector3 toward = NearestPlayer(pos) - pos;
+                float yaw = Mathf.Atan2(toward.x, toward.z) * Mathf.Rad2Deg;
+                Enemy e = manager.Spawn(def, pos, yaw, _plan != null ? _plan.HealthScale : 1f);
+                if (e == null) continue;
+                e.Alert();
+                _alive.Add(e);
+                spawnedInto?.Add(e);
+                spawned++;
+            }
+            return spawned;
+        }
+
         private void SkipCurrent()
         {
             _next++;

@@ -24,6 +24,8 @@ namespace Deadfall.Rules.Encounters
         DefendUplink,
         /// <summary>Destroy two smaller hive nests in different rooms (M12).</summary>
         PurgeHives,
+        /// <summary>Shut down a failing containment system at its console (Containment Breach event).</summary>
+        ShutDownBreach,
     }
 
     public enum ObjectiveStatus : byte { Active, Complete, Failed }
@@ -257,6 +259,7 @@ namespace Deadfall.Rules.Encounters
         public const float GeneratorSeconds = 5f;
         public const float TerminalSeconds = 8f;
         public const float LockdownHackSeconds = 6f;
+        public const float BreachShutdownSeconds = 7f;
         public const float ChannelRange = 3.5f;
         public const float NestHealth = 1500f;
         public const float NestSpawnSeconds = 6f;
@@ -269,7 +272,7 @@ namespace Deadfall.Rules.Encounters
         /// <summary>Each Purge Hives nest has this share of a full nest's health.</summary>
         public const float HiveHealthFraction = 0.6f;
         /// <summary>The last objective kind, for validating synced state.</summary>
-        public const ObjectiveKind LastKind = ObjectiveKind.PurgeHives;
+        public const ObjectiveKind LastKind = ObjectiveKind.ShutDownBreach;
         /// <summary>Side objectives stay up for this many surges.</summary>
         public const int SideObjectiveSurges = 2;
 
@@ -324,6 +327,7 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.Extraction => "Hold the extraction zone",
             ObjectiveKind.DefendUplink => "Defend the uplink while it uploads",
             ObjectiveKind.PurgeHives => "Purge the hive nests",
+            ObjectiveKind.ShutDownBreach => "Shut down the containment system",
             _ => k.ToString(),
         };
 
@@ -346,6 +350,7 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.LiftLockdown => 200,
             ObjectiveKind.DefendUplink => 600,
             ObjectiveKind.PurgeHives => 700,
+            ObjectiveKind.ShutDownBreach => 300,
             _ => 0,
         };
 

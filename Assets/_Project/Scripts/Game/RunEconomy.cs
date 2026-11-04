@@ -189,6 +189,9 @@ namespace Deadfall.Game
 
         // ---------------------------------------------------------------- drops
 
+        /// <summary>Events (Red Sky) scale the loot drop chance on the host. Reset when the event ends.</summary>
+        public static float EventDropMultiplier = 1f;
+
         private void OnEnemyDied(EnemyDied e)
         {
             if (!IsAuthority || e.Definition == null) return;
@@ -196,7 +199,7 @@ namespace Deadfall.Game
             if (waves == null || !waves.IsRunning) return; // drops only in runs (sandbox spawns stay clean)
             // A Specimen always drops a Prototype weapon (GAME_DESIGN §7 boss reward); everything else rolls.
             bool boss = e.Definition.IsBoss;
-            if (!boss && _dropRng.NextFloat() >= LootRules.DropChance(e.Definition.ThreatCost)) return;
+            if (!boss && _dropRng.NextFloat() >= LootRules.DropChance(e.Definition.ThreatCost) * EventDropMultiplier) return;
             if (!boss && _drops.Count >= MaxDrops) return;
             IReadOnlyList<WeaponDefinition> all = WeaponCatalog.All;
             WeaponDefinition def = all[_dropRng.Range(0, all.Count)];

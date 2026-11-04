@@ -73,7 +73,7 @@ Not in scope (comes later): players as NetworkObjects, NetworkTransform, interpo
 9. ✅ 23 new EditMode tests (`WaveTests.cs`).
 10. ✅ Play check in the editor (`TESTING.md` §3.4), passed 2026-11-02 after #18 (surge enemies now hunt from any distance).
 
-Not in scope yet: ~~Elite, Hunt, Supply and Specimen surges~~ (done in M7), ambushes during lulls, spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
+Not in scope yet: ~~Elite, Hunt, Supply and Specimen surges~~ (done in M7), ~~ambushes during lulls~~ (done, `AmbushScheduler`), spending credits (Supply Caches, M6), the adaptive factor's inputs (squad downs and health trend; the curve already accepts it).
 
 ## M4 – Class framework ✅
 **Part 1 (framework, Gunner, Tank, Warrior)** ✅ merged as #19
@@ -142,7 +142,7 @@ Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs
 7. ✅ HUD: objective list, event line, extraction bar, objective banners. The boss bar moved below the wave panel.
 8. ✅ 10 new EditMode tests (`ObjectiveTests.cs`).
 
-Not in scope yet: the power grid feeding doors and turrets (generators only end Blackouts for now), Red Sky and Containment Breach events, objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
+Not in scope yet: the power grid feeding doors and turrets (generators only end Blackouts for now), ~~Red Sky and Containment Breach events~~ (done), objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
 
 ## M9 – Engineering ✅ (editor check held until M10)
 1. ✅ Rules (`Deadfall.Rules.Engineering`): `StructureCatalog` (three tiers each), `ScrapRules` (kills, surge clears, objectives, Engineer +50%, non-Engineer cost ×1.5, dismantle refund), `RepairRules` (chunked repairs, Engineers better), `PlacementRules` validator with a reason for every refusal, `ScrapLedger`.

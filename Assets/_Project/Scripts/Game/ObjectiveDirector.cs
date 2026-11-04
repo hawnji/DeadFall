@@ -20,7 +20,8 @@ namespace Deadfall.Game
     /// <see cref="EventScheduler"/>, places objective props in open rooms, runs channels, nests and extraction, pays
     /// rewards, and sends the whole state to clients ("df.obj") when it changes. Clients use props through the host
     /// ("df.objuse"). Survival gets optional side objectives every few surges; an Operations run gets its mission's
-    /// objectives and ends with a timed extraction defense. Events: Blackout, The Stalker, Emergency Lockdown.
+    /// objectives and ends with a timed extraction defense. Events: Blackout, The Stalker, Emergency Lockdown, Frenzy, Toxic Leak, Red Sky and Containment Breach.
+    /// Lulls can also hold an ambush (<see cref="AmbushScheduler"/>).
     /// </summary>
     public sealed class ObjectiveDirector : MonoBehaviour
     {
@@ -34,6 +35,11 @@ namespace Deadfall.Game
 
         private readonly ObjectiveTracker _tracker = new ObjectiveTracker();
         private readonly EventScheduler _events = new EventScheduler();
+        private readonly AmbushScheduler _ambushes = new AmbushScheduler();
+        private double _ambushAt;
+        private bool _ambushWarned;
+        /// <summary>The surge the active event began on (rooms for Toxic Leak / Containment Breach are picked from it).</summary>
+        private int _eventSurge;
         private readonly Dictionary<ushort, ObjectiveProp> _props = new Dictionary<ushort, ObjectiveProp>();
         private readonly Dictionary<ushort, ChannelProgress> _channels = new Dictionary<ushort, ChannelProgress>();
         private readonly Dictionary<ushort, ObjectiveNest> _nests = new Dictionary<ushort, ObjectiveNest>();
@@ -196,6 +202,7 @@ namespace Deadfall.Game
                 case ObjectivePropKind.Generator:
                 case ObjectivePropKind.DataTerminal:
                 case ObjectivePropKind.LockdownTerminal:
+                case ObjectivePropKind.ContainmentConsole:
                     if (_channels.TryGetValue(id, out ChannelProgress c) && !c.Started)
                     {
                         c.Start();
@@ -236,6 +243,7 @@ namespace Deadfall.Game
             TickChannels(dt);
             TickNests();
             TickExtraction(dt);
+            TickAmbush();
 
             if (_session != null && _session.IsHost && _session.RemotePeerCount > 0 && _dirty && Time.unscaledTime >= _nextSend)
             {
@@ -297,6 +305,30 @@ namespace Deadfall.Game
             }
         }
 
+        /// <summary>Lull ambush: a warning a few seconds ahead, then infected burst out of the closets nearest the squad.</summary>
+        private void TickAmbush()
+        {
+            if (_ambushAt <= 0.0 || _waves == null) return;
+            if (_waves.Phase != RunPhase.Lull)
+            {
+                _ambushAt = 0.0;
+                return;
+            }
+            double now = Time.timeAsDouble;
+            if (!_ambushWarned && now >= _ambushAt - AmbushScheduler.WarningSeconds)
+            {
+                _ambushWarned = true;
+                Say("WARNING: AMBUSH", "Something's moving in the walls. Get your back to something");
+            }
+            if (now < _ambushAt || _waves.Director == null) return;
+            _ambushAt = 0.0;
+            int count = AmbushScheduler.Count(_waves.Surge, _waves.Players.Count);
+            int creepers = AmbushScheduler.Creepers(count);
+            int spawned = _waves.Director.SpawnAmbush(PrototypeEnemies.Husk, count - creepers);
+            spawned += _waves.Director.SpawnAmbush(PrototypeEnemies.Creeper, creepers);
+            if (spawned > 0) Say("AMBUSH", $"{spawned} infected. They count toward the next surge if you leave them");
+        }
+
         private void TickExtraction(float dt)
         {
             if (_hold == null || _zone == null) return;
@@ -345,7 +377,8 @@ namespace Deadfall.Game
                     else PlanLull();
                     break;
                 case RunPhase.Reward:
-                    EndEvent();
+                    // A Containment Breach outlasts its surge: it runs until shut down (or its objective expires).
+                    if (ActiveEvent != RunEventKind.ContainmentBreach) EndEvent();
                     if (_tracker.ExpireAfter(_waves.Surge) > 0) Say("SIDE OBJECTIVE EXPIRED", null);
                     break;
                 case RunPhase.NotStarted:
@@ -361,6 +394,7 @@ namespace Deadfall.Game
             ClearAll(false);
             _rng = new DeterministicRandom(_waves.Seed ^ 0x5851F42D4C957F2DUL);
             _events.Reset();
+            _ambushes.Reset();
             IsOperation = _pendingOperation && _waves.IsOperation;
             _pendingOperation = false;
             if (IsOperation && _map != null && _map.HasMap)
@@ -390,8 +424,13 @@ namespace Deadfall.Game
                 if (AddObjective(kind, false, upcoming + ObjectiveRules.SideObjectiveSurges - 1) != null)
                     Say("SIDE OBJECTIVE", $"{ObjectiveRules.Title(kind)} · +{ObjectiveRules.Reward(kind)} Field Credits each");
             }
-            PendingEvent = _events.Roll(_rng, upcoming, WavePlanner.TypeFor(upcoming), hasMap, hasMap ? _map.OpenSectors : 0);
+            // No new event while one is still running (a Containment Breach carries over).
+            PendingEvent = ActiveEvent != RunEventKind.None ? RunEventKind.None
+                : _events.Roll(_rng, upcoming, WavePlanner.TypeFor(upcoming), hasMap, hasMap ? _map.OpenSectors : 0);
             if (PendingEvent != RunEventKind.None) Say($"WARNING: {EventScheduler.Name(PendingEvent)} NEXT SURGE", EventScheduler.Hint(PendingEvent));
+            float ambushIn = _ambushes.Roll(_rng, upcoming, WavePlanner.TypeFor(upcoming), _waves.TimeLeft);
+            _ambushAt = ambushIn >= 0f ? Time.timeAsDouble + ambushIn : 0.0;
+            _ambushWarned = false;
             _dirty = true;
         }
 
@@ -406,8 +445,10 @@ namespace Deadfall.Game
         private void OnSurgePlanned(SurgePlan plan)
         {
             if (!IsAuthority || plan == null) return;
+            if (PendingEvent == RunEventKind.None) return; // nothing new (an event carried over keeps running)
             ActiveEvent = PendingEvent;
             PendingEvent = RunEventKind.None;
+            _eventSurge = plan.Surge;
             switch (ActiveEvent)
             {
                 case RunEventKind.Blackout:
@@ -434,6 +475,19 @@ namespace Deadfall.Game
                 case RunEventKind.ToxicLeak:
                     ToxicLeak.Begin(_map, plan.Surge);
                     break;
+                case RunEventKind.RedSky:
+                    Enemy.EventSpeedMultiplier = EventScheduler.RedSkySpeed;
+                    Enemy.EventDamageMultiplier = EventScheduler.RedSkyDamage;
+                    WaveManager.EventCreditMultiplier = EventScheduler.RedSkyCredits;
+                    RunEconomy.EventDropMultiplier = EventScheduler.RedSkyDrops;
+                    RedSkyLighting.Set(true);
+                    break;
+                case RunEventKind.ContainmentBreach:
+                    ContainmentBreach.Begin(_map, plan.Surge, true);
+                    if (ContainmentBreach.IsActive)
+                        AddObjective(ObjectiveKind.ShutDownBreach, false, plan.Surge + EventScheduler.BreachSurges - 1);
+                    else ActiveEvent = RunEventKind.None;
+                    break;
             }
             if (ActiveEvent != RunEventKind.None) Say(EventScheduler.Name(ActiveEvent), EventScheduler.Hint(ActiveEvent));
             _dirty = true;
@@ -459,6 +513,11 @@ namespace Deadfall.Game
                 if (o.Kind != ObjectiveKind.Extraction) Say("OBJECTIVE COMPLETE", o.RewardCredits > 0 ? $"{o.Title} · +{o.RewardCredits} Field Credits each" : o.Title);
                 if (o.Kind == ObjectiveKind.RestorePower && ActiveEvent == RunEventKind.Blackout) EndEvent();
                 if (o.Kind == ObjectiveKind.LiftLockdown && ActiveEvent == RunEventKind.Lockdown) EndEvent();
+            }
+            if (o.Kind == ObjectiveKind.ShutDownBreach && ActiveEvent == RunEventKind.ContainmentBreach)
+            {
+                EndEvent();
+                if (o.Status == ObjectiveStatus.Failed) Say("CONTAINMENT VENTED", "The system burned itself out");
             }
             if (o.Kind == ObjectiveKind.Keycard) HasKeycard = false;
             RemovePropsOf(o.Id, o.Status == ObjectiveStatus.Failed);
@@ -515,6 +574,16 @@ namespace Deadfall.Game
                 case ObjectiveKind.LiftLockdown:
                     PlaceLockdownTerminal(o.Id);
                     break;
+                case ObjectiveKind.ShutDownBreach:
+                {
+                    // The console stands on the arcing floor itself: shutting it down means braving the arcs.
+                    int room = ContainmentBreach.Room;
+                    Vector3 pos = room >= 0 ? SpotInRoom(room) : PickSpot(0, out _);
+                    ushort id = NextId();
+                    _props[id] = ObjectiveProp.Create(id, o.Id, ObjectivePropKind.ContainmentConsole, pos, transform);
+                    _channels[id] = new ChannelProgress(ObjectiveRules.BreachShutdownSeconds);
+                    break;
+                }
                 case ObjectiveKind.DefendUplink:
                 {
                     ushort before = PeekId();
@@ -671,6 +740,7 @@ namespace Deadfall.Game
             if (_map != null) _map.SetSealed(false);
             ClearEventEffects();
             ActiveEvent = PendingEvent = RunEventKind.None;
+            _ambushAt = 0.0;
             IsOperation = false;
             if (notify) _dirty = true;
         }
@@ -704,6 +774,7 @@ namespace Deadfall.Game
                 w.WriteValueSafe(_hold != null ? _hold.Elapsed : 0f);
                 w.WriteValueSafe(ExtractionOccupied ? (byte)1 : (byte)0);
                 w.WriteValueSafe(_zonePos);
+                w.WriteValueSafe((ushort)Mathf.Clamp(_eventSurge, 0, ushort.MaxValue));
 
                 int oc = Mathf.Min(32, _tracker.All.Count);
                 w.WriteValueSafe((byte)oc);
@@ -805,6 +876,8 @@ namespace Deadfall.Game
             r.ReadValueSafe(out float holdElapsed);
             r.ReadValueSafe(out byte occupied);
             r.ReadValueSafe(out Vector3 zonePos);
+            r.ReadValueSafe(out ushort eventSurge);
+            _eventSurge = eventSurge;
             IsOperation = op == 1;
             HasKeycard = keycard == 1;
             ExtractionOccupied = occupied == 1;
@@ -864,7 +937,7 @@ namespace Deadfall.Game
                     n.SetHealth01((flags & 2) != 0 ? 0f : value / 255f);
                     continue;
                 }
-                if (kind > (byte)ObjectivePropKind.LockdownTerminal) continue;
+                if (kind > (byte)ObjectivePropKind.ContainmentConsole) continue;
                 if (!_props.TryGetValue(id, out ObjectiveProp p) || p == null)
                 {
                     _props[id] = p = ObjectiveProp.Create(id, objectiveId, (ObjectivePropKind)kind, pos, transform);
@@ -906,15 +979,21 @@ namespace Deadfall.Game
             ActiveEvent = kind;
             if (kind == RunEventKind.Blackout) BlackoutLighting.SetDark(true);
             if (kind == RunEventKind.Lockdown && _map != null) _map.SetSealed(true);
-            if (kind == RunEventKind.ToxicLeak) ToxicLeak.Begin(_map, _waves != null ? _waves.Surge : 0);
+            if (kind == RunEventKind.ToxicLeak) ToxicLeak.Begin(_map, _eventSurge);
+            if (kind == RunEventKind.RedSky) RedSkyLighting.Set(true);
+            if (kind == RunEventKind.ContainmentBreach) ContainmentBreach.Begin(_map, _eventSurge, false);
         }
 
-        /// <summary>Undoes Frenzy and Toxic Leak (M12) on this machine.</summary>
+        /// <summary>Undoes Frenzy, Toxic Leak, Red Sky and Containment Breach on this machine.</summary>
         private static void ClearEventEffects()
         {
             Enemy.EventSpeedMultiplier = 1f;
             Enemy.EventDamageMultiplier = 1f;
+            WaveManager.EventCreditMultiplier = 1f;
+            RunEconomy.EventDropMultiplier = 1f;
             ToxicLeak.End();
+            ContainmentBreach.End();
+            RedSkyLighting.Set(false);
         }
     }
 }
