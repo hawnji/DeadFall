@@ -460,6 +460,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Each Broodmother rupture hatches one Creeper (host), counted toward the surge.
 - [ ] Clients see the same rings at the same spots and only take damage themselves.
 
+### 3.30 Manual checklist: Creepers using vents
+
+- [ ] Generated maps have dark floor grates by a wall in every room (two in big rooms), never in secret rooms and never at doorways.
+- [ ] A Creeper more than ~14 m from the squad that passes within 3 m of a grate sometimes sinks into it (growl), disappears for 1 to 5 s, and climbs out of an open-room grate 3.5 to 13 m from its target. The exit grate rattles just before (host).
+- [ ] While inside it can't be shot or targeted by sentries; it counts toward the surge. It never comes out in a closed sector.
+- [ ] Clients see it sink and rise at the same grates.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
