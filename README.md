@@ -118,6 +118,17 @@ Audio (M13): every sound is synthesised at startup from recipes in `Rules/Common
 
 **Without Unity** (cloud/CI): `Tools/CompileCheck/setup.sh` then `Tools/CompileCheck/check.py` compiles every assembly and runs the Rules tests. See `Tools/CompileCheck/README.md`.
 
+## Online play (Unity Relay)
+
+Online co-op uses join codes through Unity Relay, so nobody needs an IP address or port forwarding. One-time setup:
+
+1. In the Editor: **Edit > Project Settings > Services**, sign in and link the project to Unity Cloud.
+2. **Window > Package Manager > Unity Registry**, install **Multiplayer Services** (`com.unity.services.multiplayer`).
+   The `Deadfall.Online` assembly only compiles once that package is present (`DEADFALL_UGS`); without it the
+   game still runs with LAN/IP co-op only.
+3. Title screen: **Host online** starts a session and shows a join code (bottom of the screen and on the pause
+   screen, with Copy). Friends use **Join online** and type the code.
+
 ## Documentation
 
 | File | Purpose |
