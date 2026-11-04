@@ -29,3 +29,4 @@
 Assets/_Project/Resources/Models/*.fbx -filter -diff -merge binary
 Assets/_Project/Resources/Audio/*.wav -filter -diff -merge binary
 Assets/_Project/Resources/Audio/*.ogg -filter -diff -merge binary
+Assets/_Project/Resources/Music/*.ogg -filter -diff -merge binary

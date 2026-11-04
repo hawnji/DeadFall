@@ -11,7 +11,9 @@ namespace Deadfall.UI
     /// The title screen shown when the game starts: a slow camera drift through FOB Halcyon behind the DEADFALL logo,
     /// with Play solo, Host co-op, Join co-op, Settings and Quit. The game world is already built underneath; the
     /// title just holds the cursor, swaps in its own camera and hides the in-game HUD until the player picks an option.
-    /// Skipped with <c>-skiptitle</c>, <c>-deadfall-host</c> or <c>-deadfall-join</c> on the command line.
+    /// Plays the title theme (Resources/Music/TitleTheme) on the Music slider. "Quit to title" on the pause screen
+    /// leaves co-op, returns to the FOB and shows it again (<see cref="ReturnToTitle"/>).
+    /// The first showing is skipped with <c>-skiptitle</c>, <c>-deadfall-host</c> or <c>-deadfall-join</c> on the command line.
     /// </summary>
     public sealed class TitleScreen : MonoBehaviour
     {
@@ -20,6 +22,7 @@ namespace Deadfall.UI
         private const string PrefPort = "deadfall.net.port";
         private const float FadeIn = 1.4f;
         private const float FadeOut = 0.45f;
+        private const string Theme = "Music/TitleTheme";
 
         private GameObject _player;
         private GameObject _hud;
@@ -28,6 +31,8 @@ namespace Deadfall.UI
         private Camera _camera;
         private SettingsPanel _settings;
         private Vector3 _center;
+        private Action _returnToBase;
+        private bool _returnRequested;
 
         private bool _open;
         private bool _joinOpen;
@@ -39,15 +44,19 @@ namespace Deadfall.UI
         private float _closingAt = -1f;
 
         public static bool Showing { get; private set; }
+        public static TitleScreen Current { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => Showing = false;
+        private static void ResetStatics() { Showing = false; Current = null; }
 
         /// <param name="player">The local player, frozen while the title is up.</param>
         /// <param name="hud">The in-game HUD root, hidden while the title is up.</param>
         /// <param name="fobOrigin">FOB Halcyon's origin; the title camera drifts inside it.</param>
-        public void Bind(GameObject player, GameObject hud, Vector3 fobOrigin)
+        /// <param name="returnToBase">Ends any run or map and puts the player back at the FOB (Quit to title).</param>
+        public void Bind(GameObject player, GameObject hud, Vector3 fobOrigin, Action returnToBase)
         {
+            Current = this;
+            _returnToBase = returnToBase;
             _player = player;
             _hud = hud;
             _center = fobOrigin;
@@ -63,19 +72,41 @@ namespace Deadfall.UI
 
         private void Start()
         {
-            if (SkippedByCommandLine()) { Destroy(this); return; }
             _address = PlayerPrefs.GetString(PrefAddress, SessionService.DefaultAddress);
             _port = PlayerPrefs.GetInt(PrefPort, SessionService.DefaultPort).ToString();
             _settings = gameObject.AddComponent<SettingsPanel>();
             _settings.Bind(_cursor);
+            if (!SkippedByCommandLine()) Open();
+        }
+
+        /// <summary>Leaves any co-op session, returns to the FOB and shows the title again (pause screen).</summary>
+        public void ReturnToTitle()
+        {
+            // Deferred to Update: this is called from the pause screen's OnGUI, which Open() hides.
+            if (!_open) _returnRequested = true;
+        }
+
+        private void DoReturnToTitle()
+        {
+            _returnRequested = false;
+            if (_open) return;
+            SessionService s = SessionService.Current;
+            if (s != null && s.IsActive) s.Stop();
+            try { _returnToBase?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
             Open();
         }
 
         private void Open()
         {
+            if (_open) return;
             _open = true;
             Showing = true;
             _openedAt = Time.unscaledTime;
+            _closingAt = -1f;
+            _joinOpen = _joining = false;
+            _error = string.Empty;
+            GameAudio.PlayMusic(Theme, 2f);
             UiModal.TryOpen(Owner);
             if (_hud != null) _hud.SetActive(false);
 
@@ -101,6 +132,7 @@ namespace Deadfall.UI
             foreach (Camera c in _playerCameras) if (c != null) { c.enabled = true; c.tag = "MainCamera"; }
             if (_camera != null) Destroy(_camera.gameObject);
             Showing = false;
+            GameAudio.StopMusic(2.5f);
             if (_cursor != null) _cursor.SetLocked(true);
             GameAudio.Play2D(SfxId.UiConfirm);
         }
@@ -108,6 +140,7 @@ namespace Deadfall.UI
         private void OnDestroy()
         {
             if (_open) Close();
+            if (Current == this) Current = null;
         }
 
         /// <summary>A slow sideways drift along the south end of the hall, looking up the lane at Command Center.</summary>
@@ -122,11 +155,8 @@ namespace Deadfall.UI
 
         private void Update()
         {
-            if (!_open)
-            {
-                if (_closingAt >= 0f && Time.unscaledTime - _closingAt > FadeOut) Destroy(this);
-                return;
-            }
+            if (_returnRequested) DoReturnToTitle();
+            if (!_open) return;
             PlaceCamera(Time.unscaledTime - _openedAt);
             // The cursor stays free (Esc would otherwise lock it and wake up gameplay input).
             if (_cursor != null && _cursor.IsLocked) _cursor.SetLocked(false);
@@ -149,7 +179,7 @@ namespace Deadfall.UI
             if (!_open)
             {
                 // A short fade from black into the game after the title closes.
-                if (_closingAt < 0f) return;
+                if (_closingAt < 0f || now - _closingAt > FadeOut) return;
                 HudKit.Begin();
                 GUI.depth = -60;
                 float a = 1f - Mathf.Clamp01((now - _closingAt) / FadeOut);
