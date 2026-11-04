@@ -23,6 +23,8 @@ namespace Deadfall.Core
             _base = null;
             _emissive = null;
             _emissiveLoaded = false;
+            _normalBase = null;
+            _normalLoaded = false;
         }
 
         /// <summary>
@@ -44,6 +46,44 @@ namespace Deadfall.Core
             m.EnableKeyword("_EMISSION");
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", color * intensity);
+            return m;
+        }
+
+        private const string NormalPath = "Materials/RuntimeLitNormal";
+        private static Material _normalBase;
+        private static bool _normalLoaded;
+
+        /// <summary>
+        /// A lit material with an albedo and normal map tiled every <paramref name="tileMeters"/> (meshes carry UVs in
+        /// metres, see <see cref="SurfaceArt"/>). Uses <c>Resources/Materials/RuntimeLitNormal.mat</c> so builds keep the
+        /// normal-map shader variant.
+        /// </summary>
+        public static Material CreateSurface(Texture2D albedo, Texture2D normal, Color tint, float tileMeters, float smoothness, float bumpScale)
+        {
+            if (!_normalLoaded)
+            {
+                _normalLoaded = true;
+                bool srpActive = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+                Material asset = srpActive ? Resources.Load<Material>(NormalPath) : null;
+                if (asset != null) _normalBase = new Material(asset) { name = "RuntimeLitNormal" };
+            }
+            var m = new Material(_normalBase != null ? _normalBase : Base);
+            SetColor(m, tint);
+            var scale = Vector2.one / Mathf.Max(0.05f, tileMeters);
+            if (albedo != null)
+            {
+                if (m.HasProperty("_BaseMap")) { m.SetTexture("_BaseMap", albedo); m.SetTextureScale("_BaseMap", scale); }
+                if (m.HasProperty("_MainTex")) { m.SetTexture("_MainTex", albedo); m.SetTextureScale("_MainTex", scale); }
+            }
+            if (normal != null && m.HasProperty("_BumpMap"))
+            {
+                m.SetTexture("_BumpMap", normal);
+                m.SetTextureScale("_BumpMap", scale);
+                if (m.HasProperty("_BumpScale")) m.SetFloat("_BumpScale", bumpScale);
+                m.EnableKeyword("_NORMALMAP");
+            }
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smoothness);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smoothness);
             return m;
         }
 

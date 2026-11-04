@@ -422,6 +422,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] A dropped client's rejoin prompt reconnects with the same code while the host is still up.
 - [ ] After an online session, LAN host and join still work (the transport switches back).
 
+### 3.25 Manual checklist: surface textures
+
+- [ ] Maps, the FOB and the sandbox show textured concrete floors and ceilings, plaster walls, metal doors, consoles and racks, wooden crates and barricades, and dirt ground. The textures repeat at a sensible scale on large walls instead of stretching.
+- [ ] Lighting shows bumps (panel seams and rivets on metal, plank gaps on wood) and nothing looks inside-out or black.
+- [ ] Coloured markings (deployment lane, booth headers, hazard pads, sector marks) stay flat colours.
+- [ ] A development build shows the same textures (no pink, and the normal maps still work).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

@@ -568,7 +568,7 @@ namespace Deadfall.World
             go.transform.localScale = size;
             go.isStatic = true;
             if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>()); // gone before the NavMesh bake this frame
-            go.GetComponent<Renderer>().sharedMaterial = Mat(color);
+            if (!SurfaceArt.ApplyAuto(go, color)) go.GetComponent<Renderer>().sharedMaterial = Mat(color);
             return go;
         }
     }

@@ -409,7 +409,7 @@ namespace Deadfall.DebugTools
             go.transform.position = position;
             go.transform.localScale = size;
             go.isStatic = true;
-            Tint(go, color);
+            if (!SurfaceArt.ApplyAuto(go, color)) Tint(go, color);
             return go;
         }
 
