@@ -126,6 +126,9 @@ namespace Deadfall.DebugTools
             WorldControl.ReturnToFob = EnterSandbox;
             WorldControl.EnterTrainingRange = GoToRange;
             WorldControl.AtBase = () => !InMap;
+
+            // Title screen over the FOB until the player picks Play, Host or Join.
+            new GameObject("[Title]").AddComponent<TitleScreen>().Bind(player, ui, FobOrigin);
         }
 
         private void GoToRange()

@@ -397,6 +397,16 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] A client sees the same animation as the host.
 - [ ] With a full horde (F8 a few times), frame rate holds up.
 
+### 3.23 Manual checklist: title screen
+
+- [ ] Pressing Play fades in from black to the DEADFALL title, with the camera drifting slowly inside FOB Halcyon. The in-game HUD, crosshair and pause menu are hidden.
+- [ ] Esc and the mouse do nothing to the game while the title is up. The cursor stays free.
+- [ ] Play solo fades into the game at the FOB with the cursor locked and the HUD back.
+- [ ] Host co-op starts hosting and enters the game. The second copy's Join co-op connects to 127.0.0.1 and enters the game once connected. A wrong address shows an error and Cancel stops the attempt.
+- [ ] Settings opens the settings window and Done returns to the title.
+- [ ] Quit closes a build. In the editor it shows as disabled.
+- [ ] `-skiptitle`, `-deadfall-host` or `-deadfall-join` on the command line go straight into the game.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
