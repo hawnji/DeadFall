@@ -104,19 +104,25 @@ namespace Deadfall.Rules.World
                     if (boss == null) return false;
                 }
 
-                // Side branches from main-route rooms (not the objective).
+                // Side branches from main-route rooms (not the objective), and on big maps off other side rooms too.
                 int branches = _rng.Range(_g.BranchesMin, _g.BranchesMax + 1);
                 var hosts = new List<PlacedRoom>();
+                var sideHosts = new List<PlacedRoom>();
                 foreach (PlacedRoom r in Layout.Rooms)
                     if (r.OnCriticalPath && r.Template.Role != RoomRole.Objective) hosts.Add(r);
                 // At most one branch in the first sector, so the starting area stays small (GAME_DESIGN §3.1).
                 int firstSectorBranches = 0;
                 for (int i = 0, tries = 0; i < branches && tries < branches * 4; tries++)
                 {
-                    PlacedRoom host = hosts[_rng.Range(0, hosts.Count)];
-                    bool first = mainIndex.TryGetValue(host.Index, out int mi) && mi < _g.FirstSectorRooms;
+                    bool nested = sideHosts.Count > 0 && _rng.NextFloat() < _g.NestedBranchChance;
+                    PlacedRoom host = nested ? sideHosts[_rng.Range(0, sideHosts.Count)] : hosts[_rng.Range(0, hosts.Count)];
+                    bool first = MainIndexOf(host, mainIndex) < _g.FirstSectorRooms;
                     if (first && firstSectorBranches > 0) continue;
-                    if (AttachVia(host, RoomRole.Room) != null) { i++; if (first) firstSectorBranches++; }
+                    PlacedRoom added = AttachVia(host, RoomRole.Room);
+                    if (added == null) continue;
+                    i++;
+                    if (first) firstSectorBranches++;
+                    sideHosts.Add(added);
                 }
 
                 // Secret rooms behind vents.
@@ -138,6 +144,17 @@ namespace Deadfall.Rules.World
                 AssignLoot();
                 AssignBreaches();
                 return true;
+            }
+
+            /// <summary>Main-route position of a room, or of the main-route room its side branch hangs off.</summary>
+            private int MainIndexOf(PlacedRoom r, Dictionary<int, int> mainIndex)
+            {
+                while (r != null)
+                {
+                    if (mainIndex.TryGetValue(r.Index, out int mi)) return mi;
+                    r = r.Parent >= 0 ? Layout.Rooms[r.Parent] : null;
+                }
+                return int.MaxValue;
             }
 
             /// <summary>Attaches a room of the role, sometimes through a corridor piece.</summary>

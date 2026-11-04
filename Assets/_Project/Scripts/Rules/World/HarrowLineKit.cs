@@ -105,15 +105,16 @@ namespace Deadfall.Rules.World
         public static GraphTemplate SurvivalGraph() => new GraphTemplate
         {
             Id = "survival",
-            CriticalRoomsMin = 4, CriticalRoomsMax = 6,
-            BranchesMin = 2, BranchesMax = 4,
-            Secrets = 1,
+            CriticalRoomsMin = 14, CriticalRoomsMax = 18,
+            BranchesMin = 26, BranchesMax = 32,
+            NestedBranchChance = 0.45f,
+            Secrets = 3,
             BossRoom = true,
             Sectors = 6,
             FirstSectorRooms = 2,
             MinSpawnsPerSector = 2,
             MinLootSlots = 6,
-            MaxAttempts = 24,
+            MaxAttempts = 32,
         };
 
         private static RoomTemplate Room(string id, string name, RoomRole role, int w, int d, int loot, int breaches, int weight,

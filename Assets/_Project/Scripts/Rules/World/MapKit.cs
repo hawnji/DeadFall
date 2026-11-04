@@ -127,6 +127,8 @@ namespace Deadfall.Rules.World
         public int CriticalRoomsMin = 4, CriticalRoomsMax = 6;
         /// <summary>Side branches hanging off main-route rooms.</summary>
         public int BranchesMin = 2, BranchesMax = 4;
+        /// <summary>Chance a side branch grows off another side room instead of the main route (bigger, wider maps).</summary>
+        public float NestedBranchChance = 0f;
         public int Secrets = 1;
         public bool BossRoom = true;
         /// <summary>Sectors (spawn sector included). Sector 0 is open at the start.</summary>

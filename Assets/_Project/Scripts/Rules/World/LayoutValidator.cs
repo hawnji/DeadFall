@@ -11,7 +11,7 @@ namespace Deadfall.Rules.World
     public static class LayoutValidator
     {
         /// <summary>Largest map side in cells (keeps the runtime NavMesh bake bounded).</summary>
-        public const int MaxExtentCells = 72;
+        public const int MaxExtentCells = 96;
 
         public static List<string> Validate(Layout layout)
         {
