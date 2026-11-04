@@ -41,7 +41,7 @@ Files in `Resources/Audio` are stored in plain git (not LFS) so they can be push
 | BossRoar | Boss roar (phase change, death) | world | 1.5–2.5 s |
 | Explosion | Explosion | world | 1–2 s |
 | BarricadeBreak | Wood board breaking | world | 0.3–0.5 s |
-| Pickup | Item pickup (not hooked up yet) | yours | 0.1–0.2 s |
+| Pickup | Ammo crate, medkit, and stash pickup | yours | 0.1–0.2 s |
 | Credits | Field Credits gained | yours | 0.1–0.2 s |
 | SurgeStart | Surge starting horn | yours | 1.5–2 s |
 | SurgeClear | Surge cleared | yours | 0.8–1.2 s |

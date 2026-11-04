@@ -1,5 +1,6 @@
 using Deadfall.Core;
 using Deadfall.Player;
+using Deadfall.Rules.Common;
 using Deadfall.Rules.World;
 using UnityEngine;
 
@@ -79,6 +80,7 @@ namespace Deadfall.RunSystems
         public static void ApplyTo(GameObject player, LootKind kind)
         {
             if (player == null) return;
+            GameAudio.Play2D(SfxId.Pickup);
             var health = player.GetComponent<PlayerHealth>();
             var weapons = player.GetComponent<PlayerWeapons>();
             switch (kind)
