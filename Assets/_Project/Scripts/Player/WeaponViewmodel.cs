@@ -7,8 +7,9 @@ using UnityEngine;
 namespace Deadfall.Player
 {
     /// <summary>
-    /// Placeholder first-person weapon built from primitives. Gives readable feedback for aiming,
-    /// recoil, reload, swap, melee, and sprint until real models and animations arrive.
+    /// First-person weapon: the Blender model (or a primitive placeholder) posed for aiming, recoil, reload, swap,
+    /// melee and sprint, held by two gloved arms (<c>fp_arm</c>, the left one mirrored). Each hand sits on the
+    /// weapon's grip or support point, so it follows every motion, and the forearm pivots about a fixed shoulder.
     /// </summary>
     public sealed class WeaponViewmodel : MonoBehaviour
     {
@@ -27,6 +28,35 @@ namespace Deadfall.Player
         private Quaternion _currentRot = Quaternion.identity;
 
         private float _aim, _equip = 1f, _reload, _melee = 1f, _move;
+
+        private const float ArmReach = 0.55f;
+        private static readonly Vector3 BackR = new Vector3(0.25f, -0.6f, -0.75f).normalized;
+        private static readonly Vector3 BackL = new Vector3(-0.45f, -0.55f, -0.7f).normalized;
+        private Transform _armR, _armL;
+        private Vector3 _shoulderR, _shoulderL;
+        private float _rollR, _rollL;
+
+        /// <summary>Where the hands go on each kind of weapon (model space) and how the hand rolls around the forearm.</summary>
+        private struct Hold
+        {
+            public Vector3 Grip, Support;
+            public float RollR, RollL;
+            public Hold(Vector3 grip, float rollR, Vector3 support, float rollL) { Grip = grip; RollR = rollR; Support = support; RollL = rollL; }
+        }
+
+        private static Hold HoldFor(WeaponDefinition def)
+        {
+            if (def.Kind == WeaponKind.Melee) return new Hold(new Vector3(0f, 0f, 0.03f), -80f, new Vector3(0f, 0f, 0.15f), -80f);
+            return def.Category switch
+            {
+                WeaponCategory.Pistol => new Hold(new Vector3(0f, -0.07f, 0.01f), 0f, new Vector3(-0.03f, -0.085f, 0.02f), -20f),
+                WeaponCategory.SubmachineGun => new Hold(new Vector3(0f, -0.085f, 0.06f), 0f, new Vector3(0f, -0.08f, 0.3f), -10f),
+                WeaponCategory.Shotgun => new Hold(new Vector3(0f, -0.085f, 0.04f), 0f, new Vector3(0f, -0.04f, 0.5f), -80f),
+                WeaponCategory.LightMachineGun => new Hold(new Vector3(0f, -0.09f, 0.08f), 0f, new Vector3(0f, -0.045f, 0.5f), -80f),
+                WeaponCategory.Heavy => new Hold(new Vector3(0f, -0.09f, 0.06f), 0f, new Vector3(0f, -0.06f, 0.4f), -80f),
+                _ => new Hold(new Vector3(0f, -0.09f, 0.04f), 0f, new Vector3(0f, -0.04f, 0.4f), -80f),
+            };
+        }
         private bool _meleeing, _sprinting;
 
         public Vector3 MuzzlePosition => _muzzle != null ? _muzzle.position : transform.position;
@@ -49,6 +79,7 @@ namespace Deadfall.Player
                 _muzzle = new GameObject("Muzzle").transform;
                 _muzzle.SetParent(_model, false);
                 _muzzle.localPosition = muzzleAt;
+                AddArms(def);
                 _renderers = _model.GetComponentsInChildren<Renderer>();
                 return;
             }
@@ -71,7 +102,54 @@ namespace Deadfall.Player
             _muzzle = new GameObject("Muzzle").transform;
             _muzzle.SetParent(_model, false);
             _muzzle.localPosition = new Vector3(0f, melee ? 0f : 0.02f, bodySize.z + barrelSize.z);
+            AddArms(def);
             _renderers = _model.GetComponentsInChildren<Renderer>();
+        }
+
+        /// <summary>Puts a hand on the grip and one on the support point; each shoulder is fixed in camera space.</summary>
+        private void AddArms(WeaponDefinition def)
+        {
+            _armR = _armL = null;
+            Hold h = HoldFor(def);
+            _armR = SpawnArm("ArmR", h.Grip, false);
+            _armL = SpawnArm("ArmL", h.Support, true);
+            _rollR = h.RollR;
+            _rollL = h.RollL;
+            _shoulderR = _hipPosition + h.Grip + BackR * ArmReach;
+            _shoulderL = _hipPosition + h.Support + BackL * ArmReach;
+        }
+
+        private Transform SpawnArm(string armName, Vector3 at, bool mirrored)
+        {
+            var anchor = new GameObject(armName).transform;
+            anchor.SetParent(_model, false);
+            anchor.localPosition = at;
+            GameObject arm = ModelLibrary.Spawn("fp_arm", anchor);
+            if (arm == null) { Destroy(anchor.gameObject); return null; }
+            if (mirrored) arm.transform.localScale = new Vector3(-1f, 1f, 1f);
+            foreach (Transform t in anchor.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = gameObject.layer;
+            foreach (Renderer r in anchor.GetComponentsInChildren<Renderer>(true))
+            {
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+            }
+            return anchor;
+        }
+
+        /// <summary>Points each forearm from its shoulder at its hand (after the weapon is posed this frame).</summary>
+        private void AimArms()
+        {
+            AimArm(_armR, _shoulderR, _rollR);
+            AimArm(_armL, _shoulderL, _rollL);
+        }
+
+        private void AimArm(Transform arm, Vector3 shoulderLocal, float roll)
+        {
+            if (arm == null) return;
+            Vector3 shoulder = transform.TransformPoint(shoulderLocal);
+            Vector3 dir = arm.position - shoulder;
+            if (dir.sqrMagnitude < 1e-6f) return;
+            arm.rotation = Quaternion.LookRotation(dir, transform.up) * Quaternion.Euler(0f, 0f, roll);
         }
 
         /// <summary>
@@ -183,6 +261,7 @@ namespace Deadfall.Player
             // Kick and aim should feel immediate, so bypass smoothing for those components.
             _model.localPosition = _currentPos + new Vector3(0f, 0f, -_kickBack * _kick * 0.5f);
             _model.localRotation = _currentRot;
+            AimArms();
         }
     }
 }
