@@ -38,6 +38,7 @@ namespace Deadfall.Net
         private NetworkManager _network;
         private UnityTransport _transport;
         private bool _clientConnected;
+        private bool _transportIsRelay;
 
         public SessionRole Role { get; private set; } = SessionRole.Offline;
         public bool IsActive => Role != SessionRole.Offline;
@@ -55,6 +56,9 @@ namespace Deadfall.Net
         public NetStats Stats { get; } = new NetStats();
         public string Address { get; private set; } = DefaultAddress;
         public ushort Port { get; private set; } = DefaultPort;
+        /// <summary>The Relay join code when this session runs through Unity Relay (online), else empty.</summary>
+        public string JoinCode { get; private set; } = string.Empty;
+        public bool IsRelay => !string.IsNullOrEmpty(JoinCode);
         /// <summary>Number of remote players connected to this host (host only).</summary>
         public int RemotePeerCount => IsHost && _network != null ? Mathf.Max(0, _network.ConnectedClientsIds.Count - 1) : 0;
 
@@ -118,7 +122,8 @@ namespace Deadfall.Net
         public bool StartHost(ushort port)
         {
             if (IsActive) return false;
-            EnsureNetworkManager();
+            EnsureNetworkManager(relay: false);
+            JoinCode = string.Empty;
             Port = port;
             Address = "0.0.0.0";
             WasDropped = false;
@@ -141,7 +146,8 @@ namespace Deadfall.Net
         {
             if (IsActive) return false;
             address = string.IsNullOrWhiteSpace(address) ? DefaultAddress : address.Trim();
-            EnsureNetworkManager();
+            EnsureNetworkManager(relay: false);
+            JoinCode = string.Empty;
             Address = address;
             Port = port;
             WasDropped = false;
@@ -162,6 +168,56 @@ namespace Deadfall.Net
             return true;
         }
 
+        /// <summary>Hosts through a Unity Relay allocation (online play; see <see cref="OnlineRelay"/>).</summary>
+        public bool StartRelayHost(RelayEndpoint relay, string joinCode)
+        {
+            if (IsActive) return false;
+            EnsureNetworkManager(relay: true);
+            JoinCode = joinCode;
+            Address = $"code {joinCode}";
+            Port = relay.Port;
+            WasDropped = false;
+            Stats.Reset();
+            LastError = string.Empty;
+            _transport.SetRelayServerData(relay.Host, relay.Port, relay.AllocationId, relay.Key, relay.ConnectionData, null, relay.Secure);
+            if (!_network.StartHost())
+            {
+                JoinCode = string.Empty;
+                Fail("Could not start the online session.");
+                return false;
+            }
+            Role = SessionRole.Host;
+            AttachHandlers();
+            GameLog.Info(LogCategory, $"Hosting online, join code {joinCode}");
+            Started?.Invoke(Role);
+            return true;
+        }
+
+        /// <summary>Joins a host through Unity Relay with the allocation the join code resolved to.</summary>
+        public bool StartRelayClient(RelayEndpoint relay, string joinCode)
+        {
+            if (IsActive) return false;
+            EnsureNetworkManager(relay: true);
+            JoinCode = joinCode;
+            Address = $"code {joinCode}";
+            Port = relay.Port;
+            WasDropped = false;
+            Stats.Reset();
+            LastError = string.Empty;
+            _clientConnected = false;
+            _transport.SetRelayServerData(relay.Host, relay.Port, relay.AllocationId, relay.Key, relay.ConnectionData, relay.HostConnectionData, relay.Secure);
+            if (!_network.StartClient())
+            {
+                JoinCode = string.Empty;
+                Fail("Could not start the online connection.");
+                return false;
+            }
+            Role = SessionRole.Client;
+            AttachHandlers();
+            GameLog.Info(LogCategory, $"Joining online with code {joinCode}");
+            return true;
+        }
+
         /// <summary>Leaves or closes the session. Safe to call when offline.</summary>
         public void Stop()
         {
@@ -170,7 +226,12 @@ namespace Deadfall.Net
         }
 
         /// <summary>Joins the last host again (D-16 rejoin after a drop).</summary>
-        public bool Rejoin() => !IsActive && StartClient(Address, Port);
+        public bool Rejoin()
+        {
+            if (IsActive) return false;
+            if (IsRelay) return OnlineRelay.Join(JoinCode, null);
+            return StartClient(Address, Port);
+        }
 
         private void Update() => Stats.Tick(Time.unscaledTime);
 
@@ -198,8 +259,22 @@ namespace Deadfall.Net
             if (_network != null && _network.IsListening) _network.Shutdown();
         }
 
-        private void EnsureNetworkManager()
+        /// <summary>
+        /// Builds the NetworkManager, rebuilding it when switching between direct (IP) and Relay transport so no Relay
+        /// settings linger on a later LAN session.
+        /// </summary>
+        private void EnsureNetworkManager(bool relay)
         {
+            if (_network != null && _transportIsRelay != relay)
+            {
+                _network.OnClientConnectedCallback -= OnClientConnected;
+                _network.OnClientDisconnectCallback -= OnClientDisconnected;
+                _network.OnTransportFailure -= OnTransportFailure;
+                DestroyImmediate(_network.gameObject);
+                _network = null;
+                _transport = null;
+            }
+            _transportIsRelay = relay;
             if (_network != null) return;
             // Create inactive so NetworkConfig is assigned before NetworkManager.Awake/OnEnable run.
             // It must stay a root object: NGO refuses nested NetworkManagers and marks it DontDestroyOnLoad itself.
@@ -253,7 +328,8 @@ namespace Deadfall.Net
             WasDropped = _clientConnected;
             string why = _network.DisconnectReason;
             if (string.IsNullOrEmpty(why))
-                why = _clientConnected ? "The host closed the session or the connection dropped." : $"Could not reach a host at {Address}:{Port}.";
+                why = _clientConnected ? "The host closed the session or the connection dropped."
+                    : IsRelay ? $"Could not reach the host for code {JoinCode}." : $"Could not reach a host at {Address}:{Port}.";
             EndSession(why);
         }
 

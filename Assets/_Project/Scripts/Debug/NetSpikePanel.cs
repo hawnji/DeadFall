@@ -21,6 +21,8 @@ namespace Deadfall.DebugTools
         private PlayerCursorLock _cursor;
         private string _address = SessionService.DefaultAddress;
         private string _port = SessionService.DefaultPort.ToString();
+        private string _code = string.Empty;
+        private string _onlineError = string.Empty;
         private GUIStyle _box, _label, _status;
 
         public void Bind(NetSpikeSync sync, GameObject player)
@@ -80,7 +82,7 @@ namespace Deadfall.DebugTools
             bool paused = _cursor == null || !_cursor.IsLocked;
             if (!paused || Deadfall.Core.UiModal.Active) return;
 
-            float w = 360f, h = 230f;
+            float w = 380f, h = s.IsActive ? (s.IsRelay ? 200f : 170f) : (OnlineRelay.Available ? 330f : 230f);
             var area = new Rect((Deadfall.Core.HudKit.W - w) * 0.5f, Deadfall.Core.HudKit.PauseColumnBottom, w, h);
             Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
@@ -103,10 +105,39 @@ namespace Deadfall.DebugTools
                 GUILayout.EndHorizontal();
                 if (!string.IsNullOrEmpty(s.LastError)) GUILayout.Label(s.LastError);
                 else GUILayout.Label("Host on one copy, then Join from the other.\nSame PC: keep 127.0.0.1. LAN: use the host's IP.");
+                if (OnlineRelay.Available)
+                {
+                    GUILayout.Space(6f);
+                    GUILayout.Label("ONLINE", _label);
+                    bool busy = OnlineRelay.Busy;
+                    GUI.enabled = !busy;
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button(busy ? "Working..." : "Host online", GUILayout.Height(30f), GUILayout.Width(120f)))
+                    {
+                        _onlineError = string.Empty;
+                        OnlineRelay.Host((code, error) => _onlineError = error ?? string.Empty);
+                    }
+                    _code = OnlineRelay.CleanCode(GUILayout.TextField(_code, 12, GUILayout.Height(30f)));
+                    if (GUILayout.Button("Join code", GUILayout.Height(30f), GUILayout.Width(90f)))
+                    {
+                        _onlineError = string.Empty;
+                        OnlineRelay.Join(_code, error => _onlineError = error ?? string.Empty);
+                    }
+                    GUILayout.EndHorizontal();
+                    GUI.enabled = true;
+                    if (!string.IsNullOrEmpty(_onlineError)) GUILayout.Label(_onlineError);
+                }
             }
             else
             {
                 GUILayout.Label(StatusText(s));
+                if (s.IsRelay && s.IsHost)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label($"Join code: {s.JoinCode}", _label);
+                    if (GUILayout.Button("Copy", GUILayout.Height(26f), GUILayout.Width(70f))) GUIUtility.systemCopyBuffer = s.JoinCode;
+                    GUILayout.EndHorizontal();
+                }
                 GUILayout.Label(s.Stats.Summary(3));
                 GUILayout.Space(8f);
                 if (GUILayout.Button(s.IsHost ? "Close session" : s.IsConnecting ? "Cancel" : "Leave", GUILayout.Height(30f))) s.Stop();
@@ -120,8 +151,12 @@ namespace Deadfall.DebugTools
             {
                 case SessionRole.Host:
                     int peers = s.RemotePeerCount;
-                    return $"HOST on port {s.Port}  ·  {peers} other player{(peers == 1 ? "" : "s")} connected";
+                    return s.IsRelay
+                        ? $"HOSTING ONLINE  ·  join code {s.JoinCode}  ·  {peers} other player{(peers == 1 ? "" : "s")} connected"
+                        : $"HOST on port {s.Port}  ·  {peers} other player{(peers == 1 ? "" : "s")} connected";
                 case SessionRole.Client:
+                    if (s.IsRelay)
+                        return s.IsConnecting ? $"Joining online game {s.JoinCode}..." : $"CLIENT (player {s.LocalClientId})  ·  online game {s.JoinCode}";
                     return s.IsConnecting
                         ? $"Connecting to {s.Address}:{s.Port}..."
                         : $"CLIENT (player {s.LocalClientId})  ·  connected to {s.Address}:{s.Port}";

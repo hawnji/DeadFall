@@ -35,8 +35,11 @@ namespace Deadfall.UI
         private bool _returnRequested;
 
         private bool _open;
-        private bool _joinOpen;
+        private enum Panel { None, Online, Lan }
+        private Panel _panel;
         private bool _joining;
+        private bool _hostingOnline;
+        private string _code = string.Empty;
         private string _address = SessionService.DefaultAddress;
         private string _port = SessionService.DefaultPort.ToString();
         private string _error = string.Empty;
@@ -104,7 +107,8 @@ namespace Deadfall.UI
             Showing = true;
             _openedAt = Time.unscaledTime;
             _closingAt = -1f;
-            _joinOpen = _joining = false;
+            _panel = Panel.None;
+            _joining = _hostingOnline = false;
             _error = string.Empty;
             GameAudio.PlayMusic(Theme, 2f);
             UiModal.TryOpen(Owner);
@@ -214,13 +218,17 @@ namespace Deadfall.UI
 
             float by = y + 220f;
             const float bw = 300f, bh = 50f, gap = 12f;
-            bool busy = _joining;
+            bool busy = _joining || _hostingOnline || OnlineRelay.Busy;
+            bool online = OnlineRelay.Available;
             if (MenuButton(new Rect(x, by, bw, bh), "PLAY SOLO", !busy)) Close();
             by += bh + gap;
-            if (MenuButton(new Rect(x, by, bw, bh), "HOST CO-OP", !busy)) Host();
+            if (MenuButton(new Rect(x, by, bw, bh), _hostingOnline ? "GOING ONLINE..." : "HOST ONLINE", online && !busy)) HostOnline();
             by += bh + gap;
-            if (MenuButton(new Rect(x, by, bw, bh), "JOIN CO-OP", !busy, _joinOpen)) { _joinOpen = !_joinOpen; _error = string.Empty; }
-            float joinY = by;
+            if (MenuButton(new Rect(x, by, bw, bh), "JOIN ONLINE", online && !busy, _panel == Panel.Online)) Toggle(Panel.Online);
+            float onlineY = by;
+            by += bh + gap;
+            if (MenuButton(new Rect(x, by, bw, bh), "LAN / IP", !busy, _panel == Panel.Lan)) Toggle(Panel.Lan);
+            float lanY = by;
             by += bh + gap;
             if (MenuButton(new Rect(x, by, bw, bh), "SETTINGS", !busy))
             {
@@ -231,7 +239,12 @@ namespace Deadfall.UI
             if (MenuButton(new Rect(x, by, bw, bh), Application.isEditor ? "QUIT (BUILDS ONLY)" : "QUIT", !Application.isEditor && !busy))
                 Application.Quit();
 
-            if (_joinOpen) DrawJoin(new Rect(x + bw + 24f, joinY - 60f, 380f, 230f));
+            if (_panel == Panel.Online) DrawJoinOnline(new Rect(x + bw + 24f, onlineY - 40f, 380f, 190f));
+            else if (_panel == Panel.Lan) DrawLan(new Rect(x + bw + 24f, lanY - 90f, 380f, 270f));
+            if (!online)
+                HudKit.Label(new Rect(x, by + 4f, 520f, 40f), "Online play needs the Multiplayer Services package (Window > Package Manager).", 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
+            else if (_panel == Panel.None && !string.IsNullOrEmpty(_error))
+                HudKit.Label(new Rect(x, by + 4f, 520f, 40f), _error, 13, HudKit.Bad, TextAnchor.UpperLeft, wrap: true);
 
             HudKit.Label(new Rect(x, h - 50f, 600f, 30f), "WASD move  ·  Mouse aim  ·  F interact  ·  Esc pause", 14, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
             HudKit.Label(new Rect(w - 420f, h - 50f, 400f, 30f), BuildInfo.Label, 14, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
@@ -251,11 +264,36 @@ namespace Deadfall.UI
             return clicked;
         }
 
-        private void DrawJoin(Rect r)
+        private void Toggle(Panel p)
+        {
+            _panel = _panel == p ? Panel.None : p;
+            _error = string.Empty;
+        }
+
+        private void DrawJoinOnline(Rect r)
         {
             HudKit.Panel(r);
             float x = r.x + 18f, y = r.y + 14f, iw = r.width - 36f;
-            HudKit.Label(new Rect(x, y, iw, 26f), "JOIN A HOST", 17, HudKit.Accent, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(x, y, iw, 26f), "JOIN WITH A CODE", 17, HudKit.Accent, TextAnchor.MiddleLeft, head: true);
+            y += 40f;
+            GUI.enabled = !_joining;
+            _code = OnlineRelay.CleanCode(GUI.TextField(new Rect(x, y, iw, 40f), _code, 12));
+            GUI.enabled = true;
+            y += 52f;
+            if (_joining || OnlineRelay.Busy) Connecting(r, x, y, iw, _code);
+            else
+            {
+                if (HudKit.Button(new Rect(x, y, 140f, 36f), "Join", on: true, enabled: _code.Length >= 4)) JoinOnline();
+                string hint = string.IsNullOrEmpty(_error) ? "Ask the host for the code shown on their screen." : _error;
+                HudKit.Label(new Rect(x + 152f, y - 4f, iw - 152f, 44f), hint, 12, string.IsNullOrEmpty(_error) ? HudKit.TextDim : HudKit.Bad, TextAnchor.MiddleLeft, wrap: true);
+            }
+        }
+
+        private void DrawLan(Rect r)
+        {
+            HudKit.Panel(r);
+            float x = r.x + 18f, y = r.y + 14f, iw = r.width - 36f;
+            HudKit.Label(new Rect(x, y, iw, 26f), "LAN / DIRECT IP", 17, HudKit.Accent, TextAnchor.MiddleLeft, head: true);
             y += 38f;
             HudKit.Label(new Rect(x, y, 80f, 30f), "Address", 14, HudKit.Text);
             GUI.enabled = !_joining;
@@ -265,20 +303,24 @@ namespace Deadfall.UI
             _port = GUI.TextField(new Rect(x + 84f, y, 100f, 30f), _port, 5);
             GUI.enabled = true;
             y += 44f;
-            if (_joining)
-            {
-                HudKit.Label(new Rect(x, y, iw - 120f, 36f), $"Connecting to {_address}...", 14, HudKit.Info);
-                if (HudKit.Button(new Rect(r.xMax - 128f, y, 110f, 36f), "Cancel"))
-                {
-                    _joining = false;
-                    SessionService.Current?.Stop();
-                }
-            }
+            if (_joining) Connecting(r, x, y, iw, _address);
             else
             {
-                if (HudKit.Button(new Rect(x, y, 140f, 36f), "Connect", on: true)) Join();
-                string hint = string.IsNullOrEmpty(_error) ? "Same PC: 127.0.0.1. LAN: the host's IP." : _error;
-                HudKit.Label(new Rect(x + 152f, y - 4f, iw - 152f, 44f), hint, 12, string.IsNullOrEmpty(_error) ? HudKit.TextDim : HudKit.Bad, TextAnchor.MiddleLeft, wrap: true);
+                if (HudKit.Button(new Rect(x, y, 160f, 36f), "Join", on: true)) Join();
+                if (HudKit.Button(new Rect(x + 172f, y, 160f, 36f), "Host on LAN")) Host();
+                y += 46f;
+                string hint = string.IsNullOrEmpty(_error) ? "Same PC: 127.0.0.1. LAN: the host's IP. Over the internet the host must forward the port." : _error;
+                HudKit.Label(new Rect(x, y, iw, 44f), hint, 12, string.IsNullOrEmpty(_error) ? HudKit.TextDim : HudKit.Bad, TextAnchor.UpperLeft, wrap: true);
+            }
+        }
+
+        private void Connecting(Rect r, float x, float y, float iw, string target)
+        {
+            HudKit.Label(new Rect(x, y, iw - 120f, 36f), $"Connecting to {target}...", 14, HudKit.Info);
+            if (HudKit.Button(new Rect(r.xMax - 128f, y, 110f, 36f), "Cancel"))
+            {
+                _joining = false;
+                SessionService.Current?.Stop();
             }
         }
 
@@ -298,7 +340,36 @@ namespace Deadfall.UI
             SessionService s = SessionService.Instance;
             if (s.IsActive) s.Stop();
             if (s.StartHost(Port())) Close();
-            else { _joinOpen = true; _error = string.IsNullOrEmpty(s.LastError) ? "Could not start hosting." : s.LastError; }
+            else { _panel = Panel.Lan; _error = string.IsNullOrEmpty(s.LastError) ? "Could not start hosting." : s.LastError; }
+        }
+
+        private void HostOnline()
+        {
+            SessionService s = SessionService.Instance;
+            if (s.IsActive) s.Stop();
+            _error = string.Empty;
+            _hostingOnline = true;
+            OnlineRelay.Host((code, error) =>
+            {
+                _hostingOnline = false;
+                if (!_open) return;
+                if (error != null) { _panel = Panel.None; _error = error; return; }
+                Close(); // the join code stays on screen in game (bottom line and pause screen)
+            });
+        }
+
+        private void JoinOnline()
+        {
+            SessionService s = SessionService.Instance;
+            if (s.IsActive) s.Stop();
+            _error = string.Empty;
+            string code = _code;
+            OnlineRelay.Join(code, error =>
+            {
+                if (!_open) return;
+                if (error != null) _error = error;
+                else _joining = true; // Update closes the title once the host accepts us
+            });
         }
 
         private void Join()

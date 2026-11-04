@@ -24,10 +24,12 @@ STUBS = {
     "Unity.Networking.Transport": glob.glob(f"{HERE}/stubs/TransportStubs.cs"),
     "Unity.Netcode.Runtime": glob.glob(f"{HERE}/stubs/NetcodeStubs.cs"),
     "UnityEditor": glob.glob(f"{HERE}/stubs/UnityEditorStubs.cs"),
+    "Unity.Services.Core": glob.glob(f"{HERE}/stubs/ServicesStubs.cs"),
 }
 STUB_REFS = {"Unity.Netcode.Runtime": ["Unity.Networking.Transport"]}
 # Package assemblies whose types live inside another stub.
-STUB_ALIASES = {}
+STUB_ALIASES = {"Unity.Services.Authentication": "Unity.Services.Core", "Unity.Services.Relay": "Unity.Services.Core",
+                "Unity.Services.Multiplayer": "Unity.Services.Core"}
 
 def run(args):
     r = subprocess.run(args, capture_output=True, text=True)

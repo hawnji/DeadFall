@@ -1,0 +1,34 @@
+{
+    "name": "Deadfall.Online",
+    "rootNamespace": "Deadfall.Online",
+    "references": [
+        "Deadfall.Core",
+        "Deadfall.Net",
+        "Unity.Services.Core",
+        "Unity.Services.Authentication",
+        "Unity.Services.Multiplayer",
+        "Unity.Services.Relay"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "DEADFALL_UGS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.services.multiplayer",
+            "expression": "1.0.0",
+            "define": "DEADFALL_UGS"
+        },
+        {
+            "name": "com.unity.services.relay",
+            "expression": "1.0.0",
+            "define": "DEADFALL_UGS"
+        }
+    ],
+    "noEngineReferences": false
+}

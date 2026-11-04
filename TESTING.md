@@ -411,6 +411,17 @@ Use builds or Multiplayer Play Mode with up to 4 players. Run each line solo fir
 - [ ] Play solo after quitting to title works normally (no double HUD, no frozen input).
 - [ ] `-skiptitle`, `-deadfall-host` or `-deadfall-join` on the command line go straight into the game.
 
+### 3.24 Manual checklist: online play (Relay)
+
+Needs the project linked to Unity Cloud and the Multiplayer Services package installed (README, Online play).
+
+- [ ] With the package installed, the title shows Host online and Join online enabled. Without it they are disabled with a hint, and LAN / IP still works.
+- [ ] Host online shows "Going online...", then enters the game. The bottom line reads "HOSTING ONLINE · join code XXXXXX", and the pause screen shows the code with a Copy button.
+- [ ] A second copy (same PC or another network) joins with Join online and the code, and both players see each other, enemies and objectives as on LAN.
+- [ ] A wrong code shows "No game found for code ...". Cancel stops a join in progress.
+- [ ] A dropped client's rejoin prompt reconnects with the same code while the host is still up.
+- [ ] After an online session, LAN host and join still work (the transport switches back).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

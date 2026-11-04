@@ -90,6 +90,7 @@ namespace Unity.Netcode.Transports.UTP
     public class UnityTransport : Unity.Netcode.NetworkTransport
     {
         public void SetConnectionData(string ipv4Address, ushort port, string listenAddress = null) { }
+        public void SetRelayServerData(string ipv4Address, ushort port, byte[] allocationIdBytes, byte[] keyBytes, byte[] connectionDataBytes, byte[] hostConnectionDataBytes = null, bool isSecure = false) { }
         public void SetConnectionData(bool forceOverrideCommandLineArgs, string ipv4Address, ushort port, string listenAddress = null) { }
         public void SetConnectionData(Unity.Networking.Transport.NetworkEndpoint endPoint, Unity.Networking.Transport.NetworkEndpoint listenEndPoint = default) { }
     }
