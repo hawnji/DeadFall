@@ -83,7 +83,7 @@ Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill a
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.
 
-Maps (M5): Esc shows the map panel on the right: type a seed and press Generate (or Random) to play a generated Cinder Ridge map, M toggles the map overlay (F9 stays respawn), F uses pickups. Back to sandbox returns here.
+Maps (M5): Esc shows the map panel on the right: type a seed and press Generate (or Random) to play a generated Cinder Ridge map, M toggles the minimap, J the debug map overlay (F9 stays respawn), F uses pickups. Back to sandbox returns here.
 
 Run economy (M6): F opens Supply Caches and takes weapon drops; T picks a Field Mod when one is offered (every third surge, and after a Specimen).
 

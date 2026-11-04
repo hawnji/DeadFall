@@ -62,6 +62,7 @@ namespace Deadfall.DebugTools
             // M5: generated maps. Seed field on the pause screen, F9 map overlay.
             ui.AddComponent<SandboxMapPanel>();
             ui.AddComponent<MapHud>();
+            ui.AddComponent<Minimap>();
             ui.AddComponent<MapDebugOverlay>();
             // M6: run economy UI (Supply Cache menu, Field Mod picks with T, toasts, weapon XP).
             ui.AddComponent<RunToasts>();

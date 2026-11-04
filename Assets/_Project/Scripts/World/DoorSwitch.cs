@@ -46,6 +46,7 @@ namespace Deadfall.World
             }
             s._lampMat = RuntimeMaterials.CreateLit(new Color(0.9f, 0.2f, 0.15f));
             s._lamp.sharedMaterial = s._lampMat;
+            InteractGlow.Add(s.gameObject, InteractGlow.Objectives, () => !s.Used);
             return s;
         }
 

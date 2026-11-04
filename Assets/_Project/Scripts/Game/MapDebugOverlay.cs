@@ -23,7 +23,7 @@ namespace Deadfall.Game
 
         private void OnEnable()
         {
-            _toggle = new InputAction("MapOverlay", InputActionType.Button, "<Keyboard>/m");
+            _toggle = new InputAction("MapOverlay", InputActionType.Button, "<Keyboard>/j");
             _toggle.Enable();
         }
 

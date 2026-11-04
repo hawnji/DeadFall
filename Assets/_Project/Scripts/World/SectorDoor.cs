@@ -64,6 +64,7 @@ namespace Deadfall.World
             door._obstacle.size = alongX ? new Vector3(width, height, 0.6f) : new Vector3(0.6f, height, width);
             door._obstacle.carving = true;
             door._obstacle.carveOnlyStationary = true;
+            InteractGlow.Add(door.gameObject, InteractGlow.Objectives, () => door.CanInteract(null));
             return door;
         }
 

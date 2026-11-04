@@ -72,6 +72,8 @@ namespace Deadfall.Game
 
         // ---------------------------------------------------------------- caches
 
+        public IEnumerable<SupplyCache> Caches => _caches.Values;
+
         public void Register(SupplyCache cache) { if (cache != null) _caches[cache.Id] = cache; }
         public void Unregister(SupplyCache cache) { if (cache != null && _caches.TryGetValue(cache.Id, out SupplyCache c) && c == cache) _caches.Remove(cache.Id); }
 

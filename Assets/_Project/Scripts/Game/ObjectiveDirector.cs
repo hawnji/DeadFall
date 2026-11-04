@@ -89,6 +89,14 @@ namespace Deadfall.Game
         /// <summary>Host/offline: an objective was completed (Scrap bonus, stats).</summary>
         public event Action<Objective> ObjectiveCompleted;
 
+        /// <summary>Positions worth a minimap marker: unfinished props, live nests and the extraction zone.</summary>
+        public void CollectMarkers(List<Vector3> into)
+        {
+            foreach (ObjectiveProp p in _props.Values) if (p != null && !p.Done && p.gameObject.activeInHierarchy) into.Add(p.transform.position);
+            foreach (ObjectiveNest n in _nests.Values) if (n != null && n.IsAlive) into.Add(n.transform.position);
+            if (_zone != null) into.Add(_zone.transform.position);
+        }
+
         /// <summary>Distance from <paramref name="p"/> to the nearest objective prop, nest or extraction zone (placement checks).</summary>
         public float NearestObjectiveDistance(Vector3 p)
         {

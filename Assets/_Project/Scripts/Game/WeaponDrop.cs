@@ -71,6 +71,7 @@ namespace Deadfall.Game
                 d._spin = pivot;
             }
             else Destroy(pivot.gameObject);
+            InteractGlow.Add(root, InteractGlow.Guns);
             return d;
         }
 

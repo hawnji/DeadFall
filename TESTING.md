@@ -505,6 +505,16 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] After 4 or more pulls at one spot, a pull can come up empty: red window, "The Gun Dispenser is moving. Pull refunded" (credits back), and 5 s later it reappears in another open sector with a toast naming it. It never moves while only one sector is open.
 - [ ] Multiplayer: everyone sees the same spin, result, position and toasts; a client can buy, and only that client can take the weapon. A player joining mid-run sees it in the right state.
 
+### 3.35 Manual checklist: minimap and interaction glows
+
+- [ ] On a generated map a square minimap sits under the location card (top left). Forward is always up: turning the camera turns the map, the player arrow stays pointing up.
+- [ ] Rooms are tinted by sector with light wall outlines and gaps at doorways; sealed sectors and rooms behind closed side doors are dark, and secret rooms only appear once opened. Opening a door or sector repaints it.
+- [ ] Markers: closed doors (orange), objectives and the extraction zone (blue, pinned to the edge when far), grid generators (blue online, red tripped), the Gun Dispenser (green, pinned), Supply Caches (green), squad mates (white, pinned).
+- [ ] M hides and shows it (the debug map overlay moved to J). Nothing shows in the FOB or sandbox without a map.
+- [ ] Within ~16 m, usable things get a pulsing coloured outline: green on weapon drops, Supply Caches and the Gun Dispenser (only while it can be used); blue on credit doors, switches and relays, objective props and tripped grid generators; yellow on ammo crates, medkits, secret stashes and supply-drop crates. The outline goes away once used (door open, prop done, pickup taken).
+- [ ] Outlines follow moving parts (spinning drops, opening doors) and don't cast shadows. Check frame rate in a busy room.
+- [ ] Build check: the minimap draws in a player build (it uses the built-in UI/Default shader).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
