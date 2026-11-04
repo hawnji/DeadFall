@@ -29,6 +29,14 @@ namespace Deadfall.World
         public int Sector;
     }
 
+    /// <summary>One floor grate of the crawl-vent network.</summary>
+    public struct CrawlVent
+    {
+        public Vector3 Position;
+        public int Room;
+        public Transform Grate;
+    }
+
     /// <summary>What <see cref="MapBuilder"/> made: the geometry root plus every point gameplay needs.</summary>
     public sealed class BuiltMap
     {
@@ -45,6 +53,8 @@ namespace Deadfall.World
         /// <summary>One per <see cref="Layout.Breaches"/> entry, same order (built after the bake).</summary>
         public readonly List<BreachBarricade> Breaches = new List<BreachBarricade>();
         public readonly List<DoorSwitch> Switches = new List<DoorSwitch>();
+        /// <summary>Floor grates of the crawl-vent network Creepers use to flank (one or two per room, by a wall).</summary>
+        public readonly List<CrawlVent> CrawlVents = new List<CrawlVent>();
         public float CellSize = 4f;
 
         /// <summary>Room index at a world position, or -1 (exact for shaped rooms).</summary>
@@ -146,6 +156,8 @@ namespace Deadfall.World
                 }
             }
 
+            BuildCrawlVents(layout, map);
+
             // Breach barricades (they carve the NavMesh, so after the bake too).
             Material wood = Mat(new Color(0.48f, 0.36f, 0.22f)), frame = Mat(new Color(0.25f, 0.25f, 0.27f));
             for (int i = 0; i < layout.Breaches.Count; i++)
@@ -154,6 +166,48 @@ namespace Deadfall.World
                 Vector3 edge = EdgeMid(br.Inner, br.Facing);
                 var outward = new Vector3(br.Facing.Dx(), 0f, br.Facing.Dz());
                 map.Breaches.Add(BreachBarricade.Create(i, br.Room, edge, outward, wood, frame, _root));
+            }
+        }
+
+        /// <summary>
+        /// Crawl-vent floor grates: one per room by a wall away from doorways, two in big rooms. Deterministic from the
+        /// layout, so every peer has the same network. No colliders: they sit flush on the floor.
+        /// </summary>
+        private void BuildCrawlVents(Layout layout, BuiltMap map)
+        {
+            Color frame = new Color(0.2f, 0.21f, 0.22f), slat = new Color(0.36f, 0.37f, 0.38f), dark = new Color(0.02f, 0.02f, 0.02f);
+            var root = new GameObject("CrawlVents").transform;
+            root.SetParent(_root, false);
+            foreach (PlacedRoom r in layout.Rooms)
+            {
+                RoomRole role = r.Template.Role;
+                if (role == RoomRole.Secret) continue;
+                List<Vector3> pts = WallPoints(layout, r, 0.85f);
+                if (pts.Count == 0) continue;
+                int cells = 0;
+                foreach (Cell _ in r.Cells()) cells++;
+                int want = cells >= 9 ? 2 : 1;
+                for (int k = 0; k < want; k++)
+                {
+                    Vector3 p = pts[(r.Index * 13 + 5 + k * (pts.Count / 2 + 1)) % pts.Count];
+                    bool clash = false;
+                    foreach (CrawlVent v in map.CrawlVents) if ((v.Position - p).sqrMagnitude < 9f) clash = true;
+                    if (clash) continue;
+                    var t = new GameObject($"Vent {map.CrawlVents.Count}").transform;
+                    t.SetParent(root, false);
+                    t.position = p;
+                    Box(t, "Hole", p + Vector3.up * 0.005f, new Vector3(0.8f, 0.01f, 0.8f), dark, collider: false);
+                    for (int e = 0; e < 4; e++)
+                    {
+                        bool alongX = e < 2;
+                        float off = (e % 2 == 0 ? -1f : 1f) * 0.42f;
+                        Vector3 c = p + (alongX ? new Vector3(0f, 0.02f, off) : new Vector3(off, 0.02f, 0f));
+                        Box(t, "Grate frame", c, alongX ? new Vector3(0.92f, 0.04f, 0.08f) : new Vector3(0.08f, 0.04f, 0.92f), frame, collider: false);
+                    }
+                    for (int i = -2; i <= 2; i++)
+                        Box(t, "Grate slat", p + new Vector3(i * 0.15f, 0.025f, 0f), new Vector3(0.05f, 0.03f, 0.78f), slat, collider: false);
+                    map.CrawlVents.Add(new CrawlVent { Position = p, Room = r.Index, Grate = t });
+                }
             }
         }
 

@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace Deadfall.Tests.EditMode.Rules
 {
-    /// <summary>Lull ambushes, Red Sky, Containment Breach and boss arena hazards.</summary>
+    /// <summary>Lull ambushes, Red Sky, Containment Breach, boss arena hazards and vent-crawling Creepers.</summary>
     public class RoadmapEventTests
     {
         [Test]
@@ -81,6 +81,18 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.Less(ArenaHazardRules.Interval(SpecimenPhase.ExposedCore), ArenaHazardRules.Interval(SpecimenPhase.Rampage));
             Assert.AreEqual(ArenaHazardRules.BurstDamage, ArenaHazardRules.BurstDamageAt(ArenaHazardRules.BurstRadius - 0.1f));
             Assert.AreEqual(0f, ArenaHazardRules.BurstDamageAt(ArenaHazardRules.BurstRadius + 0.1f));
+        }
+
+        [Test]
+        public void CreepersOnlyVentWhenItSavesDistance()
+        {
+            Assert.IsTrue(VentRules.ShouldDive(toTarget: 30f, toGrate: 2f, exitToTarget: 6f));
+            Assert.IsFalse(VentRules.ShouldDive(10f, 2f, 6f), "already close: just walk");
+            Assert.IsFalse(VentRules.ShouldDive(30f, 5f, 6f), "too far from a grate");
+            Assert.IsFalse(VentRules.ShouldDive(30f, 2f, 2f), "never climbs out on top of a player");
+            Assert.IsFalse(VentRules.ShouldDive(18f, 2f, 12f), "saves too little");
+            Assert.AreEqual(VentRules.MinTravelSeconds, VentRules.TravelSeconds(1f));
+            Assert.AreEqual(VentRules.MaxTravelSeconds, VentRules.TravelSeconds(500f));
         }
     }
 }

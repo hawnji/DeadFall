@@ -489,6 +489,7 @@ namespace Deadfall.Enemies
             _knockRemaining = 0f;
             _target = null;
             _targetDistance = 0f;
+            _ventStage = 0;
             foreach (Collider c in _hurtColliders) c.enabled = true;
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = Vector3.one;
@@ -662,6 +663,79 @@ namespace Deadfall.Enemies
                 credit != null ? credit : gameObject);
         }
 
+        // ---------------------------------------------------------------- crawl vents (Creepers)
+
+        private const float VentSinkSeconds = 0.4f;
+        private const float VentRiseSeconds = 0.45f;
+        private const float VentSinkDepth = 1.4f;
+        /// <summary>Inside a vent the body waits this far under the floor (out of sight and out of reach).</summary>
+        private const float VentHideDepth = 3f;
+        private int _ventStage; // 0 none, 1 sinking into the grate, 2 crawling, 3 climbing out
+        private double _ventStageEnds;
+        private float _ventTravel;
+        private Vector3 _ventFrom, _ventTo;
+
+        /// <summary>True from the moment it dives into a crawl vent until it has climbed out of another.</summary>
+        public bool InVent => _ventStage != 0;
+
+        /// <summary>
+        /// Host: drops into the crawl vent at <paramref name="grate"/> and comes out of the one at <paramref name="exit"/>
+        /// after <paramref name="travelSeconds"/>. While inside it is below the floor with its hurtboxes off; mirrors
+        /// follow the position, so clients see it sink and climb out.
+        /// </summary>
+        public bool EnterVent(Vector3 grate, Vector3 exit, float travelSeconds)
+        {
+            if (!IsAlive || _mirrored || InVent) return false;
+            if (_agent.enabled)
+            {
+                if (_agent.isOnNavMesh) _agent.ResetPath();
+                _agent.enabled = false;
+            }
+            _moving = false;
+            _knockRemaining = 0f;
+            _ventFrom = grate;
+            _ventTo = exit;
+            _ventTravel = Mathf.Max(0.5f, travelSeconds);
+            transform.position = grate;
+            _ventStage = 1;
+            _ventStageEnds = Time.timeAsDouble + VentSinkSeconds;
+            return true;
+        }
+
+        private void TickVent(double now)
+        {
+            float left = (float)(_ventStageEnds - now);
+            switch (_ventStage)
+            {
+                case 1:
+                    transform.position = _ventFrom + Vector3.down * (VentSinkDepth * (1f - Mathf.Clamp01(left / VentSinkSeconds)));
+                    if (left > 0f) return;
+                    foreach (Collider c in _hurtColliders) c.enabled = false;
+                    transform.position = _ventFrom + Vector3.down * VentHideDepth;
+                    _ventStage = 2;
+                    _ventStageEnds = now + _ventTravel;
+                    return;
+                case 2:
+                    if (left > 0f) return;
+                    transform.position = _ventTo + Vector3.down * VentSinkDepth;
+                    foreach (Collider c in _hurtColliders) c.enabled = true;
+                    _ventStage = 3;
+                    _ventStageEnds = now + VentRiseSeconds;
+                    return;
+                default:
+                    transform.position = _ventTo + Vector3.down * (VentSinkDepth * Mathf.Clamp01(left / VentRiseSeconds));
+                    if (left > 0f) return;
+                    transform.position = _ventTo;
+                    _ventStage = 0;
+                    _agent.enabled = true;
+                    _agent.Warp(_ventTo);
+                    _agent.isStopped = true;
+                    _target = null; // look around on the next perception tick
+                    _brain.Alert();
+                    return;
+            }
+        }
+
         // ---------------------------------------------------------------- per tick (called by EnemyManager)
 
         internal void Tick(double now, float dt, bool perceive)
@@ -677,6 +751,13 @@ namespace Deadfall.Enemies
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
                 if (_rig == null || !_rig.HandlesPose) _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
                 _rig?.Tick(transform.position, EnemyState.Dead, 1f, false, (float)now, Time.deltaTime, Viewer);
+                return;
+            }
+
+            if (_ventStage != 0)
+            {
+                TickVent(now);
+                _rig?.Tick(transform.position, EnemyState.Chase, 0f, true, (float)now, Time.deltaTime, Viewer);
                 return;
             }
 
