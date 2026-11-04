@@ -119,6 +119,16 @@ namespace Deadfall.Game
             Grant(buyer, GrantWeapon, offer.Weapon, offer.Mods);
         }
 
+        /// <summary>Host/offline: gives a player a weapon (Gun Dispenser).</summary>
+        public void GiveWeapon(ulong to, WeaponDefinition def, WeaponMods mods)
+        {
+            if (!IsAuthority || def == null) return;
+            Grant(to, GrantWeapon, def, mods);
+        }
+
+        /// <summary>Host/offline: shows a red toast to one player (refused purchases).</summary>
+        public void Notify(ulong to, string reason) => Deny(to, reason);
+
         private void Deny(ulong to, string reason)
         {
             if (to == _session.LocalClientId || !_session.IsHost) { RunToasts.Show(reason, new Color(1f, 0.55f, 0.45f)); return; }
