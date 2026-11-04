@@ -237,6 +237,18 @@ namespace Deadfall.Encounters
         }
 
         private string _completeSubtitle;
+        private string _failSubtitle;
+
+        /// <summary>Host/offline: ends the run as a loss now (Operations: a required objective failed).</summary>
+        public void FailRun(string subtitle)
+        {
+            if (!IsAuthority || !_run.IsRunning) return;
+            _director.Stop();
+            _director.KillAll();
+            _run.Fail();
+            _failSubtitle = string.IsNullOrEmpty(subtitle) ? "A required objective failed" : subtitle;
+            SyncFromRun();
+        }
 
         /// <summary>Host/offline: starts a new run (ending any current one). Seed 0 picks a random seed.</summary>
         public bool StartRun(ulong seed = 0)
@@ -247,6 +259,7 @@ namespace Deadfall.Encounters
             _endless = false;
             _planner.Endless = false;
             _completeSubtitle = null;
+            _failSubtitle = null;
             _runSettings.FinalSurge = _defaultFinalSurge;
             _runSettings.LullSeconds = _defaultLullSeconds;
             _seed = seed != 0 ? seed : (ulong)DateTime.UtcNow.Ticks;
@@ -536,8 +549,8 @@ namespace Deadfall.Encounters
                     subtitle = _completeSubtitle ?? $"All {_surge} surges cleared";
                     break;
                 case RunPhase.Failed:
-                    title = "SQUAD WIPED";
-                    subtitle = $"Fell on surge {_surge}";
+                    title = _failSubtitle != null ? "MISSION FAILED" : "SQUAD WIPED";
+                    subtitle = _failSubtitle ?? $"Fell on surge {_surge}";
                     break;
             }
             if (title != null) Announced?.Invoke(new WaveAnnouncement { Title = title, Subtitle = subtitle });
@@ -600,7 +613,7 @@ namespace Deadfall.Encounters
                     w.WriteValueSafe(kv.Key);
                     w.WriteValueSafe(kv.Value);
                 }
-                w.WriteValueSafe((byte)(_endless ? 1 : 0));
+                w.WriteValueSafe((byte)((_endless ? 1 : 0) | (_failSubtitle != null ? 2 : 0) | (_completeSubtitle != null ? 4 : 0)));
                 if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgState, w, NetworkDelivery.ReliableSequenced);
                 else _session.SendToClient(MsgState, onlyTo, w, NetworkDelivery.ReliableSequenced);
             }
@@ -628,6 +641,11 @@ namespace Deadfall.Encounters
             }
             r.ReadValueSafe(out byte flags);
             _endless = (flags & 1) != 0;
+            // Clients don't get the host's wording, but the end screen title should still say how the run ended.
+            if ((flags & 2) == 0) _failSubtitle = null;
+            else if (_failSubtitle == null) _failSubtitle = "A required objective failed";
+            if ((flags & 4) == 0) _completeSubtitle = null;
+            else if (_completeSubtitle == null) _completeSubtitle = "Extraction held";
             if (phase > (byte)RunPhase.Failed || type > (byte)SurgeType.Specimen) return;
             int gained = _credits.Get(me) - before;
             if (gained > 0) LocalCreditsEarned?.Invoke(gained, null);

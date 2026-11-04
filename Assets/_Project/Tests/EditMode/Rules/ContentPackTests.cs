@@ -85,7 +85,9 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.AreEqual(7, (int)ObjectiveKind.DefendUplink, "wire order: append only");
             Assert.AreEqual(8, (int)ObjectiveKind.PurgeHives);
             Assert.AreEqual(9, (int)ObjectiveKind.ShutDownBreach);
-            Assert.AreEqual(ObjectiveKind.ShutDownBreach, ObjectiveRules.LastKind);
+            Assert.AreEqual(10, (int)ObjectiveKind.SealContainers);
+            Assert.AreEqual(11, (int)ObjectiveKind.VentReactor);
+            Assert.AreEqual(ObjectiveKind.VentReactor, ObjectiveRules.LastKind);
             Assert.AreEqual(ObjectiveRules.Hives, ObjectiveRules.Target(ObjectiveKind.PurgeHives));
             Assert.AreEqual(1, ObjectiveRules.Target(ObjectiveKind.DefendUplink));
             Assert.Greater(ObjectiveRules.Reward(ObjectiveKind.DefendUplink), ObjectiveRules.Reward(ObjectiveKind.RetrieveDataCore));

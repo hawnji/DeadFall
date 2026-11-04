@@ -477,6 +477,16 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] With the grid down, power-door relays refuse to work and say why. Generators in sealed sectors give no power until the sector opens.
 - [ ] Sandbox (no generated map): Blackout still places its own objective generators, and fences and sentries always have power.
 
+### 3.32 Manual checklist: new Operations and objectives you can fail
+
+- [ ] The deploy screen lists every Operation under the environment buttons; the environment's own one is picked by default and switching environment resets it. Deploying starts the picked Operation (its name and briefing show).
+- [ ] Operation Quarantine: three cryo containers (blue tanks) are placed. Infected within ~8 m go for an unsealed container and hits lower its integrity (shown in the prompt); a "CONTAINER UNDER ATTACK" warning shows at most every 10 s. Holding F for 5 s near one seals it (infected lose interest). If one breaks: burst, "CONTAINER BREACHED", a Bulwark climbs out, and the run ends as MISSION FAILED with the end screen saying why.
+- [ ] Operation Meltdown: two coolant valves and a 5:00 clock on the objective line that counts down for host and clients. Opening both in time completes it; running out shows OUT OF TIME and fails the run.
+- [ ] Operation Dead Air: purge the hives and hold the uplink (both required), with an optional container step. Losing an optional container fails only that step.
+- [ ] Quarantine's optional data core has a 4:00 clock; timing it out says OUT OF TIME but the run goes on.
+- [ ] Survival: side objectives can now be Seal the cryo containers or Open the reactor coolant valves (2:30 clock). Failing them never ends the run.
+- [ ] Clients see the same end title (MISSION FAILED / OPERATION COMPLETE) as the host.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

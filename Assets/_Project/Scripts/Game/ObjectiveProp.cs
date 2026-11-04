@@ -20,6 +20,10 @@ namespace Deadfall.Game
         LockdownTerminal,
         /// <summary>Channel (ShutDownBreach): the failing containment system's console.</summary>
         ContainmentConsole,
+        /// <summary>Channel (SealContainers): a cryo container the infected try to smash until it is sealed.</summary>
+        CryoContainer,
+        /// <summary>Channel (VentReactor): a coolant valve.</summary>
+        ReactorValve,
     }
 
     /// <summary>
@@ -39,9 +43,12 @@ namespace Deadfall.Game
         /// <summary>Channel running (someone pressed F).</summary>
         public bool Started { get; private set; }
         public bool Done { get; private set; }
+        /// <summary>Integrity 0..1 of a cryo container (synced; 1 for everything else).</summary>
+        public float Health01 { get; private set; } = 1f;
+        public const ObjectivePropKind LastKind = ObjectivePropKind.ReactorValve;
 
         public bool IsChannel => Kind == ObjectivePropKind.Generator || Kind == ObjectivePropKind.DataTerminal || Kind == ObjectivePropKind.LockdownTerminal
-                                 || Kind == ObjectivePropKind.ContainmentConsole;
+                                 || Kind == ObjectivePropKind.ContainmentConsole || Kind == ObjectivePropKind.CryoContainer || Kind == ObjectivePropKind.ReactorValve;
 
         public static ObjectiveProp Create(ushort id, byte objectiveId, ObjectivePropKind kind, Vector3 position, Transform parent)
         {
@@ -69,6 +76,18 @@ namespace Deadfall.Game
                     Part(root.transform, new Vector3(0f, 0.5f, 0f), new Vector3(1.1f, 1f, 0.7f), new Color(0.22f, 0.26f, 0.3f), true);
                     Part(root.transform, new Vector3(0f, 1.05f, -0.15f), new Vector3(1.1f, 0.12f, 0.4f), new Color(0.85f, 0.65f, 0.1f), false); // hazard band
                     p._light = Part(root.transform, new Vector3(0f, 1.3f, 0.05f), new Vector3(0.9f, 0.4f, 0.05f), new Color(0.4f, 0.85f, 1f), false);
+                    break;
+                case ObjectivePropKind.CryoContainer:
+                    Part(root.transform, new Vector3(0f, 0.15f, 0f), new Vector3(1f, 0.3f, 1f), new Color(0.25f, 0.27f, 0.3f), true);   // base
+                    Part(root.transform, new Vector3(0f, 1.05f, 0f), new Vector3(0.8f, 1.5f, 0.8f), new Color(0.55f, 0.75f, 0.85f), true); // tank
+                    Part(root.transform, new Vector3(0f, 1.9f, 0f), new Vector3(0.9f, 0.2f, 0.9f), new Color(0.25f, 0.27f, 0.3f), false); // cap
+                    p._light = Part(root.transform, new Vector3(0f, 1.05f, 0.41f), new Vector3(0.5f, 0.9f, 0.03f), new Color(0.35f, 0.9f, 1f), false);
+                    break;
+                case ObjectivePropKind.ReactorValve:
+                    Part(root.transform, new Vector3(0f, 0.6f, 0f), new Vector3(0.35f, 1.2f, 0.35f), new Color(0.4f, 0.42f, 0.45f), true);   // pipe
+                    Part(root.transform, new Vector3(0f, 1.25f, 0.25f), new Vector3(0.8f, 0.08f, 0.08f), new Color(0.75f, 0.15f, 0.1f), false); // wheel
+                    Part(root.transform, new Vector3(0f, 1.25f, 0.25f), new Vector3(0.08f, 0.8f, 0.08f), new Color(0.75f, 0.15f, 0.1f), false);
+                    p._light = Part(root.transform, new Vector3(0f, 1.6f, 0f), new Vector3(0.2f, 0.2f, 0.2f), new Color(1f, 0.4f, 0.1f), false);
                     break;
                 case ObjectivePropKind.SampleCase:
                     Part(root.transform, new Vector3(0f, 0.2f, 0f), new Vector3(0.5f, 0.4f, 0.35f), new Color(0.9f, 0.9f, 0.92f), true);
@@ -102,6 +121,8 @@ namespace Deadfall.Game
             return go.GetComponent<Renderer>();
         }
 
+        public void SetHealth01(float value) => Health01 = Mathf.Clamp01(value);
+
         public void SetState(float progress01, bool started, bool done)
         {
             Progress01 = Mathf.Clamp01(progress01);
@@ -125,6 +146,9 @@ namespace Deadfall.Game
                 case ObjectivePropKind.DataTerminal: return Started ? $"Downloading data core {Progress01 * 100f:0}% (stay close)" : "Download data core";
                 case ObjectivePropKind.LockdownTerminal: return Started ? $"Hacking {Progress01 * 100f:0}% (stay close)" : "Hack terminal to lift the lockdown";
                 case ObjectivePropKind.ContainmentConsole: return Started ? $"Shutting down {Progress01 * 100f:0}% (stay close)" : "Shut down the containment system";
+                case ObjectivePropKind.CryoContainer:
+                    return Started ? $"Sealing cryo container {Progress01 * 100f:0}% (integrity {Health01 * 100f:0}%, stay close)" : $"Seal cryo container (integrity {Health01 * 100f:0}%)";
+                case ObjectivePropKind.ReactorValve: return Started ? $"Opening coolant valve {Progress01 * 100f:0}% (stay close)" : "Open coolant valve";
                 case ObjectivePropKind.SampleCase: return "Take sample case";
                 case ObjectivePropKind.Keycard: return "Take keycard";
                 case ObjectivePropKind.SecurityLocker: return d != null && d.HasKeycard ? "Open security locker" : "Security locker (needs the keycard)";

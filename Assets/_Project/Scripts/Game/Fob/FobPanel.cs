@@ -184,11 +184,25 @@ namespace Deadfall.Game
             // M12: pick the environment, then the mode.
             GUILayout.BeginHorizontal();
             foreach (EnvironmentDef env in EnvironmentCatalog.All)
-                if (GUILayout.Toggle(_environment == env.Index, env.DisplayName, GUI.skin.button, GUILayout.Height(28f))) _environment = env.Index;
+                if (GUILayout.Toggle(_environment == env.Index, env.DisplayName, GUI.skin.button, GUILayout.Height(28f)) && _environment != env.Index)
+                {
+                    _environment = env.Index;
+                    _missionId = null; // back to that environment's own Operation
+                }
             GUILayout.EndHorizontal();
             EnvironmentDef picked = EnvironmentCatalog.At(_environment);
             GUILayout.Label(picked.Blurb, _small);
-            MissionTemplate op = ObjectiveRules.MissionById(picked.MissionId);
+            MissionTemplate op = PickedMission(picked);
+            // Any Operation can be played on any environment; the environment's own one is the default.
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Operation", GUILayout.Width(70f));
+            for (int i = 0; i < ObjectiveRules.Missions.Length; i++)
+            {
+                MissionTemplate m = ObjectiveRules.Missions[i];
+                if (GUILayout.Toggle(op == m, m.Name.Replace("Operation ", string.Empty), GUI.skin.button, GUILayout.Height(24f))) _missionId = m.Id;
+            }
+            GUILayout.EndHorizontal();
+            op = PickedMission(picked);
             GUI.enabled = !client && WorldControl.EnterMap != null;
             Mission(op.Name.Replace("Operation ", "Operation: "), op.Briefing + " Surges continue until you extract. Pays the most Intel.", () => Deploy(DeployMode.Operation));
             Mission("Survival", "Hold out through every surge. Sectors open after surges 3, 7 and 12; a Specimen waits at the end.", () => Deploy(DeployMode.Survival));
@@ -233,6 +247,11 @@ namespace Deadfall.Game
 
         private enum DeployMode { Operation, Survival, Endless }
         private int _environment;
+        /// <summary>The Operation picked in the deploy list (null = the environment's own).</summary>
+        private string _missionId;
+
+        private MissionTemplate PickedMission(EnvironmentDef env) =>
+            ObjectiveRules.MissionById(string.IsNullOrEmpty(_missionId) ? env.MissionId : _missionId);
 
         private void Deploy(DeployMode mode)
         {
@@ -242,7 +261,7 @@ namespace Deadfall.Game
             if (WorldControl.EnterMap == null || !WorldControl.EnterMap(seed)) { RunToasts.Show("Deployment failed: the map would not generate.", new Color(1f, 0.5f, 0.4f)); return; }
             if (mode == DeployMode.Operation)
             {
-                if (ObjectiveDirector.Current == null || !ObjectiveDirector.Current.StartOperation())
+                if (ObjectiveDirector.Current == null || !ObjectiveDirector.Current.StartOperation(PickedMission(EnvironmentCatalog.At(_environment))))
                     RunToasts.Show("Could not start the Operation.", new Color(1f, 0.5f, 0.4f));
             }
             else if (WaveManager.Current != null)

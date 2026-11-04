@@ -142,7 +142,7 @@ Not in scope yet: ~~Creepers using vents~~ (done: crawl-vent floor grates, `Vent
 7. ✅ HUD: objective list, event line, extraction bar, objective banners. The boss bar moved below the wave panel.
 8. ✅ 10 new EditMode tests (`ObjectiveTests.cs`).
 
-Not in scope yet: ~~the power grid feeding doors and turrets~~ (done: `PowerGrid`, 2 to 3 grid generators that trip in surges and Blackouts), ~~Red Sky and Containment Breach events~~ (done), objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
+Not in scope yet: ~~the power grid feeding doors and turrets~~ (done: `PowerGrid`, 2 to 3 grid generators that trip in surges and Blackouts), ~~Red Sky and Containment Breach events~~ (done), objective-driven sector unlocks in Operations (all sectors open at once, T-47), ~~more mission templates, failing objectives (destroyable sample containers)~~ (done: Operations Quarantine, Meltdown and Dead Air, cryo containers the infected smash, timed objectives, a failed required objective loses the run, Operation picker on the deploy screen).
 
 ## M9 – Engineering ✅ (editor check held until M10)
 1. ✅ Rules (`Deadfall.Rules.Engineering`): `StructureCatalog` (three tiers each), `ScrapRules` (kills, surge clears, objectives, Engineer +50%, non-Engineer cost ×1.5, dismantle refund), `RepairRules` (chunked repairs, Engineers better), `PlacementRules` validator with a reason for every refusal, `ScrapLedger`.
