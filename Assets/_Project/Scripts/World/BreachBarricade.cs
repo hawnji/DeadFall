@@ -144,6 +144,9 @@ namespace Deadfall.World
             return Vector3.Distance(point, closest);
         }
 
+        /// <summary>Only from the closet side (+z); enemies already in the room never tear a closet open.</summary>
+        public bool BreakableFrom(Vector3 point) => transform.InverseTransformPoint(point).z > -0.3f;
+
         public float ApplyDamage(in DamageInfo info)
         {
             if (!Authority || Boards <= 0 || info.Amount <= 0f) return 0f;

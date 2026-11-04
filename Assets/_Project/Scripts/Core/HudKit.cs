@@ -31,6 +31,11 @@ namespace Deadfall.Core
         public static float W { get; private set; } = 1920f;
         public static float H { get; private set; } = 1080f;
 
+        /// <summary>Top of the pause screen's centre column (PAUSED, Resume/Settings, Quit to title).</summary>
+        public static float PauseTop => H * 0.2f;
+        /// <summary>Where panels below the pause column (co-op) start, clear of its buttons and hint.</summary>
+        public static float PauseColumnBottom => PauseTop + 200f;
+
         private static Matrix4x4 _saved;
         private static Texture2D _round, _roundSmall, _ring, _vignette;
         private static GUIStyle _roundStyle, _roundSmallStyle, _ringStyle;

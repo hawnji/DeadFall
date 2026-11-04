@@ -81,7 +81,7 @@ namespace Deadfall.DebugTools
             if (!paused || Deadfall.Core.UiModal.Active) return;
 
             float w = 360f, h = 230f;
-            var area = new Rect((Deadfall.Core.HudKit.W - w) * 0.5f, Deadfall.Core.HudKit.H * 0.4f + 50f, w, h);
+            var area = new Rect((Deadfall.Core.HudKit.W - w) * 0.5f, Deadfall.Core.HudKit.PauseColumnBottom, w, h);
             Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
             GUILayout.Label("CO-OP", _label);
