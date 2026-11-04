@@ -70,7 +70,7 @@ namespace Deadfall.Enemies
         public static event System.Action<Enemy, SpecimenPhase> PhaseChanged;
         private NavMeshAgent _agent;
         private Transform _visual;
-        private EnemyRig _rig;
+        private IEnemyRig _rig;
         private static int _viewerFrame = -1;
         private static Vector3 _viewer;
 
@@ -311,16 +311,49 @@ namespace Deadfall.Enemies
         private void DressWithModel(Color skin, Color dark)
         {
             if (!ModelFor(_definition.BodyType, out string id, out float h0, out float r0)) return;
-            GameObject model = ModelLibrary.Spawn(id, _visual, slot => slot == "Skin" ? skin : slot == "SkinDark" ? dark : (Color?)null);
-            if (model == null) return;
+            System.Func<string, Color?> tint = slot => slot == "Skin" ? skin : slot == "SkinDark" ? dark : (Color?)null;
+            // The rigged, animated zombie when there is one for this body; else the limb-swing model.
+            string zm = RiggedModelFor(_definition.BodyType);
+            GameObject model = zm != null && ModelLibrary.Has(zm) ? ModelLibrary.Spawn(zm, _visual, tint, keepAnimator: true) : null;
+            if (model != null)
+            {
+                _rig = ZombieAnimator.Bind(model, zm, _definition.Height);
+                if (_rig == null)
+                {
+                    Destroy(model);
+                    model = null;
+                }
+            }
+            if (model == null)
+            {
+                model = ModelLibrary.Spawn(id, _visual, tint);
+                if (model == null) return;
+                _rig = EnemyRig.Bind(model.transform, _visual, _definition.Height, _definition.BodyType == EnemyBodyType.Crawler);
+            }
             float sr = _definition.Radius / r0, sh = _definition.Height / h0;
             model.transform.localScale = new Vector3(sr, sh, sr);
-            _rig = EnemyRig.Bind(model.transform, _visual, _definition.Height, _definition.BodyType == EnemyBodyType.Crawler);
             ModelLibrary.HideExcept(_visual, model.transform, r =>
             {
                 foreach (PhasePart p in _phaseParts) if (p.Go != null && r.transform.IsChildOf(p.Go.transform)) return true;
                 return false;
             });
+        }
+
+        /// <summary>The rigged zm_* model with animation clips for a body type (built at the same nominal size as
+        /// <see cref="ModelFor"/>), or null. Crawlers and the Broodmother keep their limb-swing models.</summary>
+        internal static string RiggedModelFor(EnemyBodyType body)
+        {
+            switch (body)
+            {
+                case EnemyBodyType.Standard: return "zm_standard";
+                case EnemyBodyType.Lean: return "zm_lean";
+                case EnemyBodyType.Plated: return "zm_plated";
+                case EnemyBodyType.Bloated: return "zm_bloated";
+                case EnemyBodyType.Spitter: return "zm_spitter";
+                case EnemyBodyType.Alpha: return "zm_alpha";
+                case EnemyBodyType.Specimen: return "zm_specimen";
+                default: return null;
+            }
         }
 
         /// <summary>Model id and the nominal height/radius it was built at (the prototype definition for that body).</summary>
@@ -529,7 +562,7 @@ namespace Deadfall.Enemies
             if (!IsAlive)
             {
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
-                _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
+                if (_rig == null || !_rig.HandlesPose) _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
                 _rig?.Tick(transform.position, EnemyState.Dead, 1f, false, (float)now, Time.deltaTime, Viewer);
                 return;
             }
@@ -642,7 +675,7 @@ namespace Deadfall.Enemies
                     _explodeCredit = null;
                 }
                 float t = Mathf.Clamp01((float)(now - _diedAt) / 0.35f);
-                _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
+                if (_rig == null || !_rig.HandlesPose) _visual.localRotation = Quaternion.Euler(-85f * t, 0f, 0f);
                 _rig?.Tick(transform.position, EnemyState.Dead, 1f, false, (float)now, Time.deltaTime, Viewer);
                 return;
             }
@@ -858,6 +891,7 @@ namespace Deadfall.Enemies
                     rot = Quaternion.Euler(0f, 0f, Mathf.Sin((float)now * 60f) * 6f * p);
                     break;
             }
+            if (_rig != null && _rig.HandlesPose) rot = Quaternion.identity; // the clips act it out
             _visual.localRotation = rot;
             _visual.localScale = scale;
             _rig?.Tick(transform.position, _brain.State, p, true, (float)now, Time.deltaTime, Viewer);

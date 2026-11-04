@@ -41,9 +41,10 @@ namespace Deadfall.Core
         /// <summary>
         /// Instantiates model <paramref name="id"/> under <paramref name="parent"/> at the local origin (no colliders).
         /// <paramref name="tint"/> maps a tint slot name (Skin, SkinDark, Accent, AccentDim) to a colour; null keeps
-        /// the slot's default. Returns null when the model isn't available.
+        /// the slot's default. Returns null when the model isn't available. <paramref name="keepAnimator"/> keeps the
+        /// importer's Animator (and its avatar) for rigged, animated models.
         /// </summary>
-        public static GameObject Spawn(string id, Transform parent, Func<string, Color?> tint = null)
+        public static GameObject Spawn(string id, Transform parent, Func<string, Color?> tint = null, bool keepAnimator = false)
         {
             GameObject prefab = Load(id);
             if (prefab == null) return null;
@@ -53,7 +54,7 @@ namespace Deadfall.Core
             go.transform.localRotation = Quaternion.identity;
             go.transform.localScale = Vector3.one;
             foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) UnityEngine.Object.Destroy(c);
-            foreach (Animator a in go.GetComponentsInChildren<Animator>(true)) UnityEngine.Object.Destroy(a);
+            if (!keepAnimator) foreach (Animator a in go.GetComponentsInChildren<Animator>(true)) UnityEngine.Object.Destroy(a);
             foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
             {
                 r.GetSharedMaterials(Scratch);

@@ -35,6 +35,25 @@ Blender 4.0 is what was used (Ubuntu `apt install blender`). Newer versions shou
 - "Fit" models (props, doors, the transport) are normalised to a 1x1x1 box around the origin and placed under the
   placeholder cube, so they take its size. Models long along X are turned by the game when the cube runs along Z.
 
+## Rigged zombies (zm_*)
+
+`zm_standard`, `zm_lean`, `zm_plated`, `zm_bloated`, `zm_spitter`, `zm_alpha` and `zm_specimen` are skinned
+characters with real animation clips, built by the "rigged zombies" section of `build_models.py`:
+
+- Body: a Skin-modifier hull over the bone graph with one subdivision, materials picked per face by region (trousers,
+  torn shirt, skin, bruises). Head, hands, shoes and each type's growths are primitives bound rigidly to one bone.
+  Weights: nearest bone, blended with its parent or child near the joints.
+- Armature: Hips > Spine > Chest > Neck > Head, UpperArm/LowerArm/Hand .L/.R off the Chest, UpperLeg/LowerLeg/Foot
+  .L/.R off the Hips.
+- Clips (one FBX take each, named `<model>|<Clip>`): Idle, Walk (a shamble with a dragging leg), Run, Attack (the
+  strike frame is at 42%), Hit, Spit (release at 60%), Convulse (loop) and Death (ends lying face down). Clips are
+  written as code (`clip_walk` ...), in body terms: `flex`, `lean`, `tilt`, `turn`.
+- They export without baked space transforms and use `fbx_meta_template_animated.txt` (Generic rig, avatar from
+  the model, hierarchy preserved). `ZombieAnimator.cs` samples the clips with a PlayableGraph; the `enemy_*` models
+  stay as the fallback, and the crawler and Broodmother keep their limb-swing rigs.
+- `--preview` also writes `zombies_poses.png` and `zombies_side.png` (each zombie in walk, run, attack, hit, spit
+  and death poses).
+
 ## Models
 
 | Model | Used by |
