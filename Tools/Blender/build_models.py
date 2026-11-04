@@ -1486,6 +1486,43 @@ def weapon_railspike_maul():
     return m
 
 
+
+# ----------------------------------------------------------------------------------------------- first-person arms
+# One right arm; the left is the same model mirrored in game. Origin = the centre of the closed fist (where a grip
+# passes through, along Unity Y); fingers wrap in front (+Z), the back of the hand faces +X, and the forearm runs back
+# along -Z. WeaponViewmodel aims +Z from a shoulder point at the weapon's grip, so the arm always reaches the gun.
+
+GLOVE = "C_6F6148"
+GLOVE_L = "C_574B37"
+SLEEVE = "C_49503B"
+SLEEVE_D = "C_363C2C"
+CUFF = "C_2A2B2F"
+
+
+def fp_arm():
+    m = Model("fp_arm")
+    # Back of the hand and palm wrapping the grip.
+    m.box((0.026, 0.0, -0.012), (0.028, 0.088, 0.075), GLOVE, rot=(0, -8, 0), bevel=0.008)
+    m.box((0.036, 0.006, -0.01), (0.008, 0.07, 0.05), GLOVE_L, rot=(0, -8, 0), bevel=0.003)  # knuckle guard
+    # Four curled fingers wrapping round the front of the grip, each a knuckle and a tip.
+    for i, y in enumerate((0.03, 0.01, -0.01, -0.03)):
+        w = 0.021 if i < 3 else 0.018
+        m.box((0.012, y, 0.026), (0.026, w, 0.026), GLOVE, bevel=0.006)
+        m.box((-0.014, y - 0.002, 0.02), (0.022, w * 0.95, 0.024), GLOVE, rot=(0, 25, 0), bevel=0.006)
+    # Thumb over the top of the grip on the far side.
+    m.limb((0.012, 0.03, -0.03), (-0.02, 0.04, 0.012), (0.022, 0.02), GLOVE)
+    m.box((-0.026, 0.042, 0.018), (0.02, 0.019, 0.024), GLOVE, bevel=0.006)
+    # Wrist and glove cuff.
+    tube(m, -0.085, -0.04, 0.056, GLOVE, y=0.0, x=0.022, segments=10)
+    tube(m, -0.13, -0.08, 0.064, CUFF, y=0.0, x=0.022, segments=10)
+    # Forearm: sleeve widening towards the elbow, with a rolled band and a seam.
+    m.cone((0.022, 0.0, -0.4), (0.088, 0.56, 0.088), SLEEVE, rot=(-90, 0, 0), segments=12)
+    tube(m, -0.62, -0.12, 0.078, SLEEVE, y=0.0, x=0.022, segments=12)
+    tube(m, -0.2, -0.14, 0.086, SLEEVE_D, y=0.0, x=0.022, segments=12)
+    m.box((0.022, 0.041, -0.4), (0.008, 0.004, 0.42), SLEEVE_D, bevel=0.0)
+    return m
+
+
 BUILDERS = [
     enemy_standard, enemy_lean, enemy_plated, enemy_crawler, enemy_bloated, enemy_spitter, enemy_alpha, enemy_specimen,
     player_body, player_head,
@@ -1496,6 +1533,7 @@ BUILDERS = [
     weapon_halberd_ar, weapon_breacher_12, weapon_ranger_9, weapon_saber_7, weapon_wasp_smg, weapon_anvil_lmg,
     weapon_tether_cleaver, weapon_mule_launcher,
     enemy_brood, weapon_vesper_dmr, weapon_bulldog_44, weapon_hailstorm, weapon_kestrel_pdw, weapon_railspike_maul,
+    fp_arm,
 ]
 
 

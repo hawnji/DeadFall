@@ -429,6 +429,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Coloured markings (deployment lane, booth headers, hazard pads, sector marks) stay flat colours.
 - [ ] A development build shows the same textures (no pink, and the normal maps still work).
 
+### 3.26 Manual checklist: first-person arms
+
+- [ ] Every weapon is held by two gloved hands: the right hand on the grip, the left on the handguard or pump (both hands on the pistol and on melee handles). Hands follow recoil, reload, swap, sprint and melee swings without drifting off the weapon.
+- [ ] The sleeves never end in view, at hip or aiming, at FOV 70 to 110.
+- [ ] Arms don't clip through the camera or show through walls more than the weapon does.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
