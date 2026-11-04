@@ -29,6 +29,8 @@ namespace Deadfall.Enemies
         private const float ChargeContactSlack = 0.9f;
         /// <summary>A blocker counts as cutting the path when it is this close to where the partial path ends.</summary>
         private const float PathEndBlockerRange = 3f;
+        /// <summary>How far a cut-off enemy looks for a blocker it can walk up to (a closet is a few metres across).</summary>
+        private const float SealedBlockerRange = 14f;
 
         private static readonly Dictionary<Color, Material> SharedMaterials = new Dictionary<Color, Material>();
 
@@ -650,12 +652,15 @@ namespace Deadfall.Enemies
                 _target = _stats.CanExplode ? EnemyAttacks.BiggestCluster(transform.position, out _targetDistance)
                                             : CombatTargets.Nearest(transform.position, out _targetDistance);
             // A barricade has cut the path to the player: tear down the nearest blocker instead (never stuck for good).
-            if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.hasPath
-                && _agent.pathStatus == NavMeshPathStatus.PathPartial)
+            if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.isOnNavMesh
+                && !_agent.pathPending && ((_agent.hasPath && _agent.pathStatus == NavMeshPathStatus.PathPartial) || _agent.pathStatus == NavMeshPathStatus.PathInvalid))
             {
                 // Only the blocker that actually cuts the path (near where the partial path ends), never one through
-                // a wall that is merely close in a straight line.
-                IBlocker blocker = Blockers.Nearest(_agent.pathEndPosition, PathEndBlockerRange);
+                // a wall that is merely close in a straight line. The partial path ends at the reachable point nearest
+                // the target, which in a sealed closet can be a back corner far from the boards when the player is off
+                // to one side; then fall back to the nearest blocker this enemy can actually walk up to.
+                IBlocker blocker = Blockers.Nearest(_agent.pathEndPosition, PathEndBlockerRange, b => b.BreakableFrom(transform.position))
+                                   ?? Blockers.Nearest(transform.position, SealedBlockerRange, CanWalkUpTo);
                 if (blocker != null)
                 {
                     _target = blocker;
@@ -749,6 +754,18 @@ namespace Deadfall.Enemies
 
             Face(o, hasTarget, targetPos, dt, s);
             Pose(now);
+        }
+
+        private NavMeshPath _blockerPath;
+
+        /// <summary>True when this enemy is on the blocker's break-in side and a NavMesh path from here ends at it.</summary>
+        private bool CanWalkUpTo(IBlocker b)
+        {
+            if (!b.BreakableFrom(transform.position)) return false;
+            if (_blockerPath == null) _blockerPath = new NavMeshPath();
+            if (!NavMesh.CalculatePath(transform.position, b.TargetTransform.position, _agent.areaMask, _blockerPath)) return false;
+            Vector3[] corners = _blockerPath.corners;
+            return corners.Length > 0 && b.DistanceFrom(corners[corners.Length - 1]) <= PathEndBlockerRange;
         }
 
         private Vector3 MouthPoint => transform.position + Vector3.up * (_definition.Height * 0.8f) + transform.forward * (_definition.Radius + 0.2f);

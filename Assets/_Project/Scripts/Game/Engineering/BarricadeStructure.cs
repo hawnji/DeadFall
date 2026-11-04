@@ -42,6 +42,8 @@ namespace Deadfall.Game
             return Vector3.Distance(point, closest);
         }
 
+        public bool BreakableFrom(Vector3 point) => true;
+
         protected override void OnDestroy() => Blockers.Unregister(this);
         private void OnDisable() => Blockers.Unregister(this);
     }

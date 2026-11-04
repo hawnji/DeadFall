@@ -11,6 +11,8 @@ namespace Deadfall.Combat
     {
         /// <summary>Distance from <paramref name="point"/> to the blocker's surface (melee checks use this).</summary>
         float DistanceFrom(Vector3 point);
+        /// <summary>Whether an enemy standing at <paramref name="point"/> is on the side it should break in from.</summary>
+        bool BreakableFrom(Vector3 point);
     }
 
     public static class Blockers
@@ -27,7 +29,10 @@ namespace Deadfall.Combat
         public static void Unregister(IBlocker b) => All.Remove(b);
 
         /// <summary>The nearest standing blocker within <paramref name="maxDistance"/>, or null.</summary>
-        public static IBlocker Nearest(Vector3 from, float maxDistance)
+        public static IBlocker Nearest(Vector3 from, float maxDistance) => Nearest(from, maxDistance, null);
+
+        /// <summary>The nearest standing blocker within <paramref name="maxDistance"/> that <paramref name="accept"/> allows, or null.</summary>
+        public static IBlocker Nearest(Vector3 from, float maxDistance, System.Predicate<IBlocker> accept)
         {
             IBlocker best = null;
             float bestDist = maxDistance;
@@ -36,7 +41,7 @@ namespace Deadfall.Combat
                 IBlocker b = All[i];
                 if (b == null || !b.IsTargetable) continue;
                 float d = b.DistanceFrom(from);
-                if (d < bestDist)
+                if (d < bestDist && (accept == null || accept(b)))
                 {
                     bestDist = d;
                     best = b;

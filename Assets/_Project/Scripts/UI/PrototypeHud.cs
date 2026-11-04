@@ -169,20 +169,20 @@ namespace Deadfall.UI
             if (_cursor != null && !_cursor.IsLocked && !UiModal.Active)
             {
                 HudKit.Backdrop(0.5f);
-                HudKit.Label(new Rect(0f, h * 0.36f, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
-                HudKit.Prompt(w * 0.5f, h * 0.36f + 66f, "Esc", "Resume", true);
-                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, h * 0.36f + 66f, 150f, 40f), "Settings"))
+                HudKit.Label(new Rect(0f, HudKit.PauseTop, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
+                HudKit.Prompt(w * 0.5f, HudKit.PauseTop + 66f, "Esc", "Resume", true);
+                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, HudKit.PauseTop + 66f, 150f, 40f), "Settings"))
                     _settingsPanel.Open();
                 if (TitleScreen.Current != null)
                 {
                     // Two clicks: the first arms it for a few seconds, so a stray click doesn't end a run.
                     bool armed = now < _quitConfirmUntil;
-                    if (HudKit.Button(new Rect(w * 0.5f - 130f, h * 0.36f + 122f, 260f, 40f), armed ? "Click again to quit" : "Quit to title", on: armed, accent: HudKit.Bad))
+                    if (HudKit.Button(new Rect(w * 0.5f - 130f, HudKit.PauseTop + 122f, 260f, 40f), armed ? "Click again to quit" : "Quit to title", on: armed, accent: HudKit.Bad))
                     {
                         if (armed) { _quitConfirmUntil = 0f; TitleScreen.Current.ReturnToTitle(); }
                         else _quitConfirmUntil = now + 3f;
                     }
-                    if (armed) HudKit.Label(new Rect(0f, h * 0.36f + 168f, w, 22f), "Leaves co-op and ends the current run.", 13, HudKit.TextDim, TextAnchor.MiddleCenter);
+                    if (armed) HudKit.Label(new Rect(0f, HudKit.PauseTop + 168f, w, 22f), "Leaves co-op and ends the current run.", 13, HudKit.TextDim, TextAnchor.MiddleCenter);
                 }
                 HudKit.Label(new Rect(w - 320f, h - 30f, 300f, 20f), BuildInfo.Label, 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             }
