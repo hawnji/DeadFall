@@ -11,7 +11,7 @@ namespace Deadfall.Enemies
     /// before a spit, flailing in a stagger, limp on death. It reads only state and position, so client mirrors
     /// animate exactly like the host's enemies with no extra network data.
     /// </summary>
-    public sealed class EnemyRig
+    public sealed class EnemyRig : IEnemyRig
     {
         private enum Kind { Biped, Quadruped, Spider }
 
@@ -90,6 +90,8 @@ namespace Deadfall.Enemies
             Transform t = Find(_model, name);
             return t == null ? default : new Part { T = t, Rest = t.localRotation };
         }
+
+        public bool HandlesPose => false;
 
         /// <summary>Back to the rest pose (pooled enemies being reused).</summary>
         public void Reset()

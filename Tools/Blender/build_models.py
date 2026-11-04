@@ -250,13 +250,13 @@ def export(o):
     return path
 
 
-def write_meta(fbx_path):
+def write_meta(fbx_path, template="fbx_meta_template.txt"):
     """New models get a full ModelImporter .meta (Unity rejects a bare guid-only one); existing metas keep their guid."""
     meta = fbx_path + ".meta"
     if os.path.exists(meta):
         return
     import uuid
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fbx_meta_template.txt")) as f:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), template)) as f:
         text = f.read().replace("{guid}", uuid.uuid4().hex)
     with open(meta, "w") as f:
         f.write(text)
@@ -1523,6 +1523,824 @@ def fp_arm():
     return m
 
 
+# ----------------------------------------------------------------------------------------------- rigged zombies
+# The zm_* models are one skinned mesh on a shared armature (Hips > Spine > Chest > Neck > Head, arms off the Chest,
+# legs off the Hips) with real animation clips: Idle, Walk, Run, Attack, Hit, Spit, Convulse and Death. The body is an
+# organic Skin-modifier hull over the bone graph (one subdivision), with primitives rigidly bound for the head, hands,
+# shoes and each type's growths. ZombieAnimator.cs plays the clips; the older enemy_* models stay as the fallback.
+# Crawler and Broodmother keep their limb-swing models (EnemyRig).
+
+ZM_BONES = [  # name, parent, head joint, tail joint
+    ("Hips", None, "hips", "spine"), ("Spine", "Hips", "spine", "chest"), ("Chest", "Spine", "chest", "uchest"),
+    ("Neck", "Chest", "uchest", "head"), ("Head", "Neck", "head", "head_top"),
+    ("UpperArm.L", "Chest", "shoulderL", "elbowL"), ("LowerArm.L", "UpperArm.L", "elbowL", "wristL"),
+    ("Hand.L", "LowerArm.L", "wristL", "handL"),
+    ("UpperArm.R", "Chest", "shoulderR", "elbowR"), ("LowerArm.R", "UpperArm.R", "elbowR", "wristR"),
+    ("Hand.R", "LowerArm.R", "wristR", "handR"),
+    ("UpperLeg.L", "Hips", "hipL", "kneeL"), ("LowerLeg.L", "UpperLeg.L", "kneeL", "ankleL"),
+    ("Foot.L", "LowerLeg.L", "ankleL", "toeL"),
+    ("UpperLeg.R", "Hips", "hipR", "kneeR"), ("LowerLeg.R", "UpperLeg.R", "kneeR", "ankleR"),
+    ("Foot.R", "LowerLeg.R", "ankleR", "toeR"),
+]
+ZM_PARENT = {b: p for b, p, _, _ in ZM_BONES}
+ZM_CHILDREN = {b: [c for c, p, _, _ in ZM_BONES if p == b] for b, _, _, _ in ZM_BONES}
+# The hull: skin-modifier vertices (joint names) and the edges between them. "head" is the top of the neck.
+ZM_HULL_EDGES = [("hips", "spine"), ("spine", "chest"), ("chest", "uchest"), ("uchest", "head"),
+                 ("uchest", "shoulderL"), ("shoulderL", "elbowL"), ("elbowL", "wristL"),
+                 ("uchest", "shoulderR"), ("shoulderR", "elbowR"), ("elbowR", "wristR"),
+                 ("hips", "hipL"), ("hipL", "kneeL"), ("kneeL", "ankleL"),
+                 ("hips", "hipR"), ("hipR", "kneeR"), ("kneeR", "ankleR")]
+# Hull radii (side, depth) in metres at 1.8 m, before the type's girth / limb factors.
+ZM_RADII = {"hips": (0.17, 0.12), "spine": (0.16, 0.11), "chest": (0.2, 0.125), "uchest": (0.19, 0.11),
+            "head": (0.055, 0.055), "shoulder": (0.066, 0.066), "elbow": (0.048, 0.048), "wrist": (0.036, 0.036),
+            "hip": (0.092, 0.092), "knee": (0.066, 0.066), "ankle": (0.05, 0.05)}
+TORSO_JOINTS = ("hips", "spine", "chest", "uchest", "head")
+
+
+class Zombie:
+    """Skeleton, hull and rigid extras for one zm_* model. Every coordinate is Unity space (like Model)."""
+
+    def __init__(self, name, h, w=1.0, hunch=0.0, arm_drop=0.0, stance=1.0, girth=1.0, limb=1.0, depth=1.0,
+                 shirt=True, short_pants=False, sleeves=True):
+        self.name, self.h, self.k = name, h, h / 1.8
+        self.girth, self.limb, self.depth = girth, limb, depth
+        self.shirt, self.short_pants, self.sleeves = shirt, short_pants, sleeves
+        self.radius_override = {}
+        self.extras = Model(name + "_extras")  # primitive factory; parts are bound to self.bone
+        self.bound = {}
+        self.bone = None
+        k = self.k
+
+        def P(x, y, z):
+            return (x * w * k, y * k, z * k)
+
+        J = {}
+        J["hips"] = P(0, 0.95, 0)
+        J["spine"] = P(0, 1.12, 0.02 + hunch * 0.3)
+        J["chest"] = P(0, 1.29, 0.04 + hunch * 0.6)
+        J["uchest"] = P(0, 1.42, 0.06 + hunch * 0.85)
+        J["head"] = P(0, 1.54, 0.09 + hunch)
+        J["head_top"] = P(0, 1.8, 0.09 + hunch)
+        for side, s in (("L", -1), ("R", 1)):
+            J["shoulder" + side] = P(s * 0.2, 1.42, 0.06 + hunch * 0.85)
+            J["elbow" + side] = P(s * 0.26, 1.2 - arm_drop, 0.18 + hunch)
+            J["wrist" + side] = P(s * 0.28, 1.15 - arm_drop * 1.5, 0.42 + hunch)
+            J["hand" + side] = P(s * 0.28, 1.13 - arm_drop * 1.6, 0.56 + hunch)
+            J["hip" + side] = (s * 0.11 * stance * w * k, 0.9 * k, 0.0)
+            J["knee" + side] = (s * 0.12 * stance * w * k, 0.5 * k, 0.06 * k)
+            J["ankle" + side] = (s * 0.13 * stance * w * k, 0.09 * k, -0.01 * k)
+            J["toe" + side] = (s * 0.13 * stance * w * k, 0.02 * k, 0.15 * k)
+        self.J = J
+
+    def on(self, bone):
+        z = self
+
+        class _On:
+            def __enter__(self):
+                z.bone = bone
+
+            def __exit__(self, *exc):
+                z.bone = None
+        return _On()
+
+    def add(self, fn, *args, **kw):
+        """z.add(z.extras.box, pos, size, mat, ...) inside `with z.on(bone)`: a primitive bound to that bone."""
+        o = fn(*args, **kw)
+        self.bound[o.name] = self.bone
+        return o
+
+    def radius(self, joint):
+        if joint in self.radius_override:
+            r = self.radius_override[joint]
+        else:
+            base = joint.rstrip("LR") if joint not in ZM_RADII else joint
+            r = ZM_RADII[base]
+        f = (self.girth if joint in TORSO_JOINTS else self.limb) * self.k
+        return (r[0] * f, r[1] * f * (self.depth if joint in TORSO_JOINTS else 1.0))
+
+    # ----------------------------------------------------------------------- standard parts
+
+    def head(self, size=(0.24, 0.28, 0.26), jaw=(0.15, 0.06, 0.12), jaw_drop=0.0, eye_spread=0.065, eye=EYE):
+        k = self.k
+        a, b = Vector(self.J["head"]), Vector(self.J["head_top"])
+        c = a + (b - a) * 0.45 + Vector((0, 0, 0.01 * k))
+        sx, sy, sz = (v * k for v in size)
+        with self.on("Head"):
+            self.add(self.extras.sph, tuple(c), (sx, sy, sz), "SkinDark", segments=12)
+            self.add(self.extras.box, (c.x, c.y - sy * 0.36 - jaw_drop * k, c.z + sz * 0.25),
+                     (jaw[0] * k, jaw[1] * k, jaw[2] * k), "SkinDark", rot=(12 + jaw_drop * 200, 0, 0), bevel=0.012 * k)
+            for s in (-1, 1):
+                self.add(self.extras.box, (c.x + s * eye_spread * k, c.y + sy * 0.06, c.z + sz * 0.43),
+                         (0.05 * k, 0.028 * k, 0.03 * k), eye, bevel=0.0)
+        return c
+
+    def hands(self, claws=False, fist=False, mat="SkinDark"):
+        k = self.k
+        for side in ("L", "R"):
+            w, t = Vector(self.J["wrist" + side]), Vector(self.J["hand" + side])
+            d = (t - w).normalized()
+            mid = w + (t - w) * 0.5
+            with self.on("Hand." + side):
+                if fist:
+                    self.add(self.extras.box, tuple(mid), (0.13 * k * self.limb, 0.12 * k * self.limb, 0.13 * k * self.limb),
+                             mat, bevel=0.03 * k)
+                else:
+                    self.add(self.extras.limb, tuple(w + d * 0.01), tuple(mid + d * 0.04),
+                             (0.085 * k * self.limb, 0.04 * k * self.limb), mat)
+                    for f in (-1, 0, 1):  # fingers, curled down
+                        base = mid + d * 0.03 + Vector((f * 0.024 * k * self.limb, 0, 0))
+                        self.add(self.extras.limb, tuple(base), tuple(base + d * 0.06 * k + Vector((0, -0.03 * k, 0))),
+                                 (0.018 * k, 0.018 * k), mat)
+                if claws:
+                    for f in (-1, 0, 1):
+                        base = mid + d * 0.05 + Vector((f * 0.03 * k * self.limb, -0.02 * k, 0))
+                        self.add(self.extras.cone, tuple(base + d * 0.05 * k), (0.026 * k, 0.15 * k, 0.026 * k), BONE,
+                                 rot=(100, math.degrees(math.atan2(d.x, d.z)), 0), segments=5)
+
+    def shoes(self, mat=RUBBER, bare=False):
+        k = self.k
+        for side in ("L", "R"):
+            a, t = Vector(self.J["ankle" + side]), Vector(self.J["toe" + side])
+            with self.on("Foot." + side):
+                if bare:
+                    self.add(self.extras.box, (a.x, 0.035 * k, (a.z + t.z) / 2), (0.1 * k * self.limb, 0.06 * k, 0.22 * k),
+                             "SkinDark", bevel=0.015 * k)
+                else:
+                    self.add(self.extras.box, (a.x, 0.04 * k, (a.z + t.z) / 2 + 0.01 * k),
+                             (0.13 * k * self.limb, 0.08 * k, 0.26 * k), mat, bevel=0.02 * k)
+
+    def rags(self):
+        """A belt, bound to the hips."""
+        k = self.k
+        hp = Vector(self.J["hips"])
+        with self.on("Hips"):
+            self.add(self.extras.box, (0, hp.y + 0.01 * k, hp.z), (0.35 * k * self.girth, 0.05 * k, 0.24 * k * self.girth * self.depth),
+                     "C_2B2622", bevel=0.01 * k)
+
+    # ----------------------------------------------------------------------- build
+
+    def hull(self):
+        """The organic body: a skin-modifier hull over the joints, one subdivision, materials by region."""
+        names = sorted({n for e in ZM_HULL_EDGES for n in e})
+        index = {n: i for i, n in enumerate(names)}
+        me = bpy.data.meshes.new(self.name + "_hull")
+        me.from_pydata([to_b(self.J[n]) for n in names], [(index[a], index[b]) for a, b in ZM_HULL_EDGES], [])
+        o = bpy.data.objects.new(self.name + "_hull", me)
+        bpy.context.scene.collection.objects.link(o)
+        bpy.ops.object.select_all(action='DESELECT')
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        skin = o.modifiers.new("skin", 'SKIN')
+        skin.branch_smoothing = 0.6
+        skin.use_smooth_shade = True
+        for n, i in index.items():
+            rx, rz = self.radius(n)
+            me.skin_vertices[0].data[i].radius = (rx, rz)
+            me.skin_vertices[0].data[i].use_root = (n == "hips")
+        sub = o.modifiers.new("sub", 'SUBSURF')
+        sub.levels = 1
+        sub.render_levels = 1
+        bpy.ops.object.modifier_apply(modifier=skin.name)
+        bpy.ops.object.modifier_apply(modifier=sub.name)
+        for poly in me.polygons:
+            poly.use_smooth = True
+        # Materials by the nearest bone.
+        slots = {}
+
+        def slot(mat):
+            if mat not in slots:
+                slots[mat] = len(me.materials)
+                me.materials.append(material(mat))
+            return slots[mat]
+
+        segs = self.segments()
+        for poly in me.polygons:
+            c = poly.center
+            bone, t = nearest_bone(segs, c)
+            u = to_u(c)
+            mat = "Skin"
+            if bone.startswith(("UpperLeg", "LowerLeg", "Foot")) or bone == "Hips":
+                mat = CLOTH_DARK
+                if self.short_pants and (bone.startswith(("LowerLeg", "Foot")) or (bone.startswith("UpperLeg") and t > 0.85)):
+                    mat = "Skin"
+                if bone == "Hips" and t > 0.75 and self.shirt:
+                    mat = CLOTH
+            elif bone in ("Spine", "Chest"):
+                tear = math.sin(u[0] * 41.0 + 1.3) * math.sin(u[1] * 37.0 + u[2] * 23.0)
+                mat = CLOTH if self.shirt and tear < 0.45 else "Skin"
+                if not self.shirt and tear > 0.7:
+                    mat = "SkinDark"
+            elif bone.startswith("UpperArm") and self.sleeves and self.shirt and t < 0.35:
+                mat = CLOTH
+            elif bone.startswith(("UpperArm", "LowerArm")):
+                bruise = math.sin(u[0] * 53.0) * math.sin(u[1] * 47.0 + u[2] * 31.0)
+                mat = "SkinDark" if bruise > 0.75 else "Skin"
+            poly.material_index = slot(mat)
+        return o
+
+    def segments(self):
+        return [(b, to_b(self.J[a]), to_b(self.J[t])) for b, _, a, t in ZM_BONES]
+
+    def build(self):
+        """Hull + extras joined, weighted and parented to a new armature. Returns the armature object."""
+        segs = self.segments()
+        body = self.hull()
+        weight_by_distance(body, segs)
+        parts = [body]
+        for o in self.extras.parts:
+            vg = o.vertex_groups.new(name=self.bound[o.name])
+            vg.add(list(range(len(o.data.vertices))), 1.0, 'REPLACE')
+            parts.append(o)
+        mesh = Model._join(parts, self.name + "_body")
+        mesh.name = "Body"
+        mesh.data.name = self.name + "_body"
+
+        ad = bpy.data.armatures.new(self.name + "_rig")
+        arm = bpy.data.objects.new(self.name, ad)
+        bpy.context.scene.collection.objects.link(arm)
+        bpy.ops.object.select_all(action='DESELECT')
+        arm.select_set(True)
+        bpy.context.view_layer.objects.active = arm
+        bpy.ops.object.mode_set(mode='EDIT')
+        for b, parent, a, t in ZM_BONES:
+            eb = ad.edit_bones.new(b)
+            eb.head = to_b(self.J[a])
+            eb.tail = to_b(self.J[t])
+            eb.roll = 0.0
+            if parent:
+                eb.parent = ad.edit_bones[parent]
+                eb.use_connect = False
+        bpy.ops.object.mode_set(mode='OBJECT')
+        mesh.parent = arm
+        mod = mesh.modifiers.new("rig", 'ARMATURE')
+        mod.object = arm
+        arm["zm_k"] = self.k
+        return arm
+
+
+def to_u(p):
+    """Blender point -> Unity point (inverse of to_b)."""
+    return Vector((-p[0], p[2], -p[1]))
+
+
+def nearest_bone(segs, p):
+    best, best_d, best_t = None, 1e9, 0.0
+    for b, a, t in segs:
+        ab = t - a
+        u = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+        d = (a + ab * u - p).length
+        if d < best_d:
+            best, best_d, best_t = b, d, u
+    return best, best_t
+
+
+def weight_by_distance(o, segs):
+    """Each vertex goes to its nearest bone, blended with that bone's nearest parent or child near the joints."""
+    groups = {b: o.vertex_groups.new(name=b) for b, _, _ in segs}
+    seg = {b: (a, t) for b, a, t in segs}
+
+    def dist(b, p):
+        a, t = seg[b]
+        ab = t - a
+        u = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+        return (a + ab * u - p).length
+
+    for v in o.data.vertices:
+        p = v.co
+        b0, _ = nearest_bone(segs, p)
+        d0 = max(dist(b0, p), 1e-4)
+        neigh = ([ZM_PARENT[b0]] if ZM_PARENT[b0] else []) + ZM_CHILDREN[b0]
+        if b0 in ("UpperArm.L", "UpperArm.R"):
+            neigh = [n for n in neigh]  # Chest, LowerArm
+        best = None
+        for n in neigh:
+            d = dist(n, p)
+            if best is None or d < best[1]:
+                best = (n, d)
+        if best is None or best[1] > d0 * 2.2:
+            groups[b0].add([v.index], 1.0, 'REPLACE')
+            continue
+        w0 = 1.0 / d0 ** 4
+        w1 = 1.0 / max(best[1], 1e-4) ** 4
+        # Fade the neighbour out as it gets twice as far as the nearest bone.
+        fade = max(0.0, min(1.0, (2.2 - best[1] / d0) / 1.2))
+        w1 *= fade
+        s = w0 + w1
+        groups[b0].add([v.index], w0 / s, 'REPLACE')
+        if w1 > 0:
+            groups[best[0]].add([v.index], w1 / s, 'REPLACE')
+
+
+# ----------------------------------------------------------------------------------------------- zombie types
+# Built at the prototype definition's height / radius for the body (the same as the enemy_* models), with the
+# glowing weak points where the hurtboxes are (Enemy.BuildVisual).
+
+def zm_standard():
+    z = Zombie("zm_standard", 1.8)
+    z.head()
+    z.hands()
+    z.shoes()
+    z.rags()
+    return z
+
+
+def zm_lean():
+    z = Zombie("zm_lean", 1.65, w=0.85, hunch=0.12, arm_drop=0.06, girth=0.78, limb=0.78, short_pants=True,
+               sleeves=False)
+    z.head(size=(0.23, 0.26, 0.26), eye_spread=0.06)
+    z.hands(claws=True)
+    z.shoes(bare=True)
+    z.rags()
+    k = z.k
+    with z.on("Chest"):  # visible spine ridge
+        for i in range(4):
+            p = Vector(z.J["spine"]).lerp(Vector(z.J["uchest"]), i / 3.0)
+            z.add(z.extras.box, (0, p.y, p.z - 0.085 * k), (0.05 * k, 0.045 * k, 0.05 * k), BONE, bevel=0.0)
+    return z
+
+
+def zm_plated():
+    h, r = 2.3, 0.6
+    z = Zombie("zm_plated", h, w=2.3, hunch=0.02, girth=2.2, limb=2.0, depth=1.25, shirt=False, stance=0.95)
+    z.head(size=(0.24, 0.24, 0.26), jaw=(0.13, 0.05, 0.1), eye_spread=0.055)
+    z.hands(fist=True)
+    z.shoes()
+    z.rags()
+    with z.on("Spine"):  # front plate (armour hurtbox): riot-shield slabs grown into the chest
+        z.add(z.extras.box, (0, h * 0.5, r * 0.95), (r * 2.2, h * 0.53, 0.1), METAL, bevel=0.03)
+        for y in (0.85, 1.15, 1.45):
+            z.add(z.extras.box, (0, y, r * 0.95 + 0.06), (r * 2.25, 0.05, 0.04), METAL_LIGHT, bevel=0.0)
+        for sx in (-1, 1):
+            for y in (0.8, 1.5):
+                z.add(z.extras.cyl, (sx * 0.55, y, r * 0.95 + 0.06), (0.06, 0.03, 0.06), METAL_LIGHT, rot=(90, 0, 0), segments=6)
+    gy = h * 0.6
+    with z.on("Chest"):  # back growth (weak point)
+        z.add(z.extras.box, (0, gy, -r * 0.92), (r * 1.0, h * 0.22, 0.2), "G_F28C26", bevel=0.05)
+        for (x, y, d) in ((-0.18, gy + 0.12, 0.2), (0.16, gy - 0.1, 0.22), (0.0, gy + 0.02, 0.26)):
+            z.add(z.extras.sph, (x, y, -r * 1.02), (d, d, d), "G_F28C26", segments=8)
+    return z
+
+
+def zm_bloated():
+    h, r = 1.75, 0.42
+    z = Zombie("zm_bloated", h, w=1.25, girth=1.5, limb=1.25, depth=1.3, shirt=False, stance=1.25)
+    z.radius_override.update({"spine": (0.3, 0.27), "chest": (0.26, 0.2), "hips": (0.24, 0.2)})
+    z.head(size=(0.24, 0.25, 0.25), eye_spread=0.06)
+    z.hands()
+    z.shoes()
+    with z.on("Spine"):  # the gut, the sac (weak point) and pustules
+        z.add(z.extras.sph, (0, h * 0.5, 0.04), (r * 2.1, h * 0.36, r * 1.9), "Skin", segments=14)
+        z.add(z.extras.sph, (0, h * 0.42, r * 0.95), (0.38, 0.38, 0.32), "G_FF8C1A", segments=12)
+        for (x, y, zz, d) in ((-0.32, 1.05, 0.22, 0.13), (0.3, 0.95, 0.26, 0.11), (0.35, 0.72, -0.2, 0.12), (-0.28, 0.76, -0.3, 0.1)):
+            z.add(z.extras.sph, (x, y, zz), (d, d, d), "G_FF8C1A", segments=8)
+    with z.on("Hips"):
+        z.add(z.extras.sph, (0, h * 0.33, 0.02), (r * 1.75, 0.3, r * 1.6), CLOTH, segments=12)  # strained trousers
+    return z
+
+
+def zm_spitter():
+    h = 1.7
+    z = Zombie("zm_spitter", h, hunch=0.07, arm_drop=0.12)
+    z.head(size=(0.24, 0.26, 0.29), jaw=(0.15, 0.05, 0.15), jaw_drop=0.08, eye_spread=0.06)
+    z.hands()
+    z.shoes()
+    z.rags()
+    with z.on("Neck"):  # throat sac (weak point)
+        z.add(z.extras.sph, (0, h * 0.7, 0.26), (0.32, 0.28, 0.28), "G_B3D933", segments=12)
+    return z
+
+
+def zm_alpha():
+    h, r = 2.15, 0.42
+    z = Zombie("zm_alpha", h, w=1.45, hunch=0.03, girth=1.45, limb=1.4, depth=1.2, shirt=False)
+    z.head(size=(0.25, 0.27, 0.27), eye_spread=0.06)
+    z.hands(claws=True)
+    z.shoes()
+    z.rags()
+    gy = h * 0.78
+    with z.on("Chest"):  # crystal growth on the upper back (weak point)
+        z.add(z.extras.box, (0, gy, -r * 0.62), (r * 1.5, 0.24, 0.3), "G_59D9FF", bevel=0.04)
+        for (x, tilt) in ((-0.22, -20), (-0.08, -8), (0.07, 6), (0.21, 18)):
+            z.add(z.extras.cone, (x, gy + 0.2, -r * 0.7), (0.1, 0.38, 0.1), "G_59D9FF", rot=(-25, 0, tilt), segments=5)
+    return z
+
+
+def zm_specimen():
+    """Body, head and arms only: the phase plates, growths and core stay game-built so they can appear by phase."""
+    h = 3.4
+    z = Zombie("zm_specimen", h, w=2.6, hunch=0.12, arm_drop=0.12, girth=2.6, limb=2.3, depth=1.3, shirt=False,
+               stance=1.1)
+    z.radius_override.update({"uchest": (0.14, 0.1), "chest": (0.17, 0.12), "shoulderL": (0.075, 0.075),
+                              "shoulderR": (0.075, 0.075)})
+    z.head(size=(0.27, 0.26, 0.3), jaw=(0.2, 0.08, 0.17), eye_spread=0.07)
+    z.hands(claws=True, mat="SkinDark")
+    z.shoes(bare=True)
+    k = z.k
+    with z.on("Chest"):  # back spikes
+        u = Vector(z.J["uchest"])
+        for i, x in enumerate((-0.45, -0.15, 0.15, 0.45)):
+            z.add(z.extras.cone, (x, u.y + 0.05, u.z - 0.4), (0.16, 0.6 if i in (1, 2) else 0.45, 0.16), BONE,
+                  rot=(-35, 0, x * 25), segments=6)
+    return z
+
+
+ZOMBIES = [zm_standard, zm_lean, zm_plated, zm_bloated, zm_spitter, zm_alpha, zm_specimen]
+
+
+# ----------------------------------------------------------------------------------------------- zombie clips
+# A clip is a function of t (0..1) returning {bone: rotation} plus a Hips offset, all in Unity-flavoured body terms.
+# Rotations are about the armature's axes at rest (basis = B^-1 R B), so "flex" means the same thing on every bone:
+# positive swings a hanging limb forward / raises a forward-pointing arm, negative bends the spine forward.
+
+def _rx(d):
+    return Matrix.Rotation(math.radians(-d), 3, 'X')
+
+
+def flex(d):
+    return _rx(d)
+
+
+def lean(d):
+    """Spine / head bending forward by d degrees."""
+    return _rx(-d)
+
+
+def tilt(d):
+    """Lean towards the zombie's right (positive) or left."""
+    return Matrix.Rotation(math.radians(-d), 3, 'Y')
+
+
+def turn(d):
+    """Turn towards the zombie's right (positive)."""
+    return Matrix.Rotation(math.radians(-d), 3, 'Z')
+
+
+def spread(side, d):
+    """Forward-pointing arm swinging outward."""
+    return turn(d if side == "R" else -d)
+
+
+def legout(side, d):
+    return tilt(-d if side == "L" else d)
+
+
+def smooth(a, b, t):
+    t = max(0.0, min(1.0, (t - a) / (b - a))) if b > a else 1.0
+    return t * t * (3 - 2 * t)
+
+
+def keys(t, pts):
+    """Smoothstepped value through (time, value) keys."""
+    if t <= pts[0][0]:
+        return pts[0][1]
+    for (t0, v0), (t1, v1) in zip(pts, pts[1:]):
+        if t <= t1:
+            return v0 + (v1 - v0) * smooth(t0, t1, t)
+    return pts[-1][1]
+
+
+SIDES = (("L", 0.0), ("R", math.pi))
+
+
+def base_pose(P):
+    """The shamble stance every clip starts from: hunched, arms reaching, knees soft."""
+    P["Spine"].append(lean(8))
+    P["Neck"].append(lean(-6))
+    P["Head"].append(lean(10))
+    for side, _ in SIDES:
+        P["UpperArm." + side].append(flex(-6))
+        P["LowerArm." + side].append(flex(-4))
+        P["Hand." + side].append(flex(-15))
+
+
+def new_pose():
+    return {b: [] for b, _, _, _ in ZM_BONES}
+
+
+def clip_idle(t):
+    P, hips = new_pose(), Vector((0, -0.02, 0))
+    base_pose(P)
+    ph = 2 * math.pi * t
+    P["Spine"].append(lean(2 * math.sin(ph)))
+    P["Chest"].append(tilt(2.5 * math.sin(ph)))
+    P["Head"].append(tilt(7 * math.sin(ph + 0.6)))
+    P["Head"].append(lean(4 * math.sin(2 * ph)))
+    for side, off in SIDES:
+        P["UpperArm." + side].append(flex(-18 + 4 * math.sin(ph + off)))
+        P["LowerArm." + side].append(flex(-12 + 3 * math.sin(ph + off + 1)))
+        P["UpperLeg." + side].append(flex(8))
+        P["LowerLeg." + side].append(flex(-14))
+        P["Foot." + side].append(flex(6))
+    hips.y -= 0.01 * (1 + math.sin(ph))
+    return P, hips
+
+
+def clip_walk(t):
+    """The shamble: a dragging right leg, lurching torso, arms reaching and bobbing."""
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    ph = 2 * math.pi * t
+    s, c = math.sin(ph), math.cos(ph)
+    for side, off in SIDES:
+        amp = 26 if side == "L" else 18
+        sw = math.sin(ph + off)
+        lift = max(0.0, math.cos(ph + off))
+        P["UpperLeg." + side].append(flex(amp * sw + 4 + 10 * lift))
+        P["LowerLeg." + side].append(flex(-(6 + (38 if side == "L" else 22) * lift)))
+        P["Foot." + side].append(flex(-6 * sw + 8 * lift))
+        if side == "R":
+            P["UpperLeg.R"].append(legout("R", 6))
+            P["Foot.R"].append(turn(14))
+        reach = 24 if side == "L" else -6  # the left arm reaches, the right one hangs lower
+        P["UpperArm." + side].append(flex(reach + 7 * math.sin(ph + off + math.pi)))
+        P["UpperArm." + side].append(spread(side, 4))
+        P["LowerArm." + side].append(flex(4 + 6 * math.sin(ph + off + 2)))
+    hips.y -= 0.035 * abs(s)
+    P["Hips"].append(tilt(4 * s))
+    P["Hips"].append(turn(5 * s))
+    P["Spine"].append(lean(4))
+    P["Spine"].append(tilt(-4 * s))
+    P["Chest"].append(turn(-6 * s))
+    P["Head"].append(tilt(9 * math.sin(ph + 0.8)))
+    P["Head"].append(lean(4 * abs(c)))
+    return P, hips
+
+
+def clip_run(t):
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    ph = 2 * math.pi * t
+    s = math.sin(ph)
+    for side, off in SIDES:
+        sw = math.sin(ph + off)
+        lift = max(0.0, math.cos(ph + off))
+        P["UpperLeg." + side].append(flex(44 * sw + 12 + 14 * lift))
+        P["LowerLeg." + side].append(flex(-(18 + 75 * lift)))
+        P["Foot." + side].append(flex(-10 * sw + 10 * lift))
+        P["UpperArm." + side].append(flex(-14 + 36 * math.sin(ph + off + math.pi)))
+        P["UpperArm." + side].append(spread(side, 10))
+        P["LowerArm." + side].append(flex(-18 + 14 * math.sin(ph + off + 2.2)))
+    hips.y -= 0.02 + 0.05 * abs(s)
+    hips.z += 0.04
+    P["Hips"].append(turn(9 * s))
+    P["Spine"].append(lean(18))
+    P["Chest"].append(turn(-12 * s))
+    P["Neck"].append(lean(-14))
+    P["Head"].append(tilt(6 * math.sin(ph * 2)))
+    return P, hips
+
+
+def clip_attack(t):
+    """Rear back with both arms high (0..0.42), slam down (0.42..0.56), recover. Brain wind-up ends at 0.42."""
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    up = keys(t, [(0, 0), (0.42, 1), (0.5, -0.2), (0.56, -1), (0.75, -0.8), (1.0, 0)])
+    lift = max(up, 0.0)
+    slam = max(-up, 0.0)
+    P["Spine"].append(lean(-14 * lift + 26 * slam))
+    P["Chest"].append(lean(-8 * lift + 12 * slam))
+    P["Head"].append(lean(-14 * lift + 10 * slam))
+    for side, _ in SIDES:
+        P["UpperArm." + side].append(flex(70 * lift - 50 * slam))
+        P["UpperArm." + side].append(spread(side, 18 * lift))
+        P["LowerArm." + side].append(flex(25 * lift - 15 * slam))
+        P["Hand." + side].append(flex(20 * lift - 20 * slam))
+        P["UpperLeg." + side].append(flex(10 * slam + (12 if side == "L" else -4) * (lift + slam)))
+        P["LowerLeg." + side].append(flex(-22 * slam - 6 * lift))
+    hips.y -= 0.06 * slam
+    hips.z += 0.05 * slam - 0.03 * lift
+    return P, hips
+
+
+def clip_hit(t):
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    a = keys(t, [(0, 0), (0.18, 1), (1.0, 0)])
+    P["Spine"].append(lean(-18 * a))
+    P["Chest"].append(lean(-10 * a))
+    P["Chest"].append(tilt(8 * a))
+    P["Head"].append(lean(-22 * a))
+    P["Head"].append(tilt(-12 * a))
+    for side, _ in SIDES:
+        P["UpperArm." + side].append(flex(25 * a))
+        P["UpperArm." + side].append(spread(side, 22 * a))
+        P["LowerArm." + side].append(flex(-20 * a))
+        P["UpperLeg." + side].append(flex(-6 * a if side == "L" else 10 * a))
+        P["LowerLeg." + side].append(flex(-14 * a))
+    hips.z -= 0.08 * a
+    hips.y -= 0.03 * a
+    return P, hips
+
+
+def clip_spit(t):
+    """Head and chest rear back with the throat swelling (0..0.6), then lurch forward (0.6..0.72)."""
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    v = keys(t, [(0, 0), (0.6, 1), (0.66, -0.3), (0.72, -1), (1.0, 0)])
+    back, fwd = max(v, 0.0), max(-v, 0.0)
+    P["Spine"].append(lean(-12 * back + 16 * fwd))
+    P["Chest"].append(lean(-10 * back + 10 * fwd))
+    P["Neck"].append(lean(-18 * back + 18 * fwd))
+    P["Head"].append(lean(-24 * back + 22 * fwd))
+    for side, _ in SIDES:
+        P["UpperArm." + side].append(flex(-30 * back - 20 * fwd))
+        P["UpperArm." + side].append(spread(side, 20 * back))
+        P["LowerArm." + side].append(flex(-10 * back))
+    hips.z += 0.05 * fwd - 0.03 * back
+    return P, hips
+
+
+def clip_convulse(t):
+    """Shuddering loop for a bloated about to burst."""
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    ph = 2 * math.pi * t
+    P["Spine"].append(lean(6 * math.sin(ph * 2)))
+    P["Spine"].append(tilt(7 * math.sin(ph * 3 + 1)))
+    P["Chest"].append(turn(8 * math.sin(ph * 2 + 2)))
+    P["Head"].append(tilt(18 * math.sin(ph * 3)))
+    P["Head"].append(lean(-10 + 8 * math.sin(ph * 4)))
+    for side, off in SIDES:
+        P["UpperArm." + side].append(flex(10 + 22 * math.sin(ph * 3 + off)))
+        P["UpperArm." + side].append(spread(side, 24))
+        P["LowerArm." + side].append(flex(-20 + 15 * math.sin(ph * 4 + off)))
+        P["UpperLeg." + side].append(flex(10))
+        P["LowerLeg." + side].append(flex(-20))
+    hips.y -= 0.04 + 0.015 * math.sin(ph * 4)
+    return P, hips
+
+
+def clip_death(t, k=1.0):
+    """Knees buckle (0..0.35), then the body pitches forward onto the floor (0.35..0.75) and settles."""
+    P, hips = new_pose(), Vector((0, 0, 0))
+    base_pose(P)
+    buckle = keys(t, [(0, 0), (0.35, 1), (0.6, 0.4), (1.0, 0.0)])
+    fall = keys(t, [(0, 0), (0.3, 0.0), (0.72, 1.0), (0.8, 0.96), (1.0, 1.0)])
+    P["Hips"].append(lean(84 * fall))
+    P["Hips"].append(tilt(8 * fall))
+    P["Spine"].append(lean(10 * buckle - 6 * fall))
+    P["Chest"].append(tilt(-10 * fall))
+    P["Head"].append(turn(55 * fall))
+    P["Head"].append(lean(-25 * fall))
+    for side, _ in SIDES:
+        P["UpperLeg." + side].append(flex(55 * buckle + (8 if side == "L" else -6) * fall))
+        P["LowerLeg." + side].append(flex(-95 * buckle - (25 if side == "L" else 5) * fall))
+        P["Foot." + side].append(flex(30 * fall))
+        arm = 1 if side == "L" else -1
+        P["UpperArm." + side].append(flex(30 * buckle - 40 * fall))
+        P["UpperArm." + side].append(spread(side, (35 + 20 * arm) * fall))
+        P["LowerArm." + side].append(flex(-30 * buckle - 20 * fall))
+    # Hips sink with the knees, then drop to the floor and slide forward as the body lays down.
+    hips.y -= 0.38 * buckle * (1 - fall) + 0.8 * fall
+    hips.z += 0.3 * fall
+    return P, hips
+
+
+# name, seconds, function, loops (the loop flag is informational: ZombieAnimator samples clips by time itself)
+ZM_CLIPS = [("Idle", 2.0, clip_idle, True), ("Walk", 1.2, clip_walk, True), ("Run", 0.7, clip_run, True),
+            ("Attack", 0.9, clip_attack, False), ("Hit", 0.5, clip_hit, False), ("Spit", 0.85, clip_spit, False),
+            ("Convulse", 0.4, clip_convulse, True), ("Death", 1.4, clip_death, False)]
+ZM_FPS = 30
+
+
+def apply_pose(arm, P, hips):
+    """Sets the armature's pose bones from a clip sample. Returns {bone: (quaternion, location)}."""
+    k = arm.get("zm_k", 1.0)
+    out = {}
+    for pb in arm.pose.bones:
+        R = Matrix.Identity(3)
+        for m in P.get(pb.name, []):
+            R = R @ m
+        B = pb.bone.matrix_local.to_3x3()
+        q = (B.inverted() @ R @ B).to_quaternion()
+        pb.rotation_mode = 'QUATERNION'
+        pb.rotation_quaternion = q
+        loc = Vector((0, 0, 0))
+        if pb.name == "Hips":
+            loc = B.inverted() @ (to_b(hips) * k)
+        pb.location = loc
+        out[pb.name] = (q, loc)
+    return out
+
+
+def make_actions(arm):
+    """One action per clip on the armature, keyed every frame (quaternions kept on one hemisphere)."""
+    bpy.context.scene.render.fps = ZM_FPS
+    arm.animation_data_create()
+    actions = []
+    for name, seconds, fn, _ in ZM_CLIPS:
+        act = bpy.data.actions.new(name)
+        act.use_fake_user = True
+        arm.animation_data.action = act
+        frames = max(2, int(round(seconds * ZM_FPS)))
+        prev = {}
+        for f in range(frames + 1):
+            P, hips = fn(f / frames)
+            pose = apply_pose(arm, P, hips)
+            for pb in arm.pose.bones:
+                q = pb.rotation_quaternion.copy()
+                if pb.name in prev and prev[pb.name].dot(q) < 0:
+                    q.negate()
+                    pb.rotation_quaternion = q
+                prev[pb.name] = q
+                pb.keyframe_insert("rotation_quaternion", frame=f)
+                if pb.name == "Hips":
+                    pb.keyframe_insert("location", frame=f)
+        for fc in act.fcurves:
+            for kp in fc.keyframe_points:
+                kp.interpolation = 'LINEAR'
+        actions.append(act)
+    arm.animation_data.action = None
+    for pb in arm.pose.bones:
+        pb.rotation_quaternion = (1, 0, 0, 0)
+        pb.location = (0, 0, 0)
+    return actions
+
+
+def export_zombie(arm):
+    """Skinned mesh + armature + every clip as its own take ("<armature>|Walk")."""
+    bpy.ops.object.select_all(action='DESELECT')
+    arm.select_set(True)
+    for c in arm.children:
+        c.select_set(True)
+    bpy.context.view_layer.objects.active = arm
+    path = os.path.join(OUT, arm.name + ".fbx")
+    bpy.ops.export_scene.fbx(
+        filepath=path, use_selection=True, object_types={'ARMATURE', 'MESH'},
+        apply_unit_scale=True, apply_scale_options='FBX_SCALE_ALL',
+        axis_forward='-Z', axis_up='Y', bake_space_transform=False,
+        mesh_smooth_type='FACE', use_mesh_modifiers=False, add_leaf_bones=False,
+        primary_bone_axis='Y', secondary_bone_axis='X', use_armature_deform_only=True,
+        bake_anim=True, bake_anim_use_all_bones=True, bake_anim_use_nla_strips=False, bake_anim_use_all_actions=True,
+        bake_anim_force_startend_keying=True, bake_anim_step=1.0, bake_anim_simplify_factor=1.0,
+        path_mode='STRIP', embed_textures=False)
+    write_meta(path, "fbx_meta_template_animated.txt")
+    return path
+
+
+def preview_zombies(arms, out_dir, side=False):
+    """One row per zombie: rest, idle, walk, run, attack wind-up, attack strike, spit, death (posed copies)."""
+    scene = bpy.context.scene
+    scene.render.engine = 'BLENDER_WORKBENCH'
+    scene.display.shading.light = 'STUDIO'
+    scene.display.shading.color_type = 'MATERIAL'
+    scene.display.shading.show_cavity = True
+    scene.display.shading.show_shadows = True
+    scene.display.shading.show_object_outline = True
+    for o in list(scene.objects):
+        o.hide_render = True
+    poses = [("Walk", 0.1), ("Walk", 0.6), ("Run", 0.25), ("Attack", 0.42), ("Attack", 0.56), ("Hit", 0.18),
+             ("Spit", 0.6), ("Death", 0.45), ("Death", 1.0)]
+    fns = {n: fn for n, _, fn, _ in ZM_CLIPS}
+    temp = []
+    y_cursor = 0.0
+    col_w = 1.7
+    rows = []  # (bottom z, height) per row
+    for row, arm in enumerate(arms):
+        k = arm.get("zm_k", 1.0)
+        scale_down = min(1.0, 2.0 / (1.8 * k))  # draw the big ones smaller so every row fits
+        for col, (clip, t) in enumerate(poses):
+            a = arm.copy()
+            a.data = arm.data
+            a.animation_data_clear()
+            scene.collection.objects.link(a)
+            body = arm.children[0]
+            b = body.copy()
+            b.data = body.data
+            b.parent = a
+            b.modifiers["rig"].object = a
+            scene.collection.objects.link(b)
+            a.hide_render = False
+            b.hide_render = False
+            a.location = (0, -col * col_w, -y_cursor) if side else (col * col_w, 0, -y_cursor)
+            a.scale = (scale_down,) * 3
+            apply_pose(a, *fns[clip](t))
+            temp += [a, b]
+        rows.append((-y_cursor, 1.8 * k * scale_down))
+        y_cursor += 1.8 * k * scale_down + 0.5
+    bpy.context.view_layer.update()
+    bpy.ops.object.camera_add()
+    cam = bpy.context.active_object
+    cam.data.type = 'ORTHO'
+    width = col_w * len(poses)
+    cam.data.ortho_scale = max(width, y_cursor) * 1.05
+    top, bottom = rows[0][0] + rows[0][1], rows[-1][0]
+    mid = (len(poses) - 1) * col_w / 2
+    target = Vector((0, -mid, (top + bottom) / 2)) if side else Vector((mid, 0, (top + bottom) / 2))
+    cam.location = target + (Vector((-12.0, 0.0, 1.5)) if side else Vector((4.0, -12.0, 2.0)))
+    cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    scene.camera = cam
+    scene.render.resolution_x = 2000
+    scene.render.resolution_y = int(2000 * y_cursor / width) + 40
+    path = os.path.join(out_dir, "zombies_side.png" if side else "zombies_poses.png")
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    for o in temp:
+        bpy.data.objects.remove(o, do_unlink=True)
+    bpy.data.objects.remove(cam, do_unlink=True)
+    return path
+
+
 BUILDERS = [
     enemy_standard, enemy_lean, enemy_plated, enemy_crawler, enemy_bloated, enemy_spitter, enemy_alpha, enemy_specimen,
     player_body, player_head,
@@ -1732,10 +2550,27 @@ def main():
         print("exported", export(o), len(o.data.polygons) + sum(len(c.data.polygons) for c in o.children), "faces",
               f"({len(o.children)} rig parts)" if o.children else "")
         built.append(o)
+    zombies = []
+    for b in ZOMBIES:
+        z = b()
+        if only and z.name not in only:
+            for p in z.extras.parts:
+                bpy.data.objects.remove(p, do_unlink=True)
+            continue
+        arm = z.build()
+        actions = make_actions(arm)
+        print("exported", export_zombie(arm), len(arm.children[0].data.polygons), "faces,", len(actions), "clips")
+        for a in actions:  # the exporter takes every action that fits the armature, so the next zombie must not see these
+            bpy.data.actions.remove(a)
+        zombies.append(arm)
     if preview_path:
         os.makedirs(preview_path, exist_ok=True)
-        for p in preview(built, preview_path):
-            print("preview", p)
+        if built:
+            for p in preview(built, preview_path):
+                print("preview", p)
+        if zombies:
+            print("preview", preview_zombies(zombies, preview_path))
+            print("preview", preview_zombies(zombies, preview_path, side=True))
 
 
 main()

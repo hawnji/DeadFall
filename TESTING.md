@@ -435,6 +435,17 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The sleeves never end in view, at hip or aiming, at FOV 70 to 110.
 - [ ] Arms don't clip through the camera or show through walls more than the weapon does.
 
+### 3.27 Manual checklist: rigged zombies
+
+- [ ] The Unity import of every `zm_*` model has no errors; each has 8 clips (Idle, Walk, Run, Attack, Hit, Spit, Convulse, Death) and stands upright facing the player, at the same size as before.
+- [ ] Standard, lean, plated, bloated, spitter, alpha and specimen zombies use the new skinned models; crawlers and the Broodmother keep their old ones.
+- [ ] Idle when standing still, shambling walk when chasing, a run for fast movers and charges; feet don't skate badly at normal speeds.
+- [ ] The attack raises both arms in the wind-up and slams down exactly when the hit lands; spitters rear back and lurch forward as the spit fires; staggered zombies flinch; bloated zombies convulse before bursting.
+- [ ] Death plays a buckle-and-fall onto the floor with no extra tilt on top, and the body doesn't vanish when seen at the screen edge.
+- [ ] Glowing weak points still line up with their hurtboxes closely enough to aim at while the zombie moves.
+- [ ] In co-op, client zombies animate the same as on the host.
+- [ ] 40+ zombies on screen keep frame rate acceptable.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
@@ -503,3 +514,4 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - M1.5 spike: players cannot damage each other (by design for PvE), and remote capsules don't block movement or bullets.
 - M11: Lobby and Relay (join codes over the internet) are not in yet; they need the Unity Gaming Services package and a Unity Cloud project linked in the editor. Direct IP host/join still works. A rejoining player gets a new player number. Reviving uses each player's own reported position, so the 1.5 m slack is the only latency allowance.
 - The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.
+
