@@ -1,6 +1,7 @@
 using Deadfall.Rules.Combat;
 using Deadfall.Rules.Common;
 using Deadfall.Rules.Encounters;
+using Deadfall.Rules.Engineering;
 using Deadfall.Rules.World;
 using NUnit.Framework;
 
@@ -93,6 +94,51 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.IsFalse(VentRules.ShouldDive(18f, 2f, 12f), "saves too little");
             Assert.AreEqual(VentRules.MinTravelSeconds, VentRules.TravelSeconds(1f));
             Assert.AreEqual(VentRules.MaxTravelSeconds, VentRules.TravelSeconds(500f));
+        }
+    
+        [Test]
+        public void GridHasOneGeneratorPerSectorWithinLimits()
+        {
+            Assert.AreEqual(PowerGridRules.MinGenerators, PowerGridRules.GeneratorCount(1));
+            Assert.AreEqual(3, PowerGridRules.GeneratorCount(3));
+            Assert.AreEqual(PowerGridRules.MaxGenerators, PowerGridRules.GeneratorCount(6));
+            Assert.AreEqual(0, PowerGridRules.Capacity(0));
+            Assert.AreEqual(2 * PowerGridRules.CapacityPerGenerator, PowerGridRules.Capacity(2));
+        }
+
+        [Test]
+        public void GridPowersOldestStructuresFirst()
+        {
+            var draws = new System.Collections.Generic.List<int>
+            {
+                PowerGridRules.Draw(StructureKind.ArcFence), // 2
+                PowerGridRules.Draw(StructureKind.Sentry),   // 1
+                PowerGridRules.Draw(StructureKind.ArcFence), // 2: does not fit in what is left
+                PowerGridRules.Draw(StructureKind.Barricade),// 0: always on
+                PowerGridRules.Draw(StructureKind.Sentry),   // 1: still fits
+            };
+            var powered = new System.Collections.Generic.List<bool>();
+            PowerGridRules.Allocate(4, draws, powered);
+            CollectionAssert.AreEqual(new[] { true, true, false, true, true }, powered);
+            PowerGridRules.Allocate(0, draws, powered);
+            CollectionAssert.AreEqual(new[] { false, false, false, true, false }, powered);
+        }
+
+        [Test]
+        public void GridTripsNeverTakeTheLastGenerator()
+        {
+            var rng = new DeterministicRandom(42);
+            Assert.AreEqual(-1f, PowerGridRules.RollTrip(rng, PowerGridRules.FirstTripSurge - 1, 3));
+            for (int i = 0; i < 50; i++) Assert.AreEqual(-1f, PowerGridRules.RollTrip(rng, 10, 1));
+            int trips = 0;
+            for (int i = 0; i < 400; i++)
+            {
+                float t = PowerGridRules.RollTrip(rng, 10, 2);
+                if (t < 0f) continue;
+                trips++;
+                Assert.That(t, Is.InRange(PowerGridRules.TripMinSeconds, PowerGridRules.TripMaxSeconds));
+            }
+            Assert.That(trips, Is.InRange(60, 200));
         }
     }
 }

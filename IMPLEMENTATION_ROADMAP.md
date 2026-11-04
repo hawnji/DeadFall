@@ -142,7 +142,7 @@ Not in scope yet: ~~Creepers using vents~~ (done: crawl-vent floor grates, `Vent
 7. ✅ HUD: objective list, event line, extraction bar, objective banners. The boss bar moved below the wave panel.
 8. ✅ 10 new EditMode tests (`ObjectiveTests.cs`).
 
-Not in scope yet: the power grid feeding doors and turrets (generators only end Blackouts for now), ~~Red Sky and Containment Breach events~~ (done), objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
+Not in scope yet: ~~the power grid feeding doors and turrets~~ (done: `PowerGrid`, 2 to 3 grid generators that trip in surges and Blackouts), ~~Red Sky and Containment Breach events~~ (done), objective-driven sector unlocks in Operations (all sectors open at once, T-47), more mission templates, failing objectives (destroyable sample containers).
 
 ## M9 – Engineering ✅ (editor check held until M10)
 1. ✅ Rules (`Deadfall.Rules.Engineering`): `StructureCatalog` (three tiers each), `ScrapRules` (kills, surge clears, objectives, Engineer +50%, non-Engineer cost ×1.5, dismantle refund), `RepairRules` (chunked repairs, Engineers better), `PlacementRules` validator with a reason for every refusal, `ScrapLedger`.
@@ -155,7 +155,7 @@ Not in scope yet: the power grid feeding doors and turrets (generators only end 
 8. ✅ Demolition Crew doctrine is live: a Demolitionist's blasts repair structures by 10% when the squad has an Engineer.
 9. ✅ 8 new EditMode tests (`EngineeringTests.cs`).
 
-Not in scope yet: the Arc Fence drawing on the map's power grid, the Overwatch and Covering Fire doctrine effects, structure upgrade branches from the Engineer specialization tree (M10+).
+Not in scope yet: ~~the Arc Fence drawing on the map's power grid~~ (done: fences and sentries draw grid power, oldest first), the Overwatch and Covering Fire doctrine effects, structure upgrade branches from the Engineer specialization tree (M10+).
 
 ## M10 – FOB and permanent progression ✅ (editor check: `TESTING.md` §3.12)
 1. ✅ Rules (`Deadfall.Rules.Progression`): generic `CurrencyDefinition` and `Wallet` (Field Credits, Scrap, Requisition, Intel, D-04), operator levels (class and facility unlocks), class ranks with one skill point per rank, prestige foundation (rank 30, up to 10, titles), run rewards with 50% retention on failure (D-03).

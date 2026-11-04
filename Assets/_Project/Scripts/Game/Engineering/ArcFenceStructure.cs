@@ -35,7 +35,7 @@ namespace Deadfall.Game
 
         protected override void TickHost(float dt)
         {
-            if (Supply <= 0f) return;
+            if (Supply <= 0f || !Powered) return;
             _tick += dt;
             if (_tick < TickSeconds) return;
             _tick -= TickSeconds;
@@ -71,7 +71,7 @@ namespace Deadfall.Game
 
         protected override void TickVisual(float dt)
         {
-            bool live = Supply > 0f;
+            bool live = Supply > 0f && Powered;
             _arc.gameObject.SetActive(live);
             if (!live || _arcMat == null) return;
             _flash = Mathf.Max(0f, _flash - dt);
