@@ -63,6 +63,9 @@ namespace Deadfall.Encounters
 
         public static WaveManager Current => _current;
 
+        /// <summary>Events (Red Sky) scale kill credits on the host. Reset by the objective director when the event ends.</summary>
+        public static float EventCreditMultiplier = 1f;
+
         public RunPhase Phase => _phase;
         public int Surge => _surge;
         public SurgeType SurgeType => _type;
@@ -374,7 +377,7 @@ namespace Deadfall.Encounters
             }
             PlayerIdentity killer = PlayerIdentity.Of(e.Killer);
             if (killer == null || e.Definition == null) return;
-            int amount = _run.KillCredits(e.Definition.ThreatCost * VariantRules.CreditMultiplier(traits));
+            int amount = Mathf.RoundToInt(_run.KillCredits(e.Definition.ThreatCost * VariantRules.CreditMultiplier(traits)) * EventCreditMultiplier);
             _credits.Add(killer.ClientId, amount);
             if (killer.IsLocal) LocalCreditsEarned?.Invoke(amount, e.Definition.DisplayName);
             _stateDirty = true;

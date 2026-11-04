@@ -3,7 +3,7 @@ using Deadfall.Rules.Common;
 
 namespace Deadfall.Rules.Encounters
 {
-    /// <summary>Random events (GAME_DESIGN §12). Red Sky and Containment Breach come later.</summary>
+    /// <summary>Random events (GAME_DESIGN §12).</summary>
     public enum RunEventKind : byte
     {
         None,
@@ -17,6 +17,10 @@ namespace Deadfall.Rules.Encounters
         Frenzy,
         /// <summary>M12: two rooms fill with toxic gas for the surge (hurts players, not the infected).</summary>
         ToxicLeak,
+        /// <summary>The infected move and hit harder for the surge, but pay more and drop more loot.</summary>
+        RedSky,
+        /// <summary>An experimental system fails: one room's floor arcs with electricity until a console shuts it down.</summary>
+        ContainmentBreach,
     }
 
     /// <summary>
@@ -29,10 +33,17 @@ namespace Deadfall.Rules.Encounters
         public const int FirstSurge = 4;
         public const int CooldownSurges = 3;
         public const float Chance = 0.3f;
-        public const RunEventKind Last = RunEventKind.ToxicLeak;
+        public const RunEventKind Last = RunEventKind.ContainmentBreach;
         /// <summary>Frenzy: enemy move speed and damage multipliers.</summary>
         public const float FrenzySpeed = 1.25f;
         public const float FrenzyDamage = 1.15f;
+        /// <summary>Red Sky: enemy speed and damage, kill credit and loot drop multipliers.</summary>
+        public const float RedSkySpeed = 1.15f;
+        public const float RedSkyDamage = 1.25f;
+        public const float RedSkyCredits = 1.5f;
+        public const float RedSkyDrops = 2f;
+        /// <summary>Containment Breach runs until shut down, or vents by itself after this many surges.</summary>
+        public const int BreachSurges = 2;
 
         private int _lastEventSurge = int.MinValue / 2;
 
@@ -45,6 +56,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Lockdown => hasMap && openSectors >= 2 ? 2f : 0f,
             RunEventKind.Frenzy => 2f,
             RunEventKind.ToxicLeak => hasMap ? 2f : 0f,
+            RunEventKind.RedSky => 2f,
+            RunEventKind.ContainmentBreach => hasMap ? 2f : 0f,
             _ => 0f,
         };
 
@@ -77,6 +90,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Lockdown => "EMERGENCY LOCKDOWN",
             RunEventKind.Frenzy => "FRENZY",
             RunEventKind.ToxicLeak => "TOXIC LEAK",
+            RunEventKind.RedSky => "RED SKY",
+            RunEventKind.ContainmentBreach => "CONTAINMENT BREACH",
             _ => string.Empty,
         };
 
@@ -87,6 +102,8 @@ namespace Deadfall.Rules.Encounters
             RunEventKind.Lockdown => "Sector doors are sealing. Hack the terminal to lift the lockdown",
             RunEventKind.Frenzy => "They're faster and hit harder this surge. Hold a choke point",
             RunEventKind.ToxicLeak => "Gas is venting into two rooms. Stay out of the green haze",
+            RunEventKind.RedSky => "They're faster and hit harder, but kills pay more and drop more loot",
+            RunEventKind.ContainmentBreach => "A room's floor is arcing. Stay off it, or shut it down at the console",
             _ => string.Empty,
         };
     }

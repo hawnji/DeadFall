@@ -56,7 +56,7 @@ namespace Deadfall.Tests.EditMode.Rules
         public void SchedulerCanRollTheNewEvents()
         {
             var seen = new HashSet<RunEventKind>();
-            for (ulong seed = 1; seed <= 3000 && seen.Count < 5; seed++)
+            for (ulong seed = 1; seed <= 3000 && seen.Count < 7; seed++)
             {
                 var s = new EventScheduler();
                 RunEventKind k = s.Roll(new DeterministicRandom(seed), 8, SurgeType.Standard, true, 3);
@@ -64,7 +64,7 @@ namespace Deadfall.Tests.EditMode.Rules
             }
             Assert.Contains(RunEventKind.Frenzy, new List<RunEventKind>(seen));
             Assert.Contains(RunEventKind.ToxicLeak, new List<RunEventKind>(seen));
-            Assert.AreEqual(RunEventKind.ToxicLeak, EventScheduler.Last);
+            Assert.AreEqual((RunEventKind)5, RunEventKind.ToxicLeak, "wire order: append only");
             Assert.IsNotEmpty(EventScheduler.Name(RunEventKind.Frenzy));
             Assert.IsNotEmpty(EventScheduler.Hint(RunEventKind.ToxicLeak));
         }
@@ -84,7 +84,8 @@ namespace Deadfall.Tests.EditMode.Rules
         {
             Assert.AreEqual(7, (int)ObjectiveKind.DefendUplink, "wire order: append only");
             Assert.AreEqual(8, (int)ObjectiveKind.PurgeHives);
-            Assert.AreEqual(ObjectiveKind.PurgeHives, ObjectiveRules.LastKind);
+            Assert.AreEqual(9, (int)ObjectiveKind.ShutDownBreach);
+            Assert.AreEqual(ObjectiveKind.ShutDownBreach, ObjectiveRules.LastKind);
             Assert.AreEqual(ObjectiveRules.Hives, ObjectiveRules.Target(ObjectiveKind.PurgeHives));
             Assert.AreEqual(1, ObjectiveRules.Target(ObjectiveKind.DefendUplink));
             Assert.Greater(ObjectiveRules.Reward(ObjectiveKind.DefendUplink), ObjectiveRules.Reward(ObjectiveKind.RetrieveDataCore));

@@ -18,6 +18,8 @@ namespace Deadfall.Game
         SecurityLocker,
         /// <summary>Channel (LiftLockdown).</summary>
         LockdownTerminal,
+        /// <summary>Channel (ShutDownBreach): the failing containment system's console.</summary>
+        ContainmentConsole,
     }
 
     /// <summary>
@@ -38,7 +40,8 @@ namespace Deadfall.Game
         public bool Started { get; private set; }
         public bool Done { get; private set; }
 
-        public bool IsChannel => Kind == ObjectivePropKind.Generator || Kind == ObjectivePropKind.DataTerminal || Kind == ObjectivePropKind.LockdownTerminal;
+        public bool IsChannel => Kind == ObjectivePropKind.Generator || Kind == ObjectivePropKind.DataTerminal || Kind == ObjectivePropKind.LockdownTerminal
+                                 || Kind == ObjectivePropKind.ContainmentConsole;
 
         public static ObjectiveProp Create(ushort id, byte objectiveId, ObjectivePropKind kind, Vector3 position, Transform parent)
         {
@@ -61,6 +64,11 @@ namespace Deadfall.Game
                     Part(root.transform, new Vector3(0f, 0.55f, 0f), new Vector3(0.8f, 1.1f, 0.5f), new Color(0.25f, 0.27f, 0.32f), true);
                     p._light = Part(root.transform, new Vector3(0f, 1.2f, 0.1f), new Vector3(0.7f, 0.45f, 0.05f),
                         kind == ObjectivePropKind.LockdownTerminal ? new Color(1f, 0.6f, 0.1f) : new Color(0.2f, 0.6f, 1f), false);
+                    break;
+                case ObjectivePropKind.ContainmentConsole:
+                    Part(root.transform, new Vector3(0f, 0.5f, 0f), new Vector3(1.1f, 1f, 0.7f), new Color(0.22f, 0.26f, 0.3f), true);
+                    Part(root.transform, new Vector3(0f, 1.05f, -0.15f), new Vector3(1.1f, 0.12f, 0.4f), new Color(0.85f, 0.65f, 0.1f), false); // hazard band
+                    p._light = Part(root.transform, new Vector3(0f, 1.3f, 0.05f), new Vector3(0.9f, 0.4f, 0.05f), new Color(0.4f, 0.85f, 1f), false);
                     break;
                 case ObjectivePropKind.SampleCase:
                     Part(root.transform, new Vector3(0f, 0.2f, 0f), new Vector3(0.5f, 0.4f, 0.35f), new Color(0.9f, 0.9f, 0.92f), true);
@@ -116,6 +124,7 @@ namespace Deadfall.Game
                 case ObjectivePropKind.Generator: return Started ? $"Restarting generator {Progress01 * 100f:0}% (stay close)" : "Restart generator";
                 case ObjectivePropKind.DataTerminal: return Started ? $"Downloading data core {Progress01 * 100f:0}% (stay close)" : "Download data core";
                 case ObjectivePropKind.LockdownTerminal: return Started ? $"Hacking {Progress01 * 100f:0}% (stay close)" : "Hack terminal to lift the lockdown";
+                case ObjectivePropKind.ContainmentConsole: return Started ? $"Shutting down {Progress01 * 100f:0}% (stay close)" : "Shut down the containment system";
                 case ObjectivePropKind.SampleCase: return "Take sample case";
                 case ObjectivePropKind.Keycard: return "Take keycard";
                 case ObjectivePropKind.SecurityLocker: return d != null && d.HasKeycard ? "Open security locker" : "Security locker (needs the keycard)";

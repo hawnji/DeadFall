@@ -446,6 +446,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] In co-op, client zombies animate the same as on the host.
 - [ ] 40+ zombies on screen keep frame rate acceptable.
 
+### 3.28 Manual checklist: lull ambushes, Red Sky, Containment Breach
+
+- [ ] From surge 3 on, some lulls (at most one every 5 surges, never before a Specimen, never in short extraction lulls) play "WARNING: AMBUSH" with the alarm, then 3 s later Husks and Creepers come out of the closets nearest the squad. Ambushers left alive count toward the next surge.
+- [ ] Red Sky: lights and fog turn red for the surge, infected are faster and hit harder, kill credits are 1.5x and weapon drops are more frequent; everything goes back to normal at surge end, also on clients.
+- [ ] Containment Breach: one room's floor grid glows, flickers yellow, then arcs blue every 3.2 s; standing on it during an arc hurts (jumping over it doesn't), and infected caught on it are shocked and staggered. A console in that room ("Shut down the containment system", 7 s channel) ends it; otherwise it vents by itself after two surges. No other event starts while it runs.
+- [ ] A client that joins during Toxic Leak or Containment Breach sees the same rooms as the host.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
