@@ -102,6 +102,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<SupplyDrops>();
             // M8: objectives, Operations and random events (host-run, synced as one state message).
             net.AddComponent<ObjectiveDirector>();
+            // Boss arena hazards (ruptures under the squad while a Specimen is enraged).
+            net.AddComponent<ArenaHazards>();
             // M9: Engineering structures and the squad's Scrap (host-run).
             net.AddComponent<EngineeringDirector>();
             // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.

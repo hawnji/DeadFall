@@ -1,3 +1,4 @@
+using Deadfall.Rules.Combat;
 using Deadfall.Rules.Common;
 using Deadfall.Rules.Encounters;
 using Deadfall.Rules.World;
@@ -5,7 +6,7 @@ using NUnit.Framework;
 
 namespace Deadfall.Tests.EditMode.Rules
 {
-    /// <summary>Lull ambushes, Red Sky and Containment Breach.</summary>
+    /// <summary>Lull ambushes, Red Sky, Containment Breach and boss arena hazards.</summary>
     public class RoadmapEventTests
     {
         [Test]
@@ -67,6 +68,19 @@ namespace Deadfall.Tests.EditMode.Rules
             Assert.AreEqual(HazardRules.BreachPhase.Calm, HazardRules.BreachPhaseAt(HazardRules.BreachCycleSeconds + 0.1f));
             Assert.AreEqual(0, HazardRules.BreachArcIndex(arc + 0.1f));
             Assert.AreEqual(1, HazardRules.BreachArcIndex(HazardRules.BreachCycleSeconds + arc + 0.1f));
+        }
+
+        [Test]
+        public void ArenaHazardsStartWhenTheBossIsEnraged()
+        {
+            Assert.AreEqual(0, ArenaHazardRules.Count(SpecimenPhase.Stalk, 4), "nothing while it stalks");
+            Assert.AreEqual(1, ArenaHazardRules.Count(SpecimenPhase.Rampage, 1));
+            Assert.AreEqual(2, ArenaHazardRules.Count(SpecimenPhase.Rampage, 4));
+            Assert.AreEqual(2, ArenaHazardRules.Count(SpecimenPhase.ExposedCore, 1), "an extra beside a lone player");
+            Assert.AreEqual(4, ArenaHazardRules.Count(SpecimenPhase.ExposedCore, 4));
+            Assert.Less(ArenaHazardRules.Interval(SpecimenPhase.ExposedCore), ArenaHazardRules.Interval(SpecimenPhase.Rampage));
+            Assert.AreEqual(ArenaHazardRules.BurstDamage, ArenaHazardRules.BurstDamageAt(ArenaHazardRules.BurstRadius - 0.1f));
+            Assert.AreEqual(0f, ArenaHazardRules.BurstDamageAt(ArenaHazardRules.BurstRadius + 0.1f));
         }
     }
 }

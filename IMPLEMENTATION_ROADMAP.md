@@ -130,7 +130,7 @@ Not in scope yet: ~~Elite, Hunt, Supply and Specimen surges~~ (done in M7), ~~am
 9. ✅ HUD: boss bar with phase ticks, phase and modifiers; Hunt pursuer bar; phase banners. Sandbox: F12 spawns the next advanced enemy (Ctrl for a variant).
 10. ✅ 18 new EditMode tests (`AdvancedEnemyTests.cs`).
 
-Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs NavMesh links), arena hazards for Specimens, damage-type armor, ambushes during lulls.
+Not in scope yet: Creepers using vents (vent sockets exist in the map kit; needs NavMesh links), ~~arena hazards for Specimens~~ (done, `ArenaHazards`), damage-type armor, ~~ambushes during lulls~~ (done).
 
 ## M8 – Objectives, events, environment ✅ (editor check held until M10)
 1. ✅ Objective framework (`Deadfall.Rules.Encounters`): `ObjectiveTracker` (progress, complete once, fail, expiry by surge, required-complete check), `ChannelProgress` (stand-near channels that drain at half speed when left), `HoldTimer` (extraction pauses when the zone is empty), `ObjectiveRules` (counts, timings, rewards, side-objective schedule), `MissionTemplate`.
