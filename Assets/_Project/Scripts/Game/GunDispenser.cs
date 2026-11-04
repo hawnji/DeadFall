@@ -50,6 +50,7 @@ namespace Deadfall.Game
             g._beacon.range = 7f;
             g._beacon.intensity = 1.6f;
             g._beacon.color = new Color(1f, 0.7f, 0.2f);
+            InteractGlow.Add(root, InteractGlow.Guns, () => g.State == Mode.Idle || g.State == Mode.Offering);
             root.SetActive(false);
             return g;
         }

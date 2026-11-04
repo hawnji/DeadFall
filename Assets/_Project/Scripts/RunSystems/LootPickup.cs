@@ -41,6 +41,7 @@ namespace Deadfall.RunSystems
                     break;
             }
             LootNetwork.Register(p);
+            InteractGlow.Add(p.gameObject, InteractGlow.PowerUps, () => !p.Taken);
             return p;
         }
 

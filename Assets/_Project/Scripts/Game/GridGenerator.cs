@@ -42,6 +42,7 @@ namespace Deadfall.Game
             g._glow.range = 4f;
             g._glow.intensity = 0.8f;
             g.Apply();
+            InteractGlow.Add(root, InteractGlow.Objectives, () => !g.Online);
             return g;
         }
 

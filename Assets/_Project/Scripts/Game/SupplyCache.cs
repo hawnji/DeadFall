@@ -44,6 +44,7 @@ namespace Deadfall.Game
             if (model != null) ModelLibrary.HideExcept(root.transform, model.transform);
             c.RollStock(mapSeed);
             if (RunEconomy.Current != null) RunEconomy.Current.Register(c);
+            InteractGlow.Add(root, InteractGlow.Guns);
             return c;
         }
 

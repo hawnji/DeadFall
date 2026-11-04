@@ -107,6 +107,7 @@ namespace Deadfall.Game
                 p._lightMaterial = RuntimeMaterials.CreateLit(p._light.sharedMaterial.color);
                 p._light.sharedMaterial = p._lightMaterial;
             }
+            InteractGlow.Add(root, InteractGlow.Objectives, () => !p.Done);
             return p;
         }
 
