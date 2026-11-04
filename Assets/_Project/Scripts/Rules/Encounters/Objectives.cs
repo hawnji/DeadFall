@@ -26,6 +26,10 @@ namespace Deadfall.Rules.Encounters
         PurgeHives,
         /// <summary>Shut down a failing containment system at its console (Containment Breach event).</summary>
         ShutDownBreach,
+        /// <summary>Seal the cryo containers (hold position at each) before the infected smash one: a broken container fails it.</summary>
+        SealContainers,
+        /// <summary>Open the reactor's coolant valves (hold position at each) before the meltdown timer runs out.</summary>
+        VentReactor,
     }
 
     public enum ObjectiveStatus : byte { Active, Complete, Failed }
@@ -42,6 +46,13 @@ namespace Deadfall.Rules.Encounters
         public int RewardCredits;
         /// <summary>Survival side objectives expire after this surge (0 = never).</summary>
         public int ExpiresAfterSurge;
+        /// <summary>Seconds left before a timed objective fails (0 = no time limit).</summary>
+        public float TimeLeft;
+
+        /// <summary>Failed because its clock ran out.</summary>
+        public bool TimedOut;
+
+        public bool IsTimed => TimeLeft > 0f;
 
         public bool IsDone => Status != ObjectiveStatus.Active;
 
@@ -51,7 +62,8 @@ namespace Deadfall.Rules.Encounters
         {
             string count = Target > 1 ? $" {Progress}/{Target}" : string.Empty;
             string tag = Required ? string.Empty : " (optional)";
-            return Title + count + tag;
+            string clock = IsTimed && !IsDone ? " · " + ObjectiveRules.Clock(TimeLeft) : string.Empty;
+            return Title + count + tag + clock;
         }
     }
 
@@ -69,7 +81,7 @@ namespace Deadfall.Rules.Encounters
         /// <summary>Raised when an objective completes or fails.</summary>
         public event Action<Objective> Finished;
 
-        public Objective Add(ObjectiveKind kind, int target, bool required, int reward, int expiresAfterSurge = 0)
+        public Objective Add(ObjectiveKind kind, int target, bool required, int reward, int expiresAfterSurge = 0, float timeLimit = 0f)
         {
             var o = new Objective
             {
@@ -79,6 +91,7 @@ namespace Deadfall.Rules.Encounters
                 Required = required,
                 RewardCredits = Math.Max(0, reward),
                 ExpiresAfterSurge = expiresAfterSurge,
+                TimeLeft = Math.Max(0f, timeLimit),
             };
             if (_nextId == 0) _nextId = 1;
             _list.Add(o);
@@ -130,6 +143,32 @@ namespace Deadfall.Rules.Encounters
                 n++;
             }
             return n;
+        }
+
+        /// <summary>Runs the clocks of timed objectives; fails each one whose time runs out. Returns how many failed.</summary>
+        public int TickTimers(float dt)
+        {
+            if (dt <= 0f) return 0;
+            int n = 0;
+            for (int i = 0; i < _list.Count; i++)
+            {
+                Objective o = _list[i];
+                if (o.IsDone || !o.IsTimed) continue;
+                o.TimeLeft = Math.Max(0f, o.TimeLeft - dt);
+                if (o.TimeLeft > 0f) continue;
+                o.TimedOut = true;
+                Fail(o.Id);
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>True when any required objective has failed (an Operation is lost).</summary>
+        public bool AnyRequiredFailed()
+        {
+            for (int i = 0; i < _list.Count; i++)
+                if (_list[i].Required && _list[i].Status == ObjectiveStatus.Failed) return true;
+            return false;
         }
 
         /// <summary>True when every required objective (other than <paramref name="except"/>) is complete.</summary>
@@ -228,11 +267,14 @@ namespace Deadfall.Rules.Encounters
     {
         public readonly ObjectiveKind Kind;
         public readonly bool Required;
+        /// <summary>Seconds from the start of the Operation before this step fails (0 = no limit).</summary>
+        public readonly float TimeLimit;
 
-        public MissionStep(ObjectiveKind kind, bool required)
+        public MissionStep(ObjectiveKind kind, bool required, float timeLimit = 0f)
         {
             Kind = kind;
             Required = required;
+            TimeLimit = timeLimit;
         }
     }
 
@@ -271,8 +313,18 @@ namespace Deadfall.Rules.Encounters
         public const int Hives = 2;
         /// <summary>Each Purge Hives nest has this share of a full nest's health.</summary>
         public const float HiveHealthFraction = 0.6f;
+        public const int Containers = 3;
+        public const float ContainerSealSeconds = 5f;
+        /// <summary>Cryo container integrity (scaled by the surge's enemy health scale).</summary>
+        public const float ContainerHealth = 900f;
+        /// <summary>Infected within this radius of an unsealed container go for it instead of the squad.</summary>
+        public const float ContainerAggroRadius = 8f;
+        public const int Valves = 2;
+        public const float ValveSeconds = 6f;
+        /// <summary>A Vent Reactor side objective in Survival has this long.</summary>
+        public const float ReactorSideSeconds = 150f;
         /// <summary>The last objective kind, for validating synced state.</summary>
-        public const ObjectiveKind LastKind = ObjectiveKind.ShutDownBreach;
+        public const ObjectiveKind LastKind = ObjectiveKind.VentReactor;
         /// <summary>Side objectives stay up for this many surges.</summary>
         public const int SideObjectiveSurges = 2;
 
@@ -308,7 +360,58 @@ namespace Deadfall.Rules.Encounters
             CompletionBonus = 1700,
         };
 
-        public static readonly MissionTemplate[] Missions = { ColdStart, LastTrain };
+        /// <summary>Seal the cryo lab's specimens before the infected break them out, with a timed data pull on the side.</summary>
+        public static readonly MissionTemplate Quarantine = new MissionTemplate
+        {
+            Id = "mission.quarantine",
+            Name = "Operation Quarantine",
+            Briefing = "Seal the cryo containers before the infected smash them open (lose one and the operation fails), then hold the airlock.",
+            Steps = new[]
+            {
+                new MissionStep(ObjectiveKind.SealContainers, true),
+                new MissionStep(ObjectiveKind.RetrieveDataCore, false, 240f),
+                new MissionStep(ObjectiveKind.RecoverSamples, false),
+            },
+            ExtractionSeconds = 150f,
+            LullSeconds = 34f,
+            CompletionBonus = 1800,
+        };
+
+        /// <summary>The reactor is running away: open the coolant valves in time, then get out.</summary>
+        public static readonly MissionTemplate Meltdown = new MissionTemplate
+        {
+            Id = "mission.meltdown",
+            Name = "Operation Meltdown",
+            Briefing = "The reactor is overheating. Open both coolant valves before the timer runs out or the operation fails, then hold the airlock.",
+            Steps = new[]
+            {
+                new MissionStep(ObjectiveKind.VentReactor, true, 300f),
+                new MissionStep(ObjectiveKind.RestorePower, false),
+                new MissionStep(ObjectiveKind.PurgeHives, false),
+            },
+            ExtractionSeconds = 140f,
+            LullSeconds = 30f,
+            CompletionBonus = 1900,
+        };
+
+        /// <summary>Get a distress call out: hold the uplink and burn out the hives jamming it.</summary>
+        public static readonly MissionTemplate DeadAir = new MissionTemplate
+        {
+            Id = "mission.dead_air",
+            Name = "Operation Dead Air",
+            Briefing = "Burn out the hive nests jamming the signal and hold the uplink while it sends the distress call, then hold the airlock.",
+            Steps = new[]
+            {
+                new MissionStep(ObjectiveKind.PurgeHives, true),
+                new MissionStep(ObjectiveKind.DefendUplink, true),
+                new MissionStep(ObjectiveKind.SealContainers, false),
+            },
+            ExtractionSeconds = 160f,
+            LullSeconds = 32f,
+            CompletionBonus = 2000,
+        };
+
+        public static readonly MissionTemplate[] Missions = { ColdStart, LastTrain, Quarantine, Meltdown, DeadAir };
 
         public static MissionTemplate MissionById(string id)
         {
@@ -328,6 +431,8 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.DefendUplink => "Defend the uplink while it uploads",
             ObjectiveKind.PurgeHives => "Purge the hive nests",
             ObjectiveKind.ShutDownBreach => "Shut down the containment system",
+            ObjectiveKind.SealContainers => "Seal the cryo containers",
+            ObjectiveKind.VentReactor => "Open the reactor coolant valves",
             _ => k.ToString(),
         };
 
@@ -337,6 +442,8 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.RecoverSamples => Samples,
             ObjectiveKind.Keycard => 2, // pick up, then use
             ObjectiveKind.PurgeHives => Hives,
+            ObjectiveKind.SealContainers => Containers,
+            ObjectiveKind.VentReactor => Valves,
             _ => 1,
         };
 
@@ -351,15 +458,27 @@ namespace Deadfall.Rules.Encounters
             ObjectiveKind.DefendUplink => 600,
             ObjectiveKind.PurgeHives => 700,
             ObjectiveKind.ShutDownBreach => 300,
+            ObjectiveKind.SealContainers => 550,
+            ObjectiveKind.VentReactor => 500,
             _ => 0,
         };
+
+        /// <summary>Time limit for a side objective in Survival (0 = none).</summary>
+        public static float SideTimeLimit(ObjectiveKind k) => k == ObjectiveKind.VentReactor ? ReactorSideSeconds : 0f;
+
+        /// <summary>"2:05" style countdown text.</summary>
+        public static string Clock(float seconds)
+        {
+            int s = (int)Math.Ceiling(Math.Max(0f, seconds));
+            return $"{s / 60}:{s % 60:00}";
+        }
 
         /// <summary>Survival offers an optional side objective in the lull before surges 3, 7, 11... (GAME_DESIGN §3.1).</summary>
         public static bool OfferSideObjective(int upcomingSurge) => upcomingSurge >= 3 && upcomingSurge % 4 == 3;
 
         private static readonly ObjectiveKind[] SidePool =
             { ObjectiveKind.RestorePower, ObjectiveKind.RecoverSamples, ObjectiveKind.DestroyNest, ObjectiveKind.RetrieveDataCore, ObjectiveKind.Keycard,
-              ObjectiveKind.DefendUplink, ObjectiveKind.PurgeHives };
+              ObjectiveKind.DefendUplink, ObjectiveKind.PurgeHives, ObjectiveKind.SealContainers, ObjectiveKind.VentReactor };
 
         /// <summary>Picks a side objective, never the same kind twice in a row.</summary>
         public static ObjectiveKind PickSide(DeterministicRandom rng, ObjectiveKind? last)

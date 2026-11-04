@@ -140,5 +140,68 @@ namespace Deadfall.Tests.EditMode.Rules
             }
             Assert.That(trips, Is.InRange(60, 200));
         }
+    
+        [Test]
+        public void TimedObjectivesFailWhenTheClockRunsOut()
+        {
+            var t = new ObjectiveTracker();
+            Objective failed = null;
+            t.Finished += o => failed = o;
+            Objective timed = t.Add(ObjectiveKind.VentReactor, 2, true, 500, 0, 10f);
+            Objective plain = t.Add(ObjectiveKind.RecoverSamples, 3, false, 350);
+            Assert.IsTrue(timed.IsTimed);
+            Assert.IsFalse(plain.IsTimed);
+            StringAssert.EndsWith("0:10", timed.Describe());
+            Assert.AreEqual(0, t.TickTimers(9f));
+            Assert.AreEqual(ObjectiveStatus.Active, timed.Status);
+            Assert.AreEqual(1, t.TickTimers(2f));
+            Assert.AreEqual(timed, failed);
+            Assert.AreEqual(ObjectiveStatus.Failed, timed.Status);
+            Assert.IsTrue(timed.TimedOut);
+            Assert.AreEqual(ObjectiveStatus.Active, plain.Status);
+            Assert.IsTrue(t.AnyRequiredFailed());
+        }
+
+        [Test]
+        public void ObjectivesFinishedInTimeStopTheirClock()
+        {
+            var t = new ObjectiveTracker();
+            Objective timed = t.Add(ObjectiveKind.VentReactor, 2, true, 500, 0, 5f);
+            t.Advance(timed.Id);
+            t.Advance(timed.Id);
+            Assert.AreEqual(ObjectiveStatus.Complete, timed.Status);
+            Assert.AreEqual(0, t.TickTimers(10f));
+            Assert.AreEqual(ObjectiveStatus.Complete, timed.Status);
+            Assert.IsFalse(t.AnyRequiredFailed());
+            Assert.AreEqual("2:05", ObjectiveRules.Clock(124.2f));
+            Assert.AreEqual("0:00", ObjectiveRules.Clock(-3f));
+        }
+
+        [Test]
+        public void NewMissionsHaveFailableRequiredSteps()
+        {
+            Assert.AreSame(ObjectiveRules.Quarantine, ObjectiveRules.MissionById("mission.quarantine"));
+            Assert.AreSame(ObjectiveRules.Meltdown, ObjectiveRules.MissionById("mission.meltdown"));
+            Assert.AreSame(ObjectiveRules.DeadAir, ObjectiveRules.MissionById("mission.dead_air"));
+            Assert.IsTrue(System.Array.Exists(ObjectiveRules.Quarantine.Steps, s => s.Required && s.Kind == ObjectiveKind.SealContainers));
+            Assert.IsTrue(System.Array.Exists(ObjectiveRules.Meltdown.Steps, s => s.Required && s.Kind == ObjectiveKind.VentReactor && s.TimeLimit > 0f));
+            Assert.AreEqual(ObjectiveRules.Containers, ObjectiveRules.Target(ObjectiveKind.SealContainers));
+            Assert.AreEqual(ObjectiveRules.Valves, ObjectiveRules.Target(ObjectiveKind.VentReactor));
+            Assert.Greater(ObjectiveRules.SideTimeLimit(ObjectiveKind.VentReactor), 0f);
+            Assert.AreEqual(0f, ObjectiveRules.SideTimeLimit(ObjectiveKind.RecoverSamples));
+            var ids = new System.Collections.Generic.HashSet<string>();
+            foreach (MissionTemplate m in ObjectiveRules.Missions) Assert.IsTrue(ids.Add(m.Id), m.Id);
+        }
+
+        [Test]
+        public void RunsCanBeLostOnPurpose()
+        {
+            var run = new SurgeRun(new SurgeRunSettings());
+            Assert.AreEqual(SurgeRunEvents.None, run.Fail());
+            run.Start(0);
+            Assert.AreEqual(SurgeRunEvents.RunFailed, run.Fail());
+            Assert.AreEqual(RunPhase.Failed, run.Phase);
+            Assert.IsFalse(run.IsRunning);
+        }
     }
 }

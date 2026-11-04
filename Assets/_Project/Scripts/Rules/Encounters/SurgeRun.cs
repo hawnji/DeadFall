@@ -115,6 +115,14 @@ namespace Deadfall.Rules.Encounters
             return SurgeRunEvents.RunCompleted;
         }
 
+        /// <summary>Ends the run as a loss now (Operations: a required objective failed). No effect unless running.</summary>
+        public SurgeRunEvents Fail()
+        {
+            if (!IsRunning) return SurgeRunEvents.None;
+            Phase = RunPhase.Failed;
+            return SurgeRunEvents.RunFailed;
+        }
+
         /// <summary>Shortens the current lull so it ends within <paramref name="seconds"/>.</summary>
         public void ShortenLull(double now, float seconds)
         {

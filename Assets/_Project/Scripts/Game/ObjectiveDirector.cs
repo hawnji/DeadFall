@@ -59,6 +59,9 @@ namespace Deadfall.Game
         private readonly HashSet<ushort> _uplinks = new HashSet<ushort>();
         private double _nextUplinkRush;
         private PowerGrid _grid;
+        /// <summary>Host: a required Operation objective failed; the run is lost on the next frame.</summary>
+        private string _failReason;
+        private double _nextContainerWarning;
         /// <summary>This Blackout tripped the map's grid generators (its Restore Power objective counts their restarts).</summary>
         private bool _gridBlackout;
 
@@ -225,6 +228,8 @@ namespace Deadfall.Game
                 case ObjectivePropKind.DataTerminal:
                 case ObjectivePropKind.LockdownTerminal:
                 case ObjectivePropKind.ContainmentConsole:
+                case ObjectivePropKind.CryoContainer:
+                case ObjectivePropKind.ReactorValve:
                     if (_channels.TryGetValue(id, out ChannelProgress c) && !c.Started)
                     {
                         c.Start();
@@ -263,6 +268,14 @@ namespace Deadfall.Game
             _tracker.PruneFinished(); // finished objectives leave the list (the announcement already told everyone)
 
             float dt = Time.deltaTime;
+            if (_failReason != null)
+            {
+                string reason = _failReason;
+                _failReason = null;
+                _waves?.FailRun(reason);
+                return;
+            }
+            TickTimers(dt);
             TickChannels(dt);
             TickNests();
             TickExtraction(dt);
@@ -274,6 +287,18 @@ namespace Deadfall.Game
                 _dirty = false;
                 SendState(ulong.MaxValue);
             }
+        }
+
+        private void TickTimers(float dt)
+        {
+            for (int i = 0; i < _tracker.All.Count; i++)
+            {
+                Objective o = _tracker.All[i];
+                if (o.IsDone || !o.IsTimed) continue;
+                // Clients see whole seconds: resend when the displayed second changes.
+                if (Mathf.CeilToInt(o.TimeLeft) != Mathf.CeilToInt(o.TimeLeft - dt)) _dirty = true;
+            }
+            _tracker.TickTimers(dt);
         }
 
         private void TickChannels(float dt)
@@ -424,7 +449,7 @@ namespace Deadfall.Game
             {
                 if (_mission == null) _mission = EnvironmentMission;
                 _map.OpenAllSectors(); // T-47: Operations open the whole map at once
-                foreach (MissionStep step in _mission.Steps) AddObjective(step.Kind, step.Required, 0);
+                foreach (MissionStep step in _mission.Steps) AddObjective(step.Kind, step.Required, 0, step.TimeLimit);
                 Say(_mission.Name.ToUpperInvariant(), _mission.Briefing);
             }
             else
@@ -444,7 +469,7 @@ namespace Deadfall.Game
             {
                 ObjectiveKind kind = ObjectiveRules.PickSide(_rng, _lastSide);
                 _lastSide = kind;
-                if (AddObjective(kind, false, upcoming + ObjectiveRules.SideObjectiveSurges - 1) != null)
+                if (AddObjective(kind, false, upcoming + ObjectiveRules.SideObjectiveSurges - 1, ObjectiveRules.SideTimeLimit(kind)) != null)
                     Say("SIDE OBJECTIVE", $"{ObjectiveRules.Title(kind)} · +{ObjectiveRules.Reward(kind)} Field Credits each");
             }
             // No new event while one is still running (a Containment Breach carries over).
@@ -553,6 +578,13 @@ namespace Deadfall.Game
                 EndEvent();
                 if (o.Status == ObjectiveStatus.Failed) Say("CONTAINMENT VENTED", "The system burned itself out");
             }
+            if (o.Status == ObjectiveStatus.Failed && o.Kind != ObjectiveKind.ShutDownBreach)
+            {
+                bool lost = IsOperation && o.Required;
+                if (o.TimedOut) Say("OUT OF TIME", lost ? $"{o.Title}. The operation is lost" : o.Title);
+                else if (lost) Say("OBJECTIVE FAILED", $"{o.Title}. The operation is lost");
+                if (lost) _failReason = $"{MissionName ?? "Operation"}: {o.Title.ToLowerInvariant()} failed";
+            }
             if (o.Kind == ObjectiveKind.Keycard) HasKeycard = false;
             RemovePropsOf(o.Id, o.Status == ObjectiveStatus.Failed);
             if (IsOperation && _hold == null && _tracker.RequiredComplete(ObjectiveKind.Extraction)) BeginExtraction();
@@ -586,10 +618,10 @@ namespace Deadfall.Game
 
         // ---------------------------------------------------------------- placement (host)
 
-        private Objective AddObjective(ObjectiveKind kind, bool required, int expiresAfter)
+        private Objective AddObjective(ObjectiveKind kind, bool required, int expiresAfter, float timeLimit = 0f)
         {
             if (kind != ObjectiveKind.Extraction && (_map == null || !_map.HasMap)) return null;
-            Objective o = _tracker.Add(kind, ObjectiveRules.Target(kind), required, ObjectiveRules.Reward(kind), expiresAfter);
+            Objective o = _tracker.Add(kind, ObjectiveRules.Target(kind), required, ObjectiveRules.Reward(kind), expiresAfter, timeLimit);
             switch (kind)
             {
                 case ObjectiveKind.RestorePower:
@@ -601,6 +633,23 @@ namespace Deadfall.Game
                 case ObjectiveKind.RetrieveDataCore:
                     PlaceProp(o.Id, ObjectivePropKind.DataTerminal, 0, ObjectiveRules.TerminalSeconds);
                     break;
+                case ObjectiveKind.VentReactor:
+                    for (int i = 0; i < o.Target; i++) PlaceProp(o.Id, ObjectivePropKind.ReactorValve, i, ObjectiveRules.ValveSeconds);
+                    break;
+                case ObjectiveKind.SealContainers:
+                {
+                    float scale = _waves != null && _waves.CurrentPlan != null ? _waves.CurrentPlan.HealthScale : 1f;
+                    for (int i = 0; i < o.Target; i++)
+                    {
+                        ushort id = PeekId();
+                        PlaceProp(o.Id, ObjectivePropKind.CryoContainer, i, ObjectiveRules.ContainerSealSeconds);
+                        if (!_props.TryGetValue(id, out ObjectiveProp p) || p == null) continue;
+                        CryoContainerTarget t = CryoContainerTarget.Attach(p, ObjectiveRules.ContainerHealth * scale, ObjectiveRules.ContainerAggroRadius);
+                        t.Damaged += OnContainerDamaged;
+                        t.Broken += OnContainerBroken;
+                    }
+                    break;
+                }
                 case ObjectiveKind.Keycard:
                     PlaceProp(o.Id, ObjectivePropKind.Keycard, 0, 0f);
                     PlaceProp(o.Id, ObjectivePropKind.SecurityLocker, 1, 0f);
@@ -651,6 +700,25 @@ namespace Deadfall.Game
             }
             _dirty = true;
             return o;
+        }
+
+        private void OnContainerDamaged(CryoContainerTarget t)
+        {
+            _dirty = true;
+            double now = Time.timeAsDouble;
+            if (now < _nextContainerWarning) return;
+            _nextContainerWarning = now + 10.0;
+            Say("CONTAINER UNDER ATTACK", $"Integrity {t.Health01 * 100f:0}%. Seal it before they break it open");
+        }
+
+        private void OnContainerBroken(CryoContainerTarget t)
+        {
+            if (t.Prop == null) return;
+            ExplosionFx.Spawn(t.transform.position + Vector3.up, 2f);
+            Say("CONTAINER BREACHED", "A specimen got loose");
+            _waves?.Director?.SpawnNear(PrototypeEnemies.Bulwark, t.transform.position, 1, 0.5f, 1.5f, _born);
+            _tracker.Fail(t.Prop.ObjectiveId);
+            _dirty = true;
         }
 
         private void OnNestDestroyed(ObjectiveNest n)
@@ -775,6 +843,7 @@ namespace Deadfall.Game
             ClearEventEffects();
             ActiveEvent = PendingEvent = RunEventKind.None;
             _ambushAt = 0.0;
+            _failReason = null;
             IsOperation = false;
             if (notify) _dirty = true;
         }
@@ -823,6 +892,7 @@ namespace Deadfall.Game
                     w.WriteValueSafe((byte)Mathf.Clamp(o.Target, 0, 255));
                     w.WriteValueSafe((ushort)Mathf.Clamp(o.RewardCredits, 0, ushort.MaxValue));
                     w.WriteValueSafe((ushort)Mathf.Clamp(o.ExpiresAfterSurge, 0, ushort.MaxValue));
+                    w.WriteValueSafe((ushort)Mathf.Clamp(Mathf.CeilToInt(o.TimeLeft), 0, ushort.MaxValue));
                 }
 
                 int pc = Mathf.Min(64, _props.Count + _nests.Count);
@@ -838,6 +908,7 @@ namespace Deadfall.Game
                     w.WriteValueSafe(p.transform.eulerAngles.y);
                     w.WriteValueSafe((byte)Mathf.RoundToInt(p.Progress01 * 255f));
                     w.WriteValueSafe((byte)((p.Started ? 1 : 0) | (p.Done ? 2 : 0)));
+                    w.WriteValueSafe((byte)Mathf.CeilToInt(p.Health01 * 255f));
                 }
                 foreach (ObjectiveNest n in _nests.Values)
                 {
@@ -849,6 +920,7 @@ namespace Deadfall.Game
                     w.WriteValueSafe(0f);
                     w.WriteValueSafe((byte)Mathf.CeilToInt(n.Health01 * 255f));
                     w.WriteValueSafe((byte)(n.IsAlive ? 0 : 2));
+                    w.WriteValueSafe((byte)255);
                 }
                 // Pad if any entry was null (keeps the count honest for the reader).
                 for (; written < pc; written++)
@@ -858,6 +930,7 @@ namespace Deadfall.Game
                     w.WriteValueSafe((byte)255);
                     w.WriteValueSafe(Vector3.zero);
                     w.WriteValueSafe(0f);
+                    w.WriteValueSafe((byte)0);
                     w.WriteValueSafe((byte)0);
                     w.WriteValueSafe((byte)0);
                 }
@@ -942,11 +1015,13 @@ namespace Deadfall.Game
                 r.ReadValueSafe(out byte target);
                 r.ReadValueSafe(out ushort reward);
                 r.ReadValueSafe(out ushort expires);
+                r.ReadValueSafe(out ushort timeLeft);
                 if (kind > (byte)ObjectiveRules.LastKind || status > (byte)ObjectiveStatus.Failed) continue;
                 list.Add(new Objective
                 {
                     Id = id, Kind = (ObjectiveKind)kind, Required = required == 1, Status = (ObjectiveStatus)status,
                     Progress = progress, Target = Mathf.Max(1, target), RewardCredits = reward, ExpiresAfterSurge = expires,
+                    TimeLeft = timeLeft,
                 });
             }
             _tracker.Replace(list);
@@ -962,6 +1037,7 @@ namespace Deadfall.Game
                 r.ReadValueSafe(out float yaw);
                 r.ReadValueSafe(out byte value);
                 r.ReadValueSafe(out byte flags);
+                r.ReadValueSafe(out byte health);
                 if (id == 0 || kind == 255) continue;
                 _seen.Add(id);
                 if (kind == NestKind)
@@ -971,13 +1047,14 @@ namespace Deadfall.Game
                     n.SetHealth01((flags & 2) != 0 ? 0f : value / 255f);
                     continue;
                 }
-                if (kind > (byte)ObjectivePropKind.ContainmentConsole) continue;
+                if (kind > (byte)ObjectiveProp.LastKind) continue;
                 if (!_props.TryGetValue(id, out ObjectiveProp p) || p == null)
                 {
                     _props[id] = p = ObjectiveProp.Create(id, objectiveId, (ObjectivePropKind)kind, pos, transform);
                     p.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
                 }
                 p.SetState(value / 255f, (flags & 1) != 0, (flags & 2) != 0);
+                p.SetHealth01(health / 255f);
             }
             _scratch.Clear();
             foreach (ushort id in _props.Keys) if (!_seen.Contains(id)) _scratch.Add(id);
