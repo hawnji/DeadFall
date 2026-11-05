@@ -10,7 +10,7 @@ namespace Deadfall.Game
 {
     /// <summary>
     /// A square minimap under the location card that turns with the player (forward is always up). The layout is
-    /// painted once into a pixel buffer (rooms tinted by sector, sealed areas dark, walls outlined) and repainted when
+    /// painted once into a pixel buffer (open rooms only, tinted by sector, walls outlined; locked sectors stay blank) and repainted when
     /// sectors or side doors open; each frame the visible square is resampled, rotated, into a small view texture
     /// that is drawn with plain IMGUI. (It used to be a GL quad, which some graphics backends drew upside down at the
     /// bottom left of the screen, away from its frame and markers.) Markers on top: closed doors, objectives, the Gun Dispenser, grid generators, Supply Caches and the
@@ -99,8 +99,9 @@ namespace Deadfall.Game
             for (int i = 0; i < px.Length; i++) px[i] = bg;
             foreach (PlacedRoom r in layout.Rooms)
             {
-                if (r.Template.Role == RoomRole.Secret && !s.IsRoomOpen(r.Index)) continue; // secrets stay secret
-                bool open = s.IsRoomOpen(r.Index);
+                // Only the open part of the map: locked sectors and unopened side rooms (and secrets) stay blank.
+                if (!s.IsRoomOpen(r.Index)) continue;
+                bool open = true;
                 Color sector = MapBuilder.SectorColor(r.Sector);
                 Color fill = !open ? Sealed
                     : r.Template.Role == RoomRole.Corridor ? Color.Lerp(new Color(0.3f, 0.32f, 0.34f), sector, 0.15f)
@@ -202,17 +203,17 @@ namespace Deadfall.Game
             // Objectives.
             _markers.Clear();
             ObjectiveDirector.Current?.CollectMarkers(_markers);
-            foreach (Vector3 m in _markers) Marker(centre, pos, fwd, right, m, InteractGlow.Objectives, 7f, edge: true);
+            foreach (Vector3 m in _markers) if (Revealed(s, m)) Marker(centre, pos, fwd, right, m, InteractGlow.Objectives, 7f, edge: true);
             PowerGrid grid = PowerGrid.Current;
             if (grid != null)
                 foreach (GridGenerator g in grid.Generators)
-                    if (g != null) Marker(centre, pos, fwd, right, g.transform.position, g.Online ? new Color(0.4f, 0.75f, 1f) : new Color(1f, 0.3f, 0.25f), 6f);
+                    if (g != null && Revealed(s, g.transform.position)) Marker(centre, pos, fwd, right, g.transform.position, g.Online ? new Color(0.4f, 0.75f, 1f) : new Color(1f, 0.3f, 0.25f), 6f);
             // Guns.
             GunDispenser dispenser = GunDispenserDirector.Current != null ? GunDispenserDirector.Current.Dispenser : null;
             if (dispenser != null && dispenser.State != GunDispenser.Mode.Hidden) Marker(centre, pos, fwd, right, dispenser.transform.position, InteractGlow.Guns, 8f, edge: true);
             RunEconomy economy = RunEconomy.Current;
             if (economy != null)
-                foreach (SupplyCache c in economy.Caches) if (c != null) Marker(centre, pos, fwd, right, c.transform.position, InteractGlow.Guns, 6f);
+                foreach (SupplyCache c in economy.Caches) if (c != null && Revealed(s, c.transform.position)) Marker(centre, pos, fwd, right, c.transform.position, InteractGlow.Guns, 6f);
             // Squad.
             foreach (PlayerIdentity p in PlayerIdentity.All)
                 if (p != null && !p.IsLocal) Marker(centre, pos, fwd, right, p.transform.position, Color.white, 6f, edge: true);
@@ -220,6 +221,13 @@ namespace Deadfall.Game
             HudKit.Label(new Rect(centre.x - 10f, centre.y - 12f, 20f, 22f), "▲", 16, HudKit.Accent, TextAnchor.MiddleCenter);
             HudKit.Label(new Rect(frame.x + 6f, frame.yMax - 18f, frame.width - 12f, 16f), "M  minimap", 10, HudKit.TextDim, TextAnchor.MiddleRight);
             HudKit.End();
+        }
+
+        /// <summary>True when <paramref name="world"/> is in an open room (or outside every room), so its marker may show.</summary>
+        private static bool Revealed(MapSession s, Vector3 world)
+        {
+            int room = s.Map.RoomAt(world);
+            return room < 0 || s.IsRoomOpen(room);
         }
 
         /// <summary>A dot for a world point; <paramref name="edge"/> pins it to the frame edge when it is out of range.</summary>
