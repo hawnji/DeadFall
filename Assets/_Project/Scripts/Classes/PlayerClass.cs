@@ -71,13 +71,15 @@ namespace Deadfall.Classes
             Clear();
         }
 
+        /// <summary>Cap on cooldown speed from Field Mods and skills (T-77): +75%. Combined Arms multiplies on top.</summary>
+        public const float MaxExtraCooldownRate = 1.75f;
         private float _extraCooldownRate = 1f;
 
         /// <summary>Cooldown speed from Field Mods and skills, on top of doctrines (1 = none).</summary>
         public float ExtraCooldownRate
         {
             get => _extraCooldownRate;
-            set { _extraCooldownRate = Mathf.Max(0.1f, value); ApplyCooldownRate(); }
+            set { _extraCooldownRate = Mathf.Clamp(value, 0.1f, MaxExtraCooldownRate); ApplyCooldownRate(); }
         }
 
         private void ApplyCooldownRate()

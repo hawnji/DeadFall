@@ -138,6 +138,7 @@ Online co-op uses join codes through Unity Relay, so nobody needs an IP address 
 | `IMPLEMENTATION_ROADMAP.md` | Milestones and task status |
 | `TESTING.md` | Test strategy, automated tests, manual and regression checklists |
 | `DECISIONS.md` | Confirmed decisions, technical decisions, open questions |
+| `BALANCE.md` | Economy, weapon and progression numbers, and why they are set where they are |
 
 ## Originality
 

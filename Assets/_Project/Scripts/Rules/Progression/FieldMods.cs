@@ -152,7 +152,7 @@ namespace Deadfall.Rules.Progression
         }
     }
 
-    /// <summary>The prototype Field Mod set (placeholder numbers, T-37).</summary>
+    /// <summary>The Field Mod set (T-37; first balance pass T-77, see BALANCE.md).</summary>
     public static class FieldModCatalog
     {
         private static FieldModDef M(string id, string name, string desc, ModRarity rarity, StackRule stack, int max, params ModEffect[] effects) =>
@@ -211,7 +211,7 @@ namespace Deadfall.Rules.Progression
                 // Legendary
                 M("deadeye", "Deadeye", "+25% weapon damage and +20% more while below 30% health.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.Damage, 0.25f), E(ModStat.LowHealthDamage, 0.2f)),
                 M("phoenix_rig", "Phoenix Rig", "Ability cooldowns 30% faster and heal 40 when a surge is cleared.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.CooldownRate, 0.3f), E(ModStat.HealOnSurgeClear, 40f)),
-                M("last_stand", "Last Stand", "+40% damage while below 30% health.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.LowHealthDamage, 0.4f)),
+                M("last_stand", "Last Stand", "+60% damage while below 30% health.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.LowHealthDamage, 0.6f)),
                 M("juggernaut", "Juggernaut", "+50 max health and 10% damage reduction.", ModRarity.Legendary, StackRule.Unique, 1, E(ModStat.MaxHealth, 50f), E(ModStat.DamageReduction, 0.1f)),
             };
             // Class pools.

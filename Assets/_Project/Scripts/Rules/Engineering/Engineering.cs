@@ -58,7 +58,7 @@ namespace Deadfall.Rules.Engineering
         public StructureTier Tier(int tier) => Tiers[Math.Max(1, Math.Min(MaxTier, tier)) - 1];
     }
 
-    /// <summary>The four prototype structures (T-49). Numbers are placeholders for playtests.</summary>
+    /// <summary>The four structures (T-49; reviewed in the T-77 balance pass, see BALANCE.md).</summary>
     public static class StructureCatalog
     {
         public static readonly StructureDef Sentry = new StructureDef

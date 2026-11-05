@@ -49,10 +49,14 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
-        public void ClassRanksGiveOnePointPerRank()
+        public void ClassRanksGiveSkillPointsUpToTheFullTree()
         {
             Assert.AreEqual(0, ClassRanks.SkillPoints(1));
-            Assert.AreEqual(ClassRanks.MaxRank - 1, ClassRanks.SkillPoints(ClassRanks.MaxRank));
+            Assert.AreEqual(1, ClassRanks.SkillPoints(2));
+            Assert.AreEqual(6, ClassRanks.SkillPoints(10));
+            Assert.Less(ClassRanks.SkillPoints(20), ClassRanks.FullTreePoints, "choices matter before the late ranks");
+            Assert.AreEqual(ClassRanks.FullTreePoints, ClassRanks.SkillPoints(28));
+            Assert.AreEqual(ClassRanks.FullTreePoints, ClassRanks.SkillPoints(ClassRanks.MaxRank));
             Assert.AreEqual(ClassRanks.MaxRank, ClassRanks.RankForXp(ClassRanks.XpForRank(ClassRanks.MaxRank)));
         }
 
@@ -101,7 +105,7 @@ namespace Deadfall.Tests.EditMode.Rules
             var p = new PlayerProfile();
             const string cls = "class.gunner";
             Assert.AreEqual(SkillUnlockError.RankTooLow, ProfileRules.UnlockSkill(p, Skills, "skill.gunner.0.1"));
-            p.ClassXp[cls] = ClassRanks.XpForRank(5); // 4 points
+            p.ClassXp[cls] = ClassRanks.XpForRank(6); // 4 points (T-77: about 2 per 3 ranks)
             Assert.AreEqual(SkillUnlockError.MissingPrerequisite, ProfileRules.UnlockSkill(p, Skills, "skill.gunner.0.2"));
             Assert.AreEqual(SkillUnlockError.Ok, ProfileRules.UnlockSkill(p, Skills, "skill.gunner.0.1"));
             Assert.AreEqual(SkillUnlockError.AlreadyUnlocked, ProfileRules.UnlockSkill(p, Skills, "skill.gunner.0.1"));

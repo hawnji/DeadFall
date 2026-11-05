@@ -90,7 +90,7 @@ namespace Deadfall.Rules.Progression
         }
     }
 
-    /// <summary>Prototype trees for the five classes. Numbers are placeholders until playtests (T-52).</summary>
+    /// <summary>Skill trees for the five classes (T-52; first balance pass T-77, see BALANCE.md).</summary>
     public static class SkillTreeCatalog
     {
         public static List<SkillNodeDef> Prototype()
@@ -100,8 +100,8 @@ namespace Deadfall.Rules.Progression
             string c = "class.gunner";
             Branch(list, c, 0, "Marksman",
                 N("Steady Aim", "-10% recoil", E(ModStat.Recoil, -0.1f)),
-                N("Hollow Points", "+6% weapon damage", E(ModStat.Damage, 0.06f)),
-                N("Deadeye", "+10% weapon damage", E(ModStat.Damage, 0.1f)));
+                N("Hollow Points", "+8% weapon damage", E(ModStat.Damage, 0.08f)),
+                N("Deadeye", "+12% weapon damage", E(ModStat.Damage, 0.12f)));
             Branch(list, c, 1, "Suppressor",
                 N("Deep Pockets", "+15% reserve ammo", E(ModStat.Reserve, 0.15f)),
                 N("Trigger Discipline", "+6% fire rate", E(ModStat.FireRate, 0.06f)),
@@ -132,7 +132,7 @@ namespace Deadfall.Rules.Progression
                 N("Executioner", "+20% melee damage", E(ModStat.MeleeDamage, 0.2f)));
             Branch(list, c, 1, "Berserker",
                 N("Bloodthirst", "Heal 2 on kill", E(ModStat.HealOnKill, 2f)),
-                N("Frenzy", "+10% fire rate for 2 s after a kill", E(ModStat.KillFireRateBurst, 0.1f)),
+                N("Frenzy", "+12% melee damage", E(ModStat.MeleeDamage, 0.12f)),
                 N("Red Mist", "+25% damage below 30% health", E(ModStat.LowHealthDamage, 0.25f)));
             Branch(list, c, 2, "Skirmisher",
                 N("Footwork", "+4% move speed", E(ModStat.MoveSpeed, 0.04f)),
@@ -147,7 +147,7 @@ namespace Deadfall.Rules.Progression
             Branch(list, c, 1, "Defender",
                 N("Hazard Suit", "+10 max health", E(ModStat.MaxHealth, 10f)),
                 N("Hard Hat", "+4% damage reduction", E(ModStat.DamageReduction, 0.04f)),
-                N("Field Repairs", "Heal 12 after each surge", E(ModStat.HealOnSurgeClear, 12f)));
+                N("Field Repairs", "Heal 2 on kill and 12 after each surge", E(ModStat.HealOnKill, 2f), E(ModStat.HealOnSurgeClear, 12f)));
             Branch(list, c, 2, "Gunsmith",
                 N("Tuned Actions", "+8% reload speed", E(ModStat.ReloadSpeed, 0.08f)),
                 N("Compensators", "-12% recoil", E(ModStat.Recoil, -0.12f)),
@@ -155,9 +155,9 @@ namespace Deadfall.Rules.Progression
 
             c = "class.demolitionist";
             Branch(list, c, 0, "Sapper",
-                N("Shaped Charges", "+6% weapon damage", E(ModStat.Damage, 0.06f)),
-                N("Bigger Boom", "+8% weapon damage", E(ModStat.Damage, 0.08f)),
-                N("Overkill", "+12% weapon damage", E(ModStat.Damage, 0.12f)));
+                N("Shaped Charges", "+5% weapon damage", E(ModStat.Damage, 0.05f)),
+                N("Bigger Boom", "+7% weapon damage", E(ModStat.Damage, 0.07f)),
+                N("Overkill", "+10% weapon damage", E(ModStat.Damage, 0.1f)));
             Branch(list, c, 1, "Bombardier",
                 N("Extra Shells", "+20% reserve ammo", E(ModStat.Reserve, 0.2f)),
                 N("Fast Loader", "+12% reload speed", E(ModStat.ReloadSpeed, 0.12f)),

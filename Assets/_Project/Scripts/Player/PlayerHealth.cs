@@ -76,8 +76,10 @@ namespace Deadfall.Player
         public Vector3 Eye => transform.position + Vector3.up * (IsAlive ? 1.6f : 0.5f);
         private PlayerIdentity _identity;
         /// <summary>Base reduction combined with <see cref="BonusDamageReduction"/> (never reaches 100%).</summary>
-        public float DamageReduction => 1f - (1f - Mathf.Clamp01(_damageReduction)) * (1f - Mathf.Clamp01(BonusDamageReduction)) * (1f - Mathf.Clamp(ModDamageReduction, 0f, 0.6f));
-        /// <summary>Damage reduction from Field Mods and skills (separate from class passives, capped at 60%).</summary>
+        public float DamageReduction => 1f - (1f - Mathf.Clamp01(_damageReduction)) * (1f - Mathf.Clamp01(BonusDamageReduction)) * (1f - Mathf.Clamp(ModDamageReduction, 0f, MaxModDamageReduction));
+        /// <summary>Cap on Field Mod + skill damage reduction (T-77: was 60%, which let a Tank with Guard pass 70%).</summary>
+        public const float MaxModDamageReduction = 0.45f;
+        /// <summary>Damage reduction from Field Mods and skills (separate from class passives, capped at 45%).</summary>
         public float ModDamageReduction { get; set; }
         /// <summary>Extra reduction from class passives and abilities, set by whoever owns it each frame.</summary>
         public float BonusDamageReduction { get; set; }
