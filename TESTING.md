@@ -635,6 +635,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The end-of-run screen has a Squad table with the same stats and the MVP in its header.
 - [ ] Infected coming around corners no longer all file along the inside edge: most swing wide by different amounts, and they move at slightly different paces, so a group arrives spread out. Bosses and barricade-breakers path as before.
 
+### 3.51 Mutation glow and round speed-up
+
+- [ ] Mutated infected show a glowing ring on the floor around their feet (green regenerating, purple splitting, pale grey hardened, red swift; several traits give concentric rings) and a soft light of the first trait's colour. No floating squares through the body. The glow goes out when they die.
+- [ ] Infected get faster as surges go by in Survival, Endless and Operations: about 7% faster by surge 5, 15% by 12, 35% by surge 25 (on top of health growing to ×2.5 by surge 30). Nothing outruns a sprinting player from the speed-up alone; bosses keep their own pace.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

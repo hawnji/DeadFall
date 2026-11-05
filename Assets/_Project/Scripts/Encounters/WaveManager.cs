@@ -289,6 +289,7 @@ namespace Deadfall.Encounters
             _runSettings.FinalSurge = _defaultFinalSurge;
             _runSettings.LullSeconds = _defaultLullSeconds;
             _plan = null;
+            Enemy.RoundSpeedScale = 1f;
             _ready.Clear();
             SyncFromRun();
         }
@@ -358,9 +359,10 @@ namespace Deadfall.Encounters
                 // Endless "Relentless": shorter lulls after this surge.
                 if (_endless) _runSettings.LullSeconds = _defaultLullSeconds * EndlessRules.LullMultiplier(_run.Surge);
                 _director.Begin(_plan, _seed, now);
+                Enemy.RoundSpeedScale = _plan.SpeedScale;
                 SurgePlanned?.Invoke(_plan);
                 GameLog.Info("Waves", $"Surge {_plan.Surge} ({_plan.Type}): {_plan.Spawns.Count} enemies, budget {_plan.Budget:0.#}, " +
-                                      $"concurrency {_plan.Concurrency}, directions {_director.ActiveGroups.Count}, health x{_plan.HealthScale:0.00}.");
+                                      $"concurrency {_plan.Concurrency}, directions {_director.ActiveGroups.Count}, health x{_plan.HealthScale:0.00}, speed x{_plan.SpeedScale:0.00}.");
             }
             if ((e & SurgeRunEvents.CullStragglers) != 0)
             {
@@ -572,6 +574,7 @@ namespace Deadfall.Encounters
             _director.KillAll();
             _run.Abort();
             _plan = null;
+            Enemy.RoundSpeedScale = 1f;
             _credits.Clear();
             _ready.Clear();
             ApplyState(RunPhase.NotStarted, 0, SurgeType.Standard, 0, 0, 0, 0, 1);
