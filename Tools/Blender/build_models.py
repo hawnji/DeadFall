@@ -2341,6 +2341,179 @@ def preview_zombies(arms, out_dir, side=False):
     return path
 
 
+
+# ----------------------------------------------------------------------------------------------- objective props
+# Real size (origin on the floor, front +Z), drawn around ObjectiveProp's placeholder parts. The status light stays the
+# game's own primitive (its colour shows progress), so each model leaves a socket for it at the same spot.
+
+OBJ_BODY = "C_4A5058"
+OBJ_DARK = "C_23262B"
+OBJ_OLIVE = "C_4F5640"
+OBJ_STEEL = "C_7C838C"
+OBJ_RED = "C_A3261C"
+OBJ_GLASS = "C_8FB8C8"
+OBJ_WHITE = "C_D3D6D2"
+SCREEN_DIM = "G_1E4A66"
+
+
+def obj_generator():
+    """Generator (1.4 x 1.2 x 0.9 body): skid frame, ribbed engine block, exhaust stack, fuel tank, front control panel."""
+    m = Model("obj_generator")
+    for s in (-1, 1):
+        m.box((s * 0.6, 0.05, 0), (0.12, 0.1, 1.0), OBJ_DARK, bevel=0.01)  # skids
+    m.box((0, 0.14, 0), (1.4, 0.08, 0.92), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.66, 0), (1.36, 0.96, 0.86), OBJ_OLIVE, bevel=0.04)
+    for i in range(7):
+        m.box((-0.66 + i * 0.03 + 0.3, 0.7, -0.44), (0.015, 0.7, 0.02), OBJ_DARK, bevel=0.0)  # rear vents
+    for s in (-1, 1):
+        for i in range(5):
+            m.box((s * 0.69, 0.4 + i * 0.12, 0), (0.02, 0.05, 0.7), OBJ_DARK, bevel=0.0)  # side ribs
+    m.box((0, 1.16, 0), (1.3, 0.06, 0.8), OBJ_DARK, bevel=0.01)
+    m.cyl((0, 1.35, -0.1), (0.2, 0.35, 0.2), OBJ_STEEL, segments=10)   # exhaust stack
+    m.cyl((0, 1.54, -0.1), (0.24, 0.04, 0.24), OBJ_DARK, segments=10)
+    m.cyl((0.45, 1.24, 0.1), (0.36, 0.14, 0.36), OBJ_RED, segments=12)  # fuel cap housing
+    m.box((0, 0.9, 0.44), (0.62, 0.48, 0.04), OBJ_DARK, bevel=0.01)     # control panel (light sits in the middle)
+    m.box((-0.22, 0.78, 0.465), (0.08, 0.08, 0.02), LED_A, bevel=0.0)
+    m.box((0.22, 0.78, 0.465), (0.08, 0.08, 0.02), OBJ_STEEL, bevel=0.0)
+    m.box((0, 0.42, 0.44), (1.0, 0.1, 0.03), HAZARD, bevel=0.0)
+    m.cyl((-0.55, 0.3, 0.42), (0.1, 0.08, 0.1), RUBBER, rot=(90, 0, 0), segments=8)  # cable outlet
+    return m
+
+
+def _screen_housing(m, centre, size, depth, mat=OBJ_DARK):
+    x, y, z = centre
+    w, h = size
+    m.box((x, y, z - depth * 0.5), (w + 0.08, h + 0.08, depth), mat, bevel=0.015)
+
+
+def obj_terminal():
+    """Data / lockdown terminal (0.8 x 1.1 x 0.5 pedestal, screen at y 1.2): slanted keyboard deck, screen hood, cables."""
+    m = Model("obj_terminal")
+    m.box((0, 0.04, 0), (0.9, 0.08, 0.6), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.52, -0.02), (0.76, 0.9, 0.46), OBJ_BODY, bevel=0.03)
+    m.box((0, 0.98, 0.12), (0.8, 0.06, 0.34), OBJ_BODY, rot=(-18, 0, 0), bevel=0.01)  # keyboard deck
+    for r in range(3):
+        m.box((0, 1.0 + r * 0.01, 0.06 + r * 0.07), (0.62, 0.015, 0.04), OBJ_DARK, rot=(-18, 0, 0), bevel=0.0)
+    _screen_housing(m, (0, 1.2, 0.075), (0.7, 0.45), 0.16)
+    m.box((0, 1.47, 0.05), (0.84, 0.04, 0.22), OBJ_DARK, bevel=0.0)  # hood
+    for s in (-1, 1):
+        m.box((s * 0.39, 1.2, 0.0), (0.03, 0.5, 0.18), OBJ_DARK, bevel=0.0)
+    m.box((0, 0.5, 0.215), (0.5, 0.5, 0.02), OBJ_DARK, bevel=0.0)  # service hatch
+    m.box((0.18, 0.62, 0.23), (0.06, 0.06, 0.015), LED_G, bevel=0.0)
+    m.cyl((-0.25, 0.05, -0.3), (0.06, 0.1, 0.06), RUBBER, rot=(90, 0, 0), segments=6)
+    return m
+
+
+def obj_console():
+    """Containment console (1.1 x 1.0 x 0.7 body): heavy desk with a hazard band, big screen, emergency handle."""
+    m = Model("obj_console")
+    m.box((0, 0.06, 0), (1.2, 0.12, 0.8), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.52, 0), (1.1, 0.84, 0.7), "C_3A434C", bevel=0.03)
+    m.box((0, 0.97, 0.08), (1.14, 0.08, 0.56), "C_3A434C", rot=(-12, 0, 0), bevel=0.01)
+    m.box((0, 1.05, -0.15), (1.12, 0.12, 0.4), HAZARD, bevel=0.0)
+    for i in range(6):
+        m.box((-0.45 + i * 0.18, 1.05, 0.06), (0.06, 0.125, 0.01), OBJ_DARK, rot=(0, 0, 35), bevel=0.0)  # stripes
+    _screen_housing(m, (0, 1.3, 0.025), (0.9, 0.4), 0.14)
+    m.box((0, 1.54, 0.0), (1.0, 0.05, 0.2), OBJ_DARK, bevel=0.0)
+    m.box((0.42, 0.98, 0.3), (0.12, 0.05, 0.12), OBJ_RED, bevel=0.01)  # emergency button
+    m.box((-0.3, 1.0, 0.25), (0.3, 0.02, 0.14), SCREEN_DIM, rot=(-12, 0, 0), bevel=0.0)
+    for s in (-1, 1):
+        m.box((s * 0.56, 0.5, 0.0), (0.04, 0.7, 0.5), OBJ_DARK, bevel=0.0)
+    return m
+
+
+def obj_cryo():
+    """Cryo container (1 x 1 base, 0.8 wide tank to y 1.8): glass cylinder with frost fluid, frame ribs, pipes."""
+    m = Model("obj_cryo")
+    m.cyl((0, 0.15, 0), (1.0, 0.3, 1.0), "C_3F454C", segments=16)
+    m.cyl((0, 0.33, 0), (0.86, 0.06, 0.86), OBJ_DARK, segments=16)
+    m.cyl((0, 1.05, 0), (0.74, 1.42, 0.74), "G_7FD8F0", segments=16, smooth=True)  # frosted tank (glows)
+    for y in (0.6, 1.5):
+        m.cyl((0, y, 0), (0.8, 0.05, 0.8), OBJ_STEEL, segments=16)  # bands
+    for a in range(4):
+        ang = math.radians(45 + a * 90)
+        m.box((math.sin(ang) * 0.38, 1.05, math.cos(ang) * 0.38), (0.06, 1.5, 0.06), OBJ_STEEL, rot=(0, 45 + a * 90, 0), bevel=0.0)
+    m.cyl((0, 1.86, 0), (0.92, 0.2, 0.92), "C_3F454C", segments=16)
+    m.cyl((0, 2.0, 0), (0.4, 0.1, 0.4), OBJ_DARK, segments=12)
+    for s in (-1, 1):
+        m.cyl((s * 0.55, 1.2, -0.15), (0.08, 1.5, 0.08), OBJ_STEEL, segments=8)  # coolant lines
+        m.box((s * 0.47, 1.9, -0.15), (0.2, 0.08, 0.08), OBJ_STEEL, bevel=0.0)
+        m.box((s * 0.5, 0.35, -0.15), (0.14, 0.08, 0.08), OBJ_STEEL, bevel=0.0)
+    m.box((0, 1.05, 0.39), (0.58, 0.98, 0.03), OBJ_DARK, bevel=0.0)  # status window frame
+    m.box((0, 0.22, 0.5), (0.4, 0.1, 0.03), HAZARD, bevel=0.0)
+    return m
+
+
+def obj_valve():
+    """Reactor coolant valve (pipe 0.35 wide to y 1.5, red wheel at y 1.25, z 0.25): flanged riser, valve body, beacon."""
+    m = Model("obj_valve")
+    m.cyl((0, 0.05, 0), (0.7, 0.1, 0.7), OBJ_DARK, segments=12)
+    m.cyl((0, 0.75, 0), (0.34, 1.4, 0.34), OBJ_STEEL, segments=12)
+    for y in (0.15, 0.7, 1.45):
+        m.cyl((0, y, 0), (0.46, 0.06, 0.46), OBJ_BODY, segments=12)  # flanges
+        for a in range(6):
+            ang = math.radians(a * 60)
+            m.cyl((math.sin(ang) * 0.2, y + 0.04, math.cos(ang) * 0.2), (0.04, 0.03, 0.04), OBJ_DARK, segments=6)
+    m.box((0, 1.25, 0.12), (0.26, 0.26, 0.22), OBJ_BODY, bevel=0.02)  # valve body
+    m.cyl((0, 1.25, 0.2), (0.05, 0.12, 0.05), OBJ_DARK, rot=(90, 0, 0), segments=6)  # stem
+    n = 12
+    for i in range(n):  # wheel rim
+        ang = math.radians(i * 360 / n)
+        m.box((math.sin(ang) * 0.36, 1.25 + math.cos(ang) * 0.36, 0.25), (0.2, 0.05, 0.05), OBJ_RED, rot=(0, 0, -i * 360 / n), bevel=0.0)
+    for ang in (0, 60, 120):
+        m.box((0, 1.25, 0.25), (0.72, 0.04, 0.04), OBJ_RED, rot=(0, 0, ang), bevel=0.0)  # spokes
+    m.cyl((0, 1.25, 0.25), (0.1, 0.06, 0.1), OBJ_DARK, rot=(90, 0, 0), segments=8)
+    m.cyl((0, 1.55, 0), (0.28, 0.08, 0.28), OBJ_DARK, segments=10)  # beacon base (light sits above)
+    m.box((0, 0.55, 0.18), (0.22, 0.12, 0.01), HAZARD, bevel=0.0)
+    return m
+
+
+def obj_sample_case():
+    """Sample case (0.5 x 0.4 x 0.35): white hard case, latches, front handle, status light socket on the lid."""
+    m = Model("obj_sample_case")
+    m.box((0, 0.19, 0), (0.5, 0.36, 0.35), OBJ_WHITE, bevel=0.03)
+    m.box((0, 0.3, 0), (0.52, 0.03, 0.37), OBJ_DARK, bevel=0.0)  # lid seam
+    m.box((0, 0.395, 0), (0.28, 0.02, 0.26), OBJ_DARK, bevel=0.0)  # light socket
+    for s in (-1, 1):
+        m.box((s * 0.17, 0.3, 0.18), (0.06, 0.08, 0.02), OBJ_STEEL, bevel=0.0)  # latches
+        m.box((s * 0.26, 0.05, s * 0.0), (0.02, 0.06, 0.3), RUBBER, bevel=0.0)
+    m.box((0, 0.2, 0.2), (0.2, 0.03, 0.04), OBJ_DARK, bevel=0.0)  # handle
+    m.box((-0.1, 0.17, 0.195), (0.02, 0.06, 0.03), OBJ_DARK, bevel=0.0)
+    m.box((0.1, 0.17, 0.195), (0.02, 0.06, 0.03), OBJ_DARK, bevel=0.0)
+    m.box((0, 0.12, 0.178), (0.16, 0.06, 0.005), "C_2E8C5A", bevel=0.0)  # biohazard label
+    return m
+
+
+def obj_keycard():
+    """Keycard on a pedestal (0.6 x 0.76 x 0.6): angled reader stand holding a yellow card at y 0.8."""
+    m = Model("obj_keycard")
+    m.box((0, 0.04, 0), (0.66, 0.08, 0.66), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.42, 0), (0.5, 0.68, 0.5), OBJ_BODY, bevel=0.03)
+    m.box((0, 0.76, 0), (0.6, 0.04, 0.6), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.785, 0), (0.36, 0.02, 0.26), SCREEN_DIM, bevel=0.0)  # reader pad
+    m.box((0, 0.8, 0), (0.3, 0.02, 0.2), "C_F0C21C", bevel=0.005)    # the card
+    m.box((-0.08, 0.812, 0.02), (0.08, 0.005, 0.06), OBJ_DARK, bevel=0.0)  # chip
+    m.box((0, 0.42, 0.255), (0.3, 0.08, 0.01), HAZARD, bevel=0.0)
+    return m
+
+
+def obj_locker():
+    """Security locker (1.2 x 2 x 0.6): double armoured doors, reinforced frame, keypad housing at (0.45, 1.1)."""
+    m = Model("obj_locker")
+    m.box((0, 1.0, -0.02), (1.2, 2.0, 0.56), "C_434A55", bevel=0.03)
+    for s in (-1, 1):
+        m.box((s * 0.29, 1.0, 0.27), (0.56, 1.86, 0.04), "C_59616D", bevel=0.01)  # doors
+        for y in (0.45, 1.0, 1.55):
+            m.box((s * 0.29, y, 0.295), (0.5, 0.05, 0.015), OBJ_DARK, bevel=0.0)  # door ribs
+    m.box((0, 1.0, 0.3), (0.03, 1.86, 0.03), OBJ_DARK, bevel=0.0)  # seam
+    m.box((0.45, 1.1, 0.3), (0.2, 0.34, 0.03), OBJ_DARK, bevel=0.01)  # keypad housing (light inside)
+    m.box((-0.1, 1.0, 0.31), (0.04, 0.3, 0.04), OBJ_STEEL, bevel=0.0)  # handles
+    m.box((0.1, 1.0, 0.31), (0.04, 0.3, 0.04), OBJ_STEEL, bevel=0.0)
+    m.box((0, 2.03, 0), (1.26, 0.06, 0.62), OBJ_DARK, bevel=0.01)
+    m.box((0, 0.03, 0), (1.26, 0.06, 0.62), OBJ_DARK, bevel=0.01)
+    m.box((0, 1.82, 0.3), (0.7, 0.1, 0.01), HAZARD, bevel=0.0)
+    return m
+
 BUILDERS = [
     enemy_standard, enemy_lean, enemy_plated, enemy_crawler, enemy_bloated, enemy_spitter, enemy_alpha, enemy_specimen,
     player_body, player_head,
@@ -2352,6 +2525,7 @@ BUILDERS = [
     weapon_tether_cleaver, weapon_mule_launcher,
     enemy_brood, weapon_vesper_dmr, weapon_bulldog_44, weapon_hailstorm, weapon_kestrel_pdw, weapon_railspike_maul,
     fp_arm,
+    obj_generator, obj_terminal, obj_console, obj_cryo, obj_valve, obj_sample_case, obj_keycard, obj_locker,
 ]
 
 
@@ -2374,6 +2548,8 @@ SHEETS = {
     "map": ["prop_crate", "prop_locker", "prop_column", "prop_partition", "prop_door", "prop_relay", "prop_switch", "supply_cache"],
     "rooms": ["prop_lab_bench", "prop_tank", "prop_server_rack", "prop_shelf", "prop_table", "prop_planter", "prop_desk",
               "prop_generator"],
+    "objectives": ["obj_generator", "obj_terminal", "obj_console", "obj_cryo", "obj_valve", "obj_sample_case", "obj_keycard",
+                   "obj_locker"],
     "clutter": ["prop_barrel", "prop_light_fixture", "prop_fusebox", "prop_wall_vent", "prop_extinguisher", "prop_rubble"],
 }
 

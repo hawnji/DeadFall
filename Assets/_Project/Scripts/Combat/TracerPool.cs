@@ -3,20 +3,28 @@ using UnityEngine;
 
 namespace Deadfall.Combat
 {
-    /// <summary>Pooled bullet tracers and impact flashes. Placeholder VFX until the art pass.</summary>
+    /// <summary>
+    /// Pooled bullet tracers: a short bright streak that flies from the muzzle to the hit point, then an impact
+    /// (sparks, dust and a bullet hole, or blood on anything with a hurtbox) where it lands.
+    /// </summary>
     public sealed class TracerPool : MonoBehaviour
     {
         private struct Active
         {
             public LineRenderer Line;
+            public float StartTime;
             public float EndTime;
-            public float Duration;
+            public Vector3 From, To;
+            public bool Impact;
         }
 
+        /// <summary>Visual bullet speed (m/s); real hits are instant.</summary>
+        private const float StreakSpeed = 420f;
+        private const float StreakLength = 4f;
+
         [SerializeField] private int _capacity = 48;
-        [SerializeField] private float _duration = 0.05f;
-        [SerializeField] private float _width = 0.02f;
-        [SerializeField] private Color _color = new Color(1f, 0.85f, 0.5f, 0.9f);
+        [SerializeField] private float _width = 0.03f;
+        [SerializeField] private Color _color = new Color(1f, 0.88f, 0.55f, 1f);
 
         private readonly Stack<LineRenderer> _free = new Stack<LineRenderer>();
         private readonly List<Active> _active = new List<Active>();
@@ -75,7 +83,10 @@ namespace Deadfall.Combat
             return lr;
         }
 
-        public void Spawn(Vector3 from, Vector3 to)
+        /// <summary>Shows a shot from <paramref name="from"/> to <paramref name="to"/>; <paramref name="impact"/> adds hit effects at the end.</summary>
+        public void Spawn(Vector3 from, Vector3 to) => Spawn(from, to, true);
+
+        public void Spawn(Vector3 from, Vector3 to, bool impact)
         {
             LineRenderer lr;
             if (_free.Count > 0)
@@ -86,16 +97,19 @@ namespace Deadfall.Combat
             {
                 // Pool exhausted: recycle the oldest tracer instead of allocating.
                 lr = _active[0].Line;
+                if (_active[0].Impact) FxParticles.ImpactAt(_active[0].From, _active[0].To);
                 _active.RemoveAt(0);
             }
             else
             {
                 lr = Create();
             }
+            float travel = Mathf.Clamp(Vector3.Distance(from, to) / StreakSpeed, 0.02f, 0.25f);
             lr.SetPosition(0, from);
-            lr.SetPosition(1, to);
+            lr.SetPosition(1, from);
             lr.gameObject.SetActive(true);
-            _active.Add(new Active { Line = lr, EndTime = Time.time + _duration, Duration = _duration });
+            float now = Time.time;
+            _active.Add(new Active { Line = lr, StartTime = now, EndTime = now + travel, From = from, To = to, Impact = impact });
         }
 
         private void Update()
@@ -103,10 +117,20 @@ namespace Deadfall.Combat
             float now = Time.time;
             for (int i = _active.Count - 1; i >= 0; i--)
             {
-                if (now < _active[i].EndTime) continue;
-                LineRenderer lr = _active[i].Line;
-                lr.gameObject.SetActive(false);
-                _free.Push(lr);
+                Active a = _active[i];
+                if (now < a.EndTime)
+                {
+                    float t = Mathf.InverseLerp(a.StartTime, a.EndTime, now);
+                    float dist = Vector3.Distance(a.From, a.To);
+                    Vector3 head = Vector3.Lerp(a.From, a.To, t);
+                    float tailT = dist > 0.01f ? Mathf.Max(0f, t - StreakLength / dist) : 0f;
+                    a.Line.SetPosition(0, head);
+                    a.Line.SetPosition(1, Vector3.Lerp(a.From, a.To, tailT));
+                    continue;
+                }
+                if (a.Impact) FxParticles.ImpactAt(a.From, a.To);
+                a.Line.gameObject.SetActive(false);
+                _free.Push(a.Line);
                 _active.RemoveAt(i);
             }
         }

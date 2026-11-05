@@ -533,6 +533,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Overwatch (Gunner + Engineer): enemies a sentry hit in the last 5 s take about 20% more damage from the Gunner.
 - [ ] Clients: both doctrines work when the Gunner, Tank or Engineer is a client (host applies them).
 
+### 3.38 Effects, shield wall and objective models
+
+- [ ] Shots: each tracer is a short bright streak that flies to the hit point (not an instant line). Hitting walls throws sparks and dust and leaves a bullet hole that fades after about 10 s; hitting enemies sprays dark blood and leaves no hole.
+- [ ] Other players', sentries' and drones' shots show impacts too.
+- [ ] Explosions (Mule Launcher, Cluster Charge, Bloater, ruptures, objective blasts): fireball, rising smoke, sparks and debris that bounce, an orange light flash, and a scorch mark on the floor that fades after about 18 s. No orange sphere.
+- [ ] No pink particles or decals in a player build (they use Sprites/Default).
+- [ ] Tank shield: translucent blue hex field between two posts, grows in when deployed, pulses when hit, turns red as it weakens, flickers when low or about to expire, and bursts into sparks when it breaks. Enemies still attack it and player bullets still pass through.
+- [ ] Objectives use models: generator, data/lockdown terminal, containment console, cryo tank, reactor valve, sample case, keycard pedestal and security locker. Each status light still changes colour with progress, and the objective glow outlines the model.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
