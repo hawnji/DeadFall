@@ -142,10 +142,137 @@ def dirt(n, p):
     save("dirt", albedo, height, 2.0, p)
 
 
+# ------------------------------------------------------------------ map surfaces (structured, higher contrast)
+
+def cells(n, count, seed):
+    """Per-cell random values for a count x count grid laid over the tile: (index map, cell-local u, v)."""
+    y, x = np.mgrid[0:n, 0:n] / n
+    ix, iy = np.floor(x * count).astype(int), np.floor(y * count).astype(int)
+    return ix, iy, (x * count) % 1.0, (y * count) % 1.0
+
+
+def edge_dist(u, v):
+    return np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v))
+
+
+def floortile(n, p):
+    """Worn 1 m industrial floor tiles, 4 x 4 per 3.92 m floor plate: grout, per-tile tone, scuffs, stains, cracks."""
+    count = 4
+    ix, iy, u, v = cells(n, count, 51)
+    r = rng(52)
+    tone = r.uniform(-0.07, 0.07, (count, count))
+    grout = smoothstep(0.022, 0.008, edge_dist(u, v))
+    bevel = smoothstep(0.05, 0.022, edge_dist(u, v)) * (1 - grout)
+    mid = fbm(n, 1.8, 53)
+    grain = band(n, n // 10, n // 2, 54)
+    scuffs = smoothstep(0.62, 0.9, band(n, 3, 40, 55, aniso=(5.0, 1.0)))   # long scrapes
+    stains = smoothstep(0.6, 0.92, fbm(n, 2.6, 56)) * 0.6
+    dirt_edges = smoothstep(0.12, 0.0, edge_dist(u, v)) * (0.5 + 0.5 * fbm(n, 2.0, 57))
+    crack_field = band(n, 6, 22, 58)
+    crack = smoothstep(0.005, 0.0, np.abs(crack_field - 0.5)) * smoothstep(0.72, 0.9, fbm(n, 2.4, 59))
+    albedo = (0.8 + tone[iy, ix] + (mid - 0.5) * 0.14 + (grain - 0.5) * 0.08
+              - scuffs * 0.12 - stains * 0.2 - dirt_edges * 0.12 - crack * 0.35 - grout * 0.5 - bevel * 0.06)
+    warm = np.stack([albedo * 1.0, albedo * 0.97, albedo * 0.92], axis=-1)
+    stain_col = np.array([0.55, 0.45, 0.32])
+    warm = warm * (1 - stains[..., None] * 0.35) + stain_col * albedo[..., None] * stains[..., None] * 0.35
+    height = grain * 0.2 + mid * 0.2 - grout * 1.2 - bevel * 0.4 - crack * 0.8 + scuffs * 0.05
+    save("floortile", warm, height, 3.0, p)
+
+
+def wallpanel(n, p):
+    """Painted steel wall panels, 1 m wide x 2 m tall (2 per 2 m tile): seams, bolts, drips and scuffs."""
+    y, x = np.mgrid[0:n, 0:n] / n
+    u = (x * 2) % 1.0
+    vv = y % 1.0
+    ix = np.floor(x * 2).astype(int)
+    r = rng(61)
+    tone = r.uniform(-0.05, 0.05, 2)
+    seam = np.maximum(smoothstep(0.012, 0.004, np.minimum(u, 1 - u)), smoothstep(0.008, 0.002, np.minimum(vv, 1 - vv)))
+    lip = smoothstep(0.03, 0.012, np.minimum(u, 1 - u)) * (1 - seam)
+    bolts = np.zeros_like(x)
+    for bx in (0.05, 0.95):
+        for by in np.linspace(0.06, 0.94, 6):
+            d = np.sqrt((u - bx) ** 2 + ((vv - by) * 2) ** 2)  # u spans 1 m, vv spans 2 m
+            bolts = np.maximum(bolts, smoothstep(0.014, 0.007, d))
+    mid = fbm(n, 2.0, 62)
+    grain = band(n, n // 8, n // 2, 63)
+    drips = smoothstep(0.55, 0.9, fbm(n, 2.0, 64, aniso=(1.0, 14.0))) * (0.4 + 0.6 * fbm(n, 2.0, 65))
+    chips = smoothstep(0.86, 0.95, band(n, n // 16, n // 5, 66))
+    scuffs = smoothstep(0.7, 0.92, band(n, 4, 50, 67, aniso=(6.0, 1.0)))
+    albedo = (0.84 + tone[ix] + (mid - 0.5) * 0.1 + (grain - 0.5) * 0.05
+              - drips * 0.22 - scuffs * 0.1 - seam * 0.55 - lip * 0.08 + bolts * 0.1 - chips * 0.3)
+    col = np.stack([albedo, albedo, albedo], axis=-1)
+    rust = (drips * smoothstep(0.6, 0.85, fbm(n, 2.2, 68))) + chips * 0.8
+    rust_col = np.array([0.5, 0.3, 0.18])
+    col = col * (1 - rust[..., None] * 0.5) + rust_col * rust[..., None] * 0.5
+    height = grain * 0.12 + mid * 0.1 - seam * 1.0 + lip * 0.3 + bolts * 0.9 - chips * 0.4
+    save("wallpanel", col, height, 3.0, p)
+
+
+def ceilingtile(n, p):
+    """Drop ceiling: 6 x 6 acoustic tiles per 4 m with a metal T-bar grid, water stains and a few dark gaps."""
+    count = 6
+    ix, iy, u, v = cells(n, count, 71)
+    r = rng(72)
+    tone = r.uniform(-0.05, 0.05, (count, count))
+    missing = r.uniform(0, 1, (count, count)) < 0.03
+    stained = r.uniform(0, 1, (count, count)) < 0.25
+    sag = r.uniform(0, 1, (count, count))
+    bar = smoothstep(0.03, 0.018, edge_dist(u, v))
+    speck = band(n, n // 4, n // 2, 73)
+    pores = smoothstep(0.78, 0.9, band(n, n // 6, n // 2, 74))
+    mid = fbm(n, 2.0, 75)
+    # Water stains: ring-edged blotches, only on some tiles.
+    blot = fbm(n, 2.4, 76)
+    fade = smoothstep(0.0, 0.15, edge_dist(u, v))  # stains soak in from inside the tile
+    stain = smoothstep(0.5, 0.8, blot) * stained[iy, ix] * fade
+    ring = smoothstep(0.025, 0.0, np.abs(blot - 0.52)) * stained[iy, ix] * fade * 0.6
+    tile = 0.9 + tone[iy, ix] + (speck - 0.5) * 0.08 - pores * 0.1 + (mid - 0.5) * 0.06 - stain * 0.18 - ring * 0.18
+    tile = np.where(missing[iy, ix], 0.22 + mid * 0.06, tile)
+    albedo = tile * (1 - bar) + 0.62 * bar
+    col = np.stack([albedo, albedo, albedo], axis=-1)
+    stain_col = np.array([0.62, 0.5, 0.32])
+    s = (stain + ring)[..., None] * 0.6
+    col = col * (1 - s) + stain_col * col * s
+    height = speck * 0.15 - pores * 0.3 - bar * 0.0 + (1 - bar) * (0.4 + sag[iy, ix] * 0.1) - missing[iy, ix] * 1.0
+    height = np.where(bar > 0.5, 0.6, height)
+    save("ceilingtile", col, height, 2.5, p)
+
+
+def brick(n, p):
+    """Sooty running-bond brick for the service tunnels, 2 m tile (8 x 26 bricks)."""
+    rows, per_row = 26, 8
+    y, x = np.mgrid[0:n, 0:n] / n
+    iy = np.floor(y * rows).astype(int)
+    shift = (iy % 2) * 0.5 / per_row
+    bx = ((x + shift) * per_row) % 1.0
+    ix = np.floor(((x + shift) % 1.0) * per_row).astype(int)
+    by = (y * rows) % 1.0
+    r = rng(81)
+    tone = r.uniform(-0.12, 0.12, (rows, per_row))
+    mortar = np.maximum(smoothstep(0.03, 0.012, np.minimum(bx, 1 - bx)), smoothstep(0.1, 0.04, np.minimum(by, 1 - by)))
+    grain = band(n, n // 8, n // 2, 82)
+    mid = fbm(n, 2.0, 83)
+    soot = smoothstep(0.45, 0.85, fbm(n, 2.2, 84, aniso=(1.0, 4.0)))
+    chips = smoothstep(0.85, 0.95, band(n, n // 12, n // 4, 85))
+    b = 0.78 + tone[iy, ix] + (grain - 0.5) * 0.12 + (mid - 0.5) * 0.1 - chips * 0.2
+    m = 0.62 + (grain - 0.5) * 0.1
+    albedo = b * (1 - mortar) + m * mortar
+    albedo = albedo * (1 - soot * 0.35)
+    col = np.stack([albedo, albedo, albedo], axis=-1)
+    height = (1 - mortar) * (0.6 + grain * 0.2) - chips * 0.4 + mortar * grain * 0.1
+    save("brick", col, height, 3.5, p)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--size", type=int, default=512)
     ap.add_argument("--preview")
+    ap.add_argument("--only", help="comma-separated surface names")
     a = ap.parse_args()
+    only = set(a.only.split(",")) if a.only else None
     for f in (concrete, plaster, metal, wood, dirt):
-        f(a.size, a.preview)
+        if only is None or f.__name__ in only: f(a.size, a.preview)
+    # Map surfaces cover large areas, so they get twice the resolution.
+    for f in (floortile, wallpanel, ceilingtile, brick):
+        if only is None or f.__name__ in only: f(a.size * 2, a.preview)

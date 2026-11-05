@@ -20,6 +20,8 @@ namespace Deadfall.World
             public Color Wall, Panel, Floor, FloorAlt, Light;
             public float LightScale;
             public bool Pipes;
+            /// <summary>Service tunnel: brick walls, bare concrete floor and ceiling instead of panels and tiles.</summary>
+            public bool Tunnel;
             /// <summary>Furniture placed first, in order (ids from <see cref="FurnitureSizes"/>, or "rack_row" / "barrels").</summary>
             public string[] Furniture;
         }
@@ -58,7 +60,7 @@ namespace Deadfall.World
                 // Harrow Line service tunnels: sooty brick-red walls, wet concrete, sodium lights.
                 th.Wall = new Color(0.33f, 0.24f, 0.21f); th.Panel = new Color(0.22f, 0.17f, 0.15f);
                 th.Floor = new Color(0.24f, 0.25f, 0.25f); th.FloorAlt = new Color(0.21f, 0.22f, 0.22f);
-                th.Light = new Color(1f, 0.78f, 0.5f); th.LightScale = 0.85f; th.Pipes = true;
+                th.Light = new Color(1f, 0.78f, 0.5f); th.LightScale = 0.85f; th.Pipes = true; th.Tunnel = true;
             }
             else if (t.Role == RoomRole.Corridor) { th.Pipes = true; th.Floor = new Color(0.27f, 0.28f, 0.3f); th.FloorAlt = new Color(0.25f, 0.26f, 0.28f); }
             else if (t.HasTag("platform"))
@@ -208,7 +210,8 @@ namespace Deadfall.World
             foreach (Cell c in room.Cells())
             {
                 Color tile = ((c.X + c.Z) & 1) == 0 ? th.Floor : th.FloorAlt;
-                Box(trim, "Tile", new Vector3((c.X + 0.5f) * _cs, 0.01f, (c.Z + 0.5f) * _cs), new Vector3(_cs - 0.08f, 0.02f, _cs - 0.08f), tile, collider: false);
+                Box(trim, "Tile", new Vector3((c.X + 0.5f) * _cs, 0.01f, (c.Z + 0.5f) * _cs), new Vector3(_cs - 0.08f, 0.02f, _cs - 0.08f), tile,
+                    collider: false, surface: th.Tunnel ? Surface.Concrete : Surface.FloorTile);
             }
             if (role == RoomRole.Secret)
             {
@@ -240,7 +243,6 @@ namespace Deadfall.World
             foreach (Vector3 lp in lights) Fixture(trim, room, lp, ceilingY);
             if (ceilingY > 3f && (th.Pipes || rng.NextFloat() < 0.4f)) Pipes(trim, room, fullRuns, ceilingY, rng);
             WallClutter(parent, runs, role, rng);
-            FloorClutter(trim, parent, layout, room, th, rng);
             Batch(trim);
         }
 
@@ -442,62 +444,6 @@ namespace Deadfall.World
                 go.transform.rotation = Quaternion.LookRotation(inward, Vector3.up);
                 go.isStatic = true;
                 placed++;
-            }
-        }
-
-        /// <summary>Grime, blood and papers on the floor (no colliders), and rubble in corners.</summary>
-        private void FloorClutter(Transform trim, Transform parent, Layout layout, PlacedRoom room, Theme th, DeterministicRandom rng)
-        {
-            var cells = new List<Cell>(room.Cells());
-            List<Vector3> doors = DoorPoints(layout, room);
-            int count = room.Template.Role == RoomRole.Corridor ? rng.Range(1, 3) : rng.Range(3, 7);
-            Color grime = th.FloorAlt * 0.72f;
-            grime.a = 1f;
-            for (int i = 0; i < count; i++)
-            {
-                Cell c = cells[rng.Range(0, cells.Count)];
-                var p = new Vector3((c.X + rng.Range(0.2f, 0.8f)) * _cs, 0f, (c.Z + rng.Range(0.2f, 0.8f)) * _cs);
-                float yaw = rng.Range(0f, 180f);
-                float kind = rng.NextFloat();
-                GameObject g;
-                if (kind < 0.45f)
-                    g = Box(trim, "Grime", p + Vector3.up * 0.022f, new Vector3(rng.Range(0.8f, 2.2f), 0.004f, rng.Range(0.6f, 1.6f)), grime, collider: false);
-                else if (kind < 0.7f)
-                    g = Box(trim, "Blood", p + Vector3.up * 0.023f, new Vector3(rng.Range(0.3f, 0.6f), 0.004f, rng.Range(1.0f, 2.2f)), new Color(0.27f, 0.05f, 0.05f), collider: false);
-                else
-                {
-                    for (int k = 0; k < 3; k++)
-                    {
-                        Vector3 o = new Vector3(rng.Range(-0.5f, 0.5f), 0.024f + k * 0.001f, rng.Range(-0.5f, 0.5f));
-                        GameObject paper = Box(trim, "Paper", p + o, new Vector3(0.22f, 0.003f, 0.3f), new Color(0.78f, 0.77f, 0.72f), collider: false);
-                        paper.transform.rotation = Quaternion.Euler(0f, rng.Range(0f, 360f), 0f);
-                    }
-                    continue;
-                }
-                g.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            }
-
-            // Rubble in a corner or two of bigger rooms (low, no collider; kept off doorways).
-            if (room.Template.Role == RoomRole.Corridor || room.Template.CellCount < 9) return;
-            int rubble = rng.Range(0, 3);
-            for (int tries = 0; tries < 12 && rubble > 0; tries++)
-            {
-                Cell c = cells[rng.Range(0, cells.Count)];
-                bool w = !room.Contains(c.Step(Dir.West)), e = !room.Contains(c.Step(Dir.East));
-                bool s = !room.Contains(c.Step(Dir.South)), n = !room.Contains(c.Step(Dir.North));
-                if (!((w || e) && (s || n))) continue;
-                float x = w ? c.X * _cs + 1.0f : (c.X + 1) * _cs - 1.0f;
-                float z = s ? c.Z * _cs + 1.0f : (c.Z + 1) * _cs - 1.0f;
-                var p = new Vector3(x, 0.02f, z);
-                bool clear = true;
-                foreach (Vector3 d in doors) if ((p - d).sqrMagnitude < 9f) clear = false;
-                if (!clear) continue;
-                GameObject go = ModelLibrary.Spawn("prop_rubble", parent);
-                if (go == null) return;
-                go.transform.position = p;
-                go.transform.rotation = Quaternion.Euler(0f, rng.Range(0f, 360f), 0f);
-                go.isStatic = true;
-                rubble--;
             }
         }
 
