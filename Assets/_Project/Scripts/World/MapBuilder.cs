@@ -87,6 +87,18 @@ namespace Deadfall.World
         private readonly Dictionary<Color, Material> _materials = new Dictionary<Color, Material>();
         private Transform _root;
         private float _cs, _h;
+        /// <summary>
+        /// Per room: floor points along its walls already taken by wall furniture and low wall clutter. Loot, switches
+        /// and crawl vents (<see cref="WallPoints"/>) keep clear of them.
+        /// </summary>
+        private readonly Dictionary<int, List<Vector3>> _wallUsed = new Dictionary<int, List<Vector3>>();
+        private const float WallUsedRadius = 2f;
+
+        private void UseWall(int room, Vector3 p)
+        {
+            if (!_wallUsed.TryGetValue(room, out List<Vector3> list)) _wallUsed[room] = list = new List<Vector3>(4);
+            list.Add(new Vector3(p.x, 0f, p.z));
+        }
 
         public static readonly Color[] SectorColors =
         {
@@ -100,6 +112,7 @@ namespace Deadfall.World
         {
             _cs = layout.Kit.CellSize;
             _h = layout.Kit.WallHeight;
+            _wallUsed.Clear();
             _root = new GameObject($"[Map {layout.Seed}]").transform;
             _root.SetParent(parent, false);
             var map = new BuiltMap { Layout = layout, Root = _root, CellSize = _cs };
@@ -314,9 +327,6 @@ namespace Deadfall.World
                     else Box(t, "Ceiling", new Vector3((x0 + x1) * 0.5f, ceilingY + 0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), new Color(0.4f, 0.4f, 0.4f), surface: Surface.CeilingTile);
                 }
             }
-            // A square of the sector colour in the middle helps reading the map while sectors are new.
-            Vector3 mid = map.RoomCenter(room.Index);
-            Box(t, "SectorMark", new Vector3(mid.x, 0.026f, mid.z), new Vector3(1.2f, 0.01f, 1.2f), SectorColor(room.Sector), collider: false);
 
             // Walls: one segment per boundary cell edge.
             Color wall = theme.Wall;
@@ -430,6 +440,41 @@ namespace Deadfall.World
                 return true;
             }
 
+            var cells = new List<Cell>(room.Cells());
+
+            // A spot with the piece's back against a solid stretch of this room's wall (size: x along the wall,
+            // z depth): away from doorways, breaches, other furniture and low wall clutter, and off the room's corners.
+            bool TryWallSpot(Vector3 size, out Vector3 spot, out float yaw)
+            {
+                spot = default;
+                yaw = 0f;
+                List<Vector3> used = _wallUsed.TryGetValue(room.Index, out List<Vector3> u) ? u : null;
+                for (int tries = 0; tries < 24; tries++)
+                {
+                    Cell c = cells[rng.Range(0, cells.Count)];
+                    var dir = (Dir)rng.Range(0, 4);
+                    if (room.Contains(c.Step(dir)) || OpeningAt(layout, room, c, dir) != Opening.None) continue;
+                    var outward = new Vector3(dir.Dx(), 0f, dir.Dz());
+                    var along = new Vector3(-outward.z, 0f, outward.x);
+                    float slack = _cs * 0.5f - size.x * 0.5f - 0.35f; // stays inside this cell's stretch of wall
+                    if (slack < 0f) continue;
+                    // Next to a corner (the neighbour along the wall isn't in the room), keep to the open side.
+                    // "along" is the wall direction a quarter turn anticlockwise from the facing.
+                    float lo = room.Contains(c.Step(dir.Rotate(1))) ? -slack : 0f;
+                    float hi = room.Contains(c.Step(dir.Rotate(-1))) ? slack : 0f;
+                    float offset = rng.Range(lo, hi);
+                    Vector3 p = EdgeMid(c, dir) - outward * (WallThickness + size.z * 0.5f + 0.14f) + along * offset;
+                    if (!Clear(p, 3.2f + size.x * 0.5f) || !Spaced(p, Mathf.Max(size.x, size.z) * 0.5f)) continue;
+                    bool free = true;
+                    if (used != null) foreach (Vector3 q in used) if ((p - q).sqrMagnitude < WallUsedRadius * WallUsedRadius) free = false;
+                    if (!free) continue;
+                    spot = p;
+                    yaw = Quaternion.LookRotation(-outward).eulerAngles.y;
+                    return true;
+                }
+                return false;
+            }
+
             // Columns: corners shared by four room cells, every other corner, some skipped at random.
             if (room.Template.CellCount >= 16 && role != RoomRole.Spawn)
             {
@@ -462,7 +507,6 @@ namespace Deadfall.World
                 }
             }
 
-            var cells = new List<Cell>(room.Cells());
             bool Interior(Cell c) => room.Contains(c.Step(Dir.North)) && room.Contains(c.Step(Dir.South)) && room.Contains(c.Step(Dir.East)) && room.Contains(c.Step(Dir.West));
 
             // Themed furniture first (about one piece per six interior cells), squared to the room.
@@ -473,6 +517,17 @@ namespace Deadfall.World
             {
                 string id = theme.Furniture[f];
                 float radius = FootprintRadius(id);
+                if (AgainstWall(id))
+                {
+                    // Racks and lockers stand with their backs to a solid wall, facing into the room.
+                    if (TryWallSpot(FurnitureSizes[id], out Vector3 wp, out float wyaw))
+                    {
+                        PlaceFurniture(parent, id, wp, wyaw);
+                        placedProps.Add(new Vector4(wp.x, 0f, wp.z, radius));
+                        UseWall(room.Index, wp);
+                    }
+                    continue;
+                }
                 for (int tries = 0; tries < 16; tries++)
                 {
                     Cell c = cells[rng.Range(0, cells.Count)];
@@ -496,8 +551,15 @@ namespace Deadfall.World
                 if (!Clear(p, 3f) || !Spaced(p, 1f)) continue;
                 bool tall = rng.NextFloat() < 0.3f;
                 var size = tall ? new Vector3(1.2f, 1.8f, 1.2f) : new Vector3(rng.Range(1.2f, 2.4f), rng.Range(0.8f, 1.1f), rng.Range(0.8f, 1.4f));
+                float propYaw = rng.Range(0, 4) * 90f + rng.Range(-8f, 8f);
+                if (tall)
+                {
+                    // Lockers go against a wall too.
+                    if (!TryWallSpot(size, out p, out propYaw)) continue;
+                    UseWall(room.Index, p);
+                }
                 GameObject prop = Box(parent, tall ? "Locker" : "Crate", p + Vector3.up * (size.y * 0.5f), size, new Color(0.4f, 0.37f, 0.32f));
-                prop.transform.rotation = Quaternion.Euler(0f, rng.Range(0, 4) * 90f + rng.Range(-8f, 8f), 0f);
+                prop.transform.rotation = Quaternion.Euler(0f, propYaw, 0f);
                 ModelLibrary.Skin(prop, tall ? "prop_locker" : "prop_crate");
                 placedProps.Add(new Vector4(p.x, 0f, p.z, Mathf.Max(size.x, size.z) * 0.5f));
                 i++;
@@ -537,6 +599,8 @@ namespace Deadfall.World
                 var p = new Vector3(px, 0f, pz);
                 bool clear = true;
                 foreach (Vector3 d in doors) if ((p - d).sqrMagnitude < 4f) clear = false;
+                if (_wallUsed.TryGetValue(room.Index, out List<Vector3> used))
+                    foreach (Vector3 q in used) if ((p - q).sqrMagnitude < WallUsedRadius * WallUsedRadius) clear = false;
                 if (clear) list.Add(p);
             }
             return list;

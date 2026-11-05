@@ -585,6 +585,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Each sector has one ammo station on a wall (olive cabinet, yellow bands, glowing strip). It doesn't block a doorway, closet or the Gun Dispenser.
 - [ ] Outside a run its prompt says to start a run. During a run, F with 200 or more credits takes 200 and shows "Ammo refilled", and every gun's reserve is full. With fewer credits it says "Not enough Field Credits". In co-op a client gets the same.
 
+### 3.45 One minimap, wall furniture, no sector squares
+
+- [ ] Only one minimap, at the top left under the location card: the map, its frame and the markers all in the same square. Nothing at the bottom left. It turns with you (forward is up) and M still hides it.
+- [ ] No coloured squares in the middle of room floors.
+- [ ] Server racks (singles and rows of three) and lockers stand with their backs to a wall, facing into the room. None sit in front of a doorway, breach, switch, crawl vent, loot spot, fuse box or extinguisher.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

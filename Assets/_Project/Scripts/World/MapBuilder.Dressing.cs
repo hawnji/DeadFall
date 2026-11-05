@@ -242,7 +242,7 @@ namespace Deadfall.World
             if (ceilingY > 3f) Beams(trim, room, ceilingY);
             foreach (Vector3 lp in lights) Fixture(trim, room, lp, ceilingY);
             if (ceilingY > 3f && (th.Pipes || rng.NextFloat() < 0.4f)) Pipes(trim, room, fullRuns, ceilingY, rng);
-            WallClutter(parent, runs, role, rng);
+            WallClutter(parent, runs, role, rng, room.Index);
             Batch(trim);
         }
 
@@ -422,7 +422,7 @@ namespace Deadfall.World
         }
 
         /// <summary>Fuse boxes, vents and extinguishers on the wall, high enough to clear switches and loot.</summary>
-        private void WallClutter(Transform parent, List<WallRun> runs, RoomRole role, DeterministicRandom rng)
+        private void WallClutter(Transform parent, List<WallRun> runs, RoomRole role, DeterministicRandom rng, int room)
         {
             int wanted = role == RoomRole.Corridor ? 1 : 3;
             int placed = 0;
@@ -443,6 +443,7 @@ namespace Deadfall.World
                 go.transform.position = p;
                 go.transform.rotation = Quaternion.LookRotation(inward, Vector3.up);
                 go.isStatic = true;
+                if (y < 2.5f) UseWall(room, p); // low enough to clash with a rack or locker
                 placed++;
             }
         }
@@ -488,6 +489,9 @@ namespace Deadfall.World
             box.transform.rotation = rot;
             ModelLibrary.Skin(box, id);
         }
+
+        /// <summary>Furniture that stands against a wall instead of out in the room.</summary>
+        private static bool AgainstWall(string id) => id == "prop_server_rack" || id == "rack_row" || id == "prop_locker";
 
         /// <summary>Floor footprint radius used to keep furniture apart.</summary>
         private static float FootprintRadius(string id)

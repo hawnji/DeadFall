@@ -10,9 +10,10 @@ namespace Deadfall.Game
 {
     /// <summary>
     /// A square minimap under the location card that turns with the player (forward is always up). The layout is
-    /// painted once into a texture (rooms tinted by sector, sealed areas dark, walls outlined) and repainted when
-    /// sectors or side doors open; each frame a quad samples it with rotated texture coordinates, so turning costs
-    /// nothing. Markers on top: closed doors, objectives, the Gun Dispenser, grid generators, Supply Caches and the
+    /// painted once into a pixel buffer (rooms tinted by sector, sealed areas dark, walls outlined) and repainted when
+    /// sectors or side doors open; each frame the visible square is resampled, rotated, into a small view texture
+    /// that is drawn with plain IMGUI. (It used to be a GL quad, which some graphics backends drew upside down at the
+    /// bottom left of the screen, away from its frame and markers.) Markers on top: closed doors, objectives, the Gun Dispenser, grid generators, Supply Caches and the
     /// squad. M hides or shows it.
     /// </summary>
     public sealed class Minimap : MonoBehaviour
@@ -26,8 +27,13 @@ namespace Deadfall.Game
         private static readonly Color Sealed = new Color(0.11f, 0.12f, 0.13f, 1f);
         private static readonly Color Wall = new Color(0.75f, 0.8f, 0.85f, 1f);
 
-        private Texture2D _texture;
-        private Material _material;
+        /// <summary>Resolution of the view texture drawn in the frame.</summary>
+        private const int ViewPixels = 192;
+
+        private Color32[] _px;
+        private int _pxW, _pxH;
+        private Texture2D _view;
+        private Color32[] _viewPx;
         private ulong _paintedSeed;
         private int _paintedState = -1;
         private int _minX, _minZ, _cellsX, _cellsZ;
@@ -45,8 +51,7 @@ namespace Deadfall.Game
         private void OnDestroy()
         {
             _toggle?.Disable();
-            if (_texture != null) Destroy(_texture);
-            if (_material != null) Destroy(_material);
+            if (_view != null) Destroy(_view);
         }
 
         private void Update()
@@ -78,11 +83,6 @@ namespace Deadfall.Game
             _cellsX = maxX - _minX + 2;
             _cellsZ = maxZ - _minZ + 2;
             int w = _cellsX * CellPixels, h = _cellsZ * CellPixels;
-            if (_texture == null || _texture.width != w || _texture.height != h)
-            {
-                if (_texture != null) Destroy(_texture);
-                _texture = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "Minimap" };
-            }
 
             // Doorways and archways: edges between connected socket cells stay open.
             var openings = new HashSet<long>();
@@ -126,8 +126,38 @@ namespace Deadfall.Game
                     }
                 }
             }
-            _texture.SetPixels32(px);
-            _texture.Apply(false);
+            _px = px;
+            _pxW = w;
+            _pxH = h;
+        }
+
+        /// <summary>Resamples the square around the player, turned so forward is up, into the view texture.</summary>
+        private void UpdateView(Vector3 pos, Vector3 fwd, Vector3 right)
+        {
+            if (_view == null)
+            {
+                _view = new Texture2D(ViewPixels, ViewPixels, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "MinimapView" };
+                _viewPx = new Color32[ViewPixels * ViewPixels];
+            }
+            Color32 bg = Background;
+            float pxPerMeter = CellPixels / _cellSize;
+            float ox = pos.x * pxPerMeter - _minX * CellPixels, oz = pos.z * pxPerMeter - _minZ * CellPixels;
+            float step = 2f * RadiusMeters / ViewPixels * pxPerMeter;
+            // Texture rows go bottom to top: row 0 is the far edge behind the player (dy = -1).
+            for (int y = 0; y < ViewPixels; y++)
+            {
+                float dy = (y + 0.5f) - ViewPixels * 0.5f;
+                for (int x = 0; x < ViewPixels; x++)
+                {
+                    float dx = (x + 0.5f) - ViewPixels * 0.5f;
+                    float sx = ox + (right.x * dx + fwd.x * dy) * step;
+                    float sz = oz + (right.z * dx + fwd.z * dy) * step;
+                    int ix = (int)sx, iz = (int)sz;
+                    _viewPx[y * ViewPixels + x] = sx < 0f || sz < 0f || ix >= _pxW || iz >= _pxH ? bg : _px[iz * _pxW + ix];
+                }
+            }
+            _view.SetPixels32(_viewPx);
+            _view.Apply(false);
         }
 
         private static long EdgeKey(Cell a, Cell b)
@@ -145,19 +175,13 @@ namespace Deadfall.Game
             PlayerIdentity me = PlayerIdentity.Local;
             Camera cam = Camera.main;
             if (s == null || !s.HasMap || me == null || cam == null) return;
-            if (_paintedSeed != s.Seed || _paintedState != OpenState(s) || _texture == null)
+            if (_paintedSeed != s.Seed || _paintedState != OpenState(s) || _px == null)
             {
                 _paintedSeed = s.Seed;
                 _paintedState = OpenState(s);
                 Paint(s);
             }
-            if (_texture == null) return;
-            if (_material == null)
-            {
-                Shader shader = Shader.Find("UI/Default") ?? Shader.Find("Sprites/Default");
-                if (shader == null) return;
-                _material = new Material(shader) { name = "Minimap" };
-            }
+            if (_px == null) return;
 
             Vector3 pos = me.transform.position;
             Vector3 fwd = cam.transform.forward;
@@ -166,29 +190,11 @@ namespace Deadfall.Game
             fwd.Normalize();
             var right = new Vector3(fwd.z, 0f, -fwd.x);
 
+            UpdateView(pos, fwd, right);
             HudKit.Begin();
             var frame = new Rect(Left, Top, Size, Size);
             HudKit.Panel(new Rect(frame.x - 4f, frame.y - 4f, frame.width + 8f, frame.height + 8f));
-            HudKit.End();
-
-            // The map quad, in screen pixels (GL origin bottom left), with rotated texture coordinates.
-            float scale = HudKit.Scale;
-            float x0 = frame.x * scale, x1 = frame.xMax * scale;
-            float y1 = Screen.height - frame.y * scale, y0 = Screen.height - frame.yMax * scale;
-            _material.mainTexture = _texture;
-            GL.PushMatrix();
-            GL.LoadPixelMatrix();
-            _material.SetPass(0);
-            GL.Begin(GL.QUADS);
-            GL.Color(Color.white);
-            Corner(pos, fwd, right, -1f, -1f); GL.Vertex3(x0, y0, 0f);
-            Corner(pos, fwd, right, -1f, 1f); GL.Vertex3(x0, y1, 0f);
-            Corner(pos, fwd, right, 1f, 1f); GL.Vertex3(x1, y1, 0f);
-            Corner(pos, fwd, right, 1f, -1f); GL.Vertex3(x1, y0, 0f);
-            GL.End();
-            GL.PopMatrix();
-
-            HudKit.Begin();
+            GUI.DrawTexture(frame, _view, ScaleMode.StretchToFill, false);
             Vector2 centre = frame.center;
             // Closed doors.
             foreach (SectorDoor d in s.Map.Doors)
@@ -214,15 +220,6 @@ namespace Deadfall.Game
             HudKit.Label(new Rect(centre.x - 10f, centre.y - 12f, 20f, 22f), "▲", 16, HudKit.Accent, TextAnchor.MiddleCenter);
             HudKit.Label(new Rect(frame.x + 6f, frame.yMax - 18f, frame.width - 12f, 16f), "M  minimap", 10, HudKit.TextDim, TextAnchor.MiddleRight);
             HudKit.End();
-        }
-
-        /// <summary>Texture coordinate for a corner of the frame: dx right, dy up, in -1..1.</summary>
-        private void Corner(Vector3 pos, Vector3 fwd, Vector3 right, float dx, float dy)
-        {
-            Vector3 w = pos + right * (dx * RadiusMeters) + fwd * (dy * RadiusMeters);
-            float u = (w.x / _cellSize - _minX) / _cellsX;
-            float v = (w.z / _cellSize - _minZ) / _cellsZ;
-            GL.TexCoord2(u, v);
         }
 
         /// <summary>A dot for a world point; <paramref name="edge"/> pins it to the frame edge when it is out of range.</summary>
