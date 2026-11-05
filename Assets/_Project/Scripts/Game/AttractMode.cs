@@ -37,17 +37,36 @@ namespace Deadfall.Game
         private System.Random _rng;
         private NavMeshPath _navPath;
 
-        public void Bind(MapSession map) => _map = map;
+        private System.Func<ulong, bool> _enterMap;
+        private System.Action _exitMap;
+        private GameObject _player;
+        private readonly List<Renderer> _hidden = new List<Renderer>(16);
+
+        /// <param name="enterMap">Swaps the base world for the map of a seed (the same path a real game takes, so the
+        /// base's own NavMesh and props are gone and the map's lighting applies).</param>
+        /// <param name="exitMap">Back to base with the player at the FOB.</param>
+        /// <param name="player">The local player, hidden while the attract map runs.</param>
+        public void Bind(MapSession map, System.Func<ulong, bool> enterMap, System.Action exitMap, GameObject player)
+        {
+            _map = map;
+            _enterMap = enterMap;
+            _exitMap = exitMap;
+            _player = player;
+        }
 
         public bool Begin()
         {
             if (_map == null || _running || _map.HasMap) return false;
             _rng = new System.Random(System.Environment.TickCount);
             _seed = ((ulong)(uint)_rng.Next() << 32) | (uint)_rng.Next();
-            BuiltMap built;
-            try { built = _map.Build(_seed); }
+            try
+            {
+                if (_enterMap != null ? !_enterMap(_seed) : _map.Build(_seed) == null) return false;
+            }
             catch (System.Exception e) { Debug.LogException(e); return false; }
+            BuiltMap built = _map.Map;
             if (built == null) return false;
+            HidePlayer(true);
             _map.OpenAllSectors();
             _navPath = new NavMeshPath();
 
@@ -75,8 +94,28 @@ namespace Deadfall.Game
             _lure = null;
             EnemyManager em = EnemyManager.Current;
             if (em != null) em.DespawnAll();
+            HidePlayer(false);
             // Leave a map that arrived from a host alone (joining a game replaces ours).
-            if (_map != null && _map.HasMap && _map.Seed == _seed) _map.Clear();
+            if (_map != null && _map.HasMap && _map.Seed == _seed)
+            {
+                if (_exitMap != null) _exitMap();
+                else _map.Clear();
+            }
+        }
+
+        /// <summary>The player stands in the attract map (frozen behind the title); keep their body out of shot.</summary>
+        private void HidePlayer(bool hide)
+        {
+            if (hide)
+            {
+                _hidden.Clear();
+                if (_player == null) return;
+                foreach (Renderer r in _player.GetComponentsInChildren<Renderer>())
+                    if (r.enabled) { r.enabled = false; _hidden.Add(r); }
+                return;
+            }
+            foreach (Renderer r in _hidden) if (r != null) r.enabled = true;
+            _hidden.Clear();
         }
 
         private void OnDestroy() => End();
@@ -185,8 +224,34 @@ namespace Deadfall.Game
                 desired = eye + d.normalized * Mathf.Max(0.8f, hit.distance - 0.2f);
             Vector3 pos = Vector3.SmoothDamp(camera.transform.position, desired, ref _camVel, 0.6f, 20f, Mathf.Max(0.0001f, dt));
             if ((camera.transform.position - desired).sqrMagnitude > 40f * 40f) pos = desired; // first frame
+            pos = KeepInside(eye, pos);
             Quaternion look = Quaternion.LookRotation(focus - pos);
             camera.transform.SetPositionAndRotation(pos, Quaternion.Slerp(camera.transform.rotation, look, 1f - Mathf.Exp(-dt * 4f)));
+        }
+
+        /// <summary>
+        /// Keeps the camera in the play area: under the ceiling, with a clear line back to the lure (smoothing can drag it
+        /// round a corner and through a wall), and inside a room cell rather than out in the void around the map.
+        /// </summary>
+        private Vector3 KeepInside(Vector3 eye, Vector3 pos)
+        {
+            float floor = _lure.transform.position.y;
+            float ceiling = floor + Mathf.Max(2f, (_map.Kit != null ? _map.Kit.WallHeight : 4f) - 0.6f);
+            pos.y = Mathf.Clamp(pos.y, floor + 1.2f, ceiling);
+            Vector3 d = pos - eye;
+            float len = d.magnitude;
+            if (len > 0.01f && Physics.SphereCast(eye, 0.25f, d / len, out RaycastHit hit, len, Mask, QueryTriggerInteraction.Ignore))
+            {
+                pos = eye + d / len * Mathf.Max(0.5f, hit.distance - 0.15f);
+                _camVel = Vector3.zero;
+            }
+            BuiltMap m = _map.Map;
+            for (int i = 0; i < 8 && m.RoomAt(pos) < 0; i++)
+            {
+                pos = Vector3.Lerp(pos, eye, 0.35f);
+                _camVel = Vector3.zero;
+            }
+            return pos;
         }
 
         /// <summary>The invisible thing the horde chases: a target every enemy prefers over the (far away) player.</summary>
