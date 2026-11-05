@@ -118,7 +118,10 @@ namespace Deadfall.World
         }
 
         /// <summary>A little slower than the host's repair cooldown, so held repairs never get refused.</summary>
-        public float RepeatSeconds => 0.7f;
+        public float RepeatSeconds => 0.7f / Mathf.Max(0.5f, LocalRepairSpeed != null ? LocalRepairSpeed() : 1f);
+
+        /// <summary>Repair speed of the local player (Engineer Handy: 1.5). Set by the map session.</summary>
+        public static Func<float> LocalRepairSpeed;
 
         /// <summary>Room side, in front of the opening: up to <see cref="RepairReach"/> m out and a little past each post.</summary>
         public bool InReach(Vector3 feet, out float distance)

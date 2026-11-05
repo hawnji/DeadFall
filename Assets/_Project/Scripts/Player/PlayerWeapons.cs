@@ -41,7 +41,10 @@ namespace Deadfall.Player
             public float DamageMultiplier = 1f;
             public WeaponStateMachine Firearm;
             public SpreadModel Spread;
+            /// <summary>Magazine size before the explosive bonus (Bandolier).</summary>
+            public int BaseMagazine;
             public bool IsMelee => Definition.Kind == WeaponKind.Melee;
+            public bool IsExplosive => Stats != null && Stats.ExplosionRadius > 0f;
         }
 
         /// <summary>A weapon and its modifications, for loadouts and pickups.</summary>
@@ -147,7 +150,28 @@ namespace Deadfall.Player
         {
             float mult = ReserveMultiplier;
             foreach (Slot s in _slots)
-                s.Firearm?.SetMaxReserve(UnityEngine.Mathf.RoundToInt(s.Stats.MaxReserve * mult), refill);
+                s.Firearm?.SetMaxReserve(UnityEngine.Mathf.RoundToInt(s.Stats.MaxReserve * mult) + (s.IsExplosive ? _explosiveBonus * ExplosiveReservePerBonus : 0), refill);
+        }
+
+        private int _explosiveBonus;
+        /// <summary>Reserve rounds an explosive weapon gains for each extra magazine round (Bandolier).</summary>
+        public const int ExplosiveReservePerBonus = 3;
+
+        /// <summary>Extra rounds per magazine for explosive weapons (Demolitionist Bandolier); reserve grows 3x as much.</summary>
+        public int ExplosiveBonus => _explosiveBonus;
+
+        /// <summary>Sets the explosive-weapon bonus (0 = none). <paramref name="refill"/> tops up those weapons.</summary>
+        public void SetExplosiveBonus(int extra, bool refill)
+        {
+            _explosiveBonus = Mathf.Max(0, extra);
+            foreach (Slot s in _slots) ApplyMagazineBonus(s);
+            ApplyReserveCaps(refill);
+        }
+
+        private void ApplyMagazineBonus(Slot s)
+        {
+            if (s.Stats == null) return;
+            s.Stats.MagazineSize = s.BaseMagazine + (s.IsExplosive ? _explosiveBonus : 0);
         }
 
         /// <summary>More handling modifiers on top of <see cref="HandlingSource"/> (Field Mods).</summary>
@@ -213,6 +237,8 @@ namespace Deadfall.Player
             if (def.Kind == WeaponKind.Firearm)
             {
                 slot.Stats = WeaponModder.Apply(def.Firearm, slot.Mods, out slot.DamageMultiplier);
+                slot.BaseMagazine = slot.Stats.MagazineSize;
+                ApplyMagazineBonus(slot);
                 slot.Firearm = WeaponStateMachine.CreateFull(slot.Stats);
                 slot.Spread = new SpreadModel(slot.Stats);
             }

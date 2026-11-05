@@ -523,6 +523,16 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Starting a new run (all boards reset to full) does not play the sound.
 - [ ] Boards breaking still play the break sound, not the nail sound.
 
+### 3.37 Remaining passives and doctrines
+
+- [ ] Class HUD: no passive shows "(soon)" and no doctrine shows "*" for any class.
+- [ ] Engineer Salvager: Engineer kills give about 1.5x the Scrap of another class's kills.
+- [ ] Engineer Handy: holding F on a barricade puts boards up visibly faster than other classes (about 0.47 s vs 0.7 s per board), and none get refused.
+- [ ] Demolitionist Bandolier: the Mule Launcher shows an 8-round magazine and 24 reserve (6 / 18 for other classes). Swapping class back removes the bonus.
+- [ ] Covering Fire (Gunner + Tank in a co-op squad): enemies the Gunner shot in the last 4 s hit the Tank about 30% softer.
+- [ ] Overwatch (Gunner + Engineer): enemies a sentry hit in the last 5 s take about 20% more damage from the Gunner.
+- [ ] Clients: both doctrines work when the Gunner, Tank or Engineer is a client (host applies them).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

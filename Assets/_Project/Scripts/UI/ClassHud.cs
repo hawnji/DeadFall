@@ -83,10 +83,7 @@ namespace Deadfall.UI
             {
                 string d = string.Empty;
                 foreach (string id in _class.ActiveDoctrines)
-                {
-                    bool live = id == PrototypeClasses.Vanguard || id == PrototypeClasses.CombinedArms || id == PrototypeClasses.DemolitionCrew;
-                    d += (d.Length > 0 ? "  ·  " : string.Empty) + PrototypeClasses.DoctrineName(id) + (live ? string.Empty : "*");
-                }
+                    d += (d.Length > 0 ? "  ·  " : string.Empty) + PrototypeClasses.DoctrineName(id);
                 HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 24f), d, 12, HudKit.Accent, TextAnchor.MiddleRight, head: true);
             }
             HudKit.End();

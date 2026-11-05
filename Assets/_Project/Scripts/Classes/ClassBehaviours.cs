@@ -88,6 +88,9 @@ namespace Deadfall.Classes
                 case "combo_cleave": return new ComboCleavePassive();
                 case "melee_knockback": return new ShovePassive();
                 case "self_blast_reduction": return new HostAppliedPassive();
+                case "scrap_gain": return new HostAppliedPassive();   // Engineering: ScrapRules.EngineerBonus
+                case "repair_speed": return new HostAppliedPassive(); // Engineering: RepairRules + barricade speed
+                case "grenade_capacity": return new BandolierPassive();
                 default: return new PendingPassive();
             }
         }
@@ -341,7 +344,25 @@ namespace Deadfall.Classes
             h.MeleeKnockback = Mathf.Max(h.MeleeKnockback, Def.Magnitude);
     }
 
-    /// <summary>A passive the host applies from the class roster (Blast Padding); nothing to do on the player.</summary>
+    /// <summary>Demolitionist. Magnitude: extra rounds per magazine for explosive weapons (reserve grows 3x as much).</summary>
+    public sealed class BandolierPassive : PassiveBehaviour
+    {
+        public override void Attach()
+        {
+            Ctx.Weapons.LoadoutBuilt += Apply;
+            Apply();
+        }
+
+        public override void Detach()
+        {
+            Ctx.Weapons.LoadoutBuilt -= Apply;
+            Ctx.Weapons.SetExplosiveBonus(0, false);
+        }
+
+        private void Apply() => Ctx.Weapons.SetExplosiveBonus(Mathf.RoundToInt(Def.Magnitude), true);
+    }
+
+    /// <summary>A passive the host applies from the class roster (Blast Padding, Salvager, Handy); nothing to do on the player.</summary>
     public sealed class HostAppliedPassive : PassiveBehaviour
     {
     }
