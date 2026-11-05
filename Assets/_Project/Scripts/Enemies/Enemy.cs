@@ -175,6 +175,7 @@ namespace Deadfall.Enemies
             enemy._agent = agent;
 
             enemy.BuildVisual();
+            root.AddComponent<EnemyFootsteps>();
             return enemy;
         }
 

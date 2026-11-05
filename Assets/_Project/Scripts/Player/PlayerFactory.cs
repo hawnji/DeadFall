@@ -48,6 +48,7 @@ namespace Deadfall.Player
             root.AddComponent<PlayerMotor>();
             root.AddComponent<Footsteps>();
             root.AddComponent<PlayerHealth>();
+            root.AddComponent<LowHealthHeartbeat>();
             var weapons = root.AddComponent<PlayerWeapons>();
             weapons.SetLoadout(loadout);
             root.AddComponent<PlayerCursorLock>();
