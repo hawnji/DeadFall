@@ -5,13 +5,14 @@ using UnityEngine;
 namespace Deadfall.Game
 {
     /// <summary>
-    /// Music while on a generated map: the level tracks play in turn ("Endless Infestation", then part 2, then
-    /// back), crossfading near the end of each. Stops when leaving the map; never plays over the title screen.
-    /// Follows the Music slider like the title theme.
+    /// Music outside the title screen. On a generated map the level tracks play in turn ("Endless Infestation",
+    /// then part 2, then back), crossfading near the end of each. In the hub (FOB Halcyon and the range) "Bunker
+    /// Pulse" loops. Switching between the two crossfades; never plays over the title screen. Follows the Music slider.
     /// </summary>
     public sealed class LevelMusic : MonoBehaviour
     {
         public static readonly string[] Tracks = { "Music/EndlessInfestation", "Music/EndlessInfestation2" };
+        public const string HubTrack = "Music/BunkerPulse";
         private const float Crossfade = 3f;
         private const float StartFade = 2.5f;
         private const float StopFade = 2f;
@@ -20,7 +21,10 @@ namespace Deadfall.Game
         public static Func<bool> Suppressed;
 
         private readonly AudioClip[] _clips = new AudioClip[Tracks.Length];
+        private AudioClip _hubClip;
         private bool _playing;
+        /// <summary>Which set is playing: true for the map tracks, false for the hub loop.</summary>
+        private bool _mapMode;
         private int _track = -1;
         private float _switchAt;
 
@@ -33,23 +37,38 @@ namespace Deadfall.Game
                 _playing = false; // the title owns the music; start fresh when it closes
                 return;
             }
-            if (!OnMap)
-            {
-                if (_playing)
-                {
-                    _playing = false;
-                    GameAudio.StopMusic(StopFade);
-                }
-                return;
-            }
             float now = Time.unscaledTime;
-            if (!_playing)
+            bool onMap = OnMap;
+            if (!_playing || onMap != _mapMode)
             {
+                bool switching = _playing;
                 _playing = true;
-                PlayNext(StartFade, now);
+                _mapMode = onMap;
+                if (onMap) PlayNext(switching ? Crossfade : StartFade, now);
+                else PlayHub(switching ? Crossfade : StartFade, now);
                 return;
             }
-            if (now >= _switchAt) PlayNext(Crossfade, now);
+            if (now >= _switchAt)
+            {
+                if (_mapMode) PlayNext(Crossfade, now);
+                else PlayHub(Crossfade, now);
+            }
+        }
+
+        /// <summary>The hub loop: restarts with a crossfade near the end.</summary>
+        private void PlayHub(float fade, float now)
+        {
+            if (_hubClip == null) _hubClip = Resources.Load<AudioClip>(HubTrack);
+            if (_hubClip == null)
+            {
+                GameAudio.StopMusic(StopFade);
+                GameLog.Warn("Music", $"Hub music: {HubTrack} not found in Resources.");
+                _switchAt = now + 30f;
+                return;
+            }
+            GameAudio.PlayMusic(_hubClip, fade);
+            GameLog.Info("Music", $"Hub music: {HubTrack} ({_hubClip.length:0} s)");
+            _switchAt = now + Mathf.Max(10f, _hubClip.length - Crossfade);
         }
 
         private void PlayNext(float fade, float now)
