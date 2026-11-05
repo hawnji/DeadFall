@@ -33,6 +33,21 @@ namespace Deadfall.Game
 
         public static SquadLife Current { get; private set; }
 
+        /// <summary>Host/offline: a teammate revive went through (reviver, target). Feeds the run stats.</summary>
+        public static event System.Action<ulong, ulong> Revived;
+
+        /// <summary>Most self-revive kits the squad can hold (bought syringes stop here).</summary>
+        public const int MaxKits = 6;
+
+        /// <summary>Host/offline: adds one kit to the squad's pool (a syringe bought at an ammo station).</summary>
+        public bool HostAddKit()
+        {
+            if (!IsAuthority || Kits >= MaxKits) return false;
+            Kits++;
+            SendSquad(ulong.MaxValue);
+            return true;
+        }
+
         /// <summary>What the host last saw of each player (for rejoin snapshots and toasts).</summary>
         public struct MemberRecord
         {
@@ -358,6 +373,7 @@ namespace Deadfall.Game
                 GameLog.Warn("Squad", $"Rejected revive {reviverId} → {targetId} ({reviver.Life} → {target.Life}, {d:0.0} m)");
                 return;
             }
+            Revived?.Invoke(reviverId, targetId);
             if (target.IsLocalMember)
             {
                 _revivingMe.Clear();

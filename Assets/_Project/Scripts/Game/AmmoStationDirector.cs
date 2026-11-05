@@ -25,8 +25,14 @@ namespace Deadfall.Game
         public const int Price = LootRules.AmmoRefillPrice;
         private const float UseRange = 4f;
 
-        /// <summary>A wall cabinet 0.84 m wide and 0.3 m deep (plus the wall plate), hung 0.85 to 2.2 m up.</summary>
-        private static readonly WallPlacement.Shape StationShape = new WallPlacement.Shape(0.55f, 0.2f, 0.85f, 2.2f);
+        /// <summary>Self-revive syringe from the dispenser beside the cabinet: one more kit for the squad's pool.</summary>
+        public const int SyringePrice = 1500;
+
+        /// <summary>
+        /// A wall cabinet 0.84 m wide and 0.3 m deep (plus the wall plate) with the syringe dispenser on its right,
+        /// hung 0.85 to 2.2 m up.
+        /// </summary>
+        private static readonly WallPlacement.Shape StationShape = new WallPlacement.Shape(0.8f, 0.2f, 0.85f, 2.2f);
 
         private SessionService _session;
         private BuiltMap _builtFor;
@@ -111,11 +117,27 @@ namespace Deadfall.Game
             }
         }
 
+        /// <summary>The local player pressed F on station <paramref name="index"/>'s syringe dispenser.</summary>
+        public void RequestSyringe(int index)
+        {
+            if (IsAuthority)
+            {
+                HandleSyringe(_session != null ? _session.LocalClientId : 0UL, index);
+                return;
+            }
+            using (var w = new FastBufferWriter(4, Allocator.Temp))
+            {
+                w.WriteValueSafe((byte)(index | 0x80));
+                _session.SendToServer(MsgUse, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
         private void OnUse(ulong sender, FastBufferReader r)
         {
             if (!_session.IsHost) return;
             r.ReadValueSafe(out byte index);
-            HandleUse(sender, index);
+            if ((index & 0x80) != 0) HandleSyringe(sender, index & 0x7F);
+            else HandleUse(sender, index);
         }
 
         private void HandleUse(ulong who, int index)
@@ -134,6 +156,30 @@ namespace Deadfall.Game
             }
             economy.GiveAmmo(who);
             GameAudio.Play(SfxId.Reload, at + Vector3.up * 1.4f);
+        }
+
+        private void HandleSyringe(ulong who, int index)
+        {
+            if (index < 0 || index >= _stations.Count || _stations[index] == null) return;
+            WaveManager waves = WaveManager.Current;
+            RunEconomy economy = RunEconomy.Current;
+            SquadLife squad = SquadLife.Current;
+            if (waves == null || !waves.IsRunning || economy == null || squad == null) return;
+            Vector3 at = _stations[index].transform.position;
+            PlayerIdentity p = PlayerIdentity.Find(who);
+            if (p != null && (p.transform.position - at).sqrMagnitude > UseRange * UseRange) return;
+            if (squad.Kits >= SquadLife.MaxKits)
+            {
+                economy.Notify(who, $"The squad already carries {SquadLife.MaxKits} self-revive kits");
+                return;
+            }
+            if (!waves.TrySpendCredits(who, SyringePrice))
+            {
+                economy.Notify(who, "Not enough Field Credits");
+                return;
+            }
+            squad.HostAddKit();
+            GameAudio.Play(SfxId.Pickup, at + Vector3.up * 1.4f);
         }
     }
 }

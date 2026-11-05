@@ -625,6 +625,16 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] A power-up from a zombie killed inside a breach closet lands in the room just in front of the boards.
 - [ ] Storage shelves and desks stand against walls, clear of doorways, closets, switches and loot.
 
+### 3.50 Syringes, pings, squad stats and corner spreading
+
+- [ ] Each ammo station has a white syringe box on its right. F buys one self-revive kit for the squad (1,500), up to 6 kits ("SQUAD · N KITS" goes up). At 6 it refuses.
+- [ ] Middle mouse (rebindable, D-pad up on a controller) pings what you look at: a red ENEMY marker that follows that infected, a yellow marker naming an item (perk machine, ammo station, door...), or a blue HERE marker on a surface. Markers show distance, stick to the screen edge when off screen and fade after a few seconds. Max 3 per player.
+- [ ] Co-op: your teammate sees your pings labelled "P<id>", and you see theirs.
+- [ ] Middle mouse no longer melees (V still does).
+- [ ] Hold Tab during a run: SQUAD STATS with surge, run time and per-player kills, headshots, revives, downs, credits spent and current credits. With 2+ players the top scorer has ★ MVP.
+- [ ] The end-of-run screen has a Squad table with the same stats and the MVP in its header.
+- [ ] Infected coming around corners no longer all file along the inside edge: most swing wide by different amounts, and they move at slightly different paces, so a group arrives spread out. Bosses and barricade-breakers path as before.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

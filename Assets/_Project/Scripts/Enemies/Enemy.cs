@@ -15,6 +15,8 @@ namespace Deadfall.Enemies
         public EnemyDefinition Definition;
         public GameObject Killer;
         public Vector3 Position;
+        /// <summary>The killing blow hit the head (end-of-run headshot stats).</summary>
+        public bool Headshot;
     }
 
     /// <summary>
@@ -100,6 +102,15 @@ namespace Deadfall.Enemies
         private Vector3 _chargeDirection;
         private bool _chargeLanded;
         private float _weavePhase;
+        /// <summary>Per-enemy pace (0.92 to 1.08) so a group strings out instead of marching in step.</summary>
+        private float _paceJitter = 1f;
+        // Corner spreading: instead of every enemy hugging the inside of a turn in single file, most swing out to a
+        // point on the outside of the next corner first (a different distance each time), then path on from there.
+        private bool _detouring;
+        private Vector3 _detour;
+        private Vector3 _lastDetourCorner = new Vector3(float.MaxValue, 0f, 0f);
+        private double _detourUntil;
+        private bool _checkCorners;
         private float _health;
         private float _maxHealth = 1f;
         private Vector3 _knockDirection;
@@ -165,6 +176,7 @@ namespace Deadfall.Enemies
             enemy._stats = def.Stats.Clone();
             enemy._brain = new EnemyBrain(enemy._stats);
             enemy._weavePhase = Random.value * Mathf.PI * 2f;
+            enemy._paceJitter = Random.Range(0.92f, 1.08f);
 
             NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
             agent.radius = def.Radius;
@@ -612,7 +624,7 @@ namespace Deadfall.Enemies
                     _knockRemaining = Mathf.Min(6f, info.Knockback * Mathf.Clamp(0.35f / Mathf.Max(0.1f, _definition.Radius), 0.3f, 1.2f));
                 }
             }
-            if (_health <= 0f) Die(info.Source, now);
+            if (_health <= 0f) Die(info.Source, now, info.Zone == HitZone.Head);
             return applied;
         }
 
@@ -642,7 +654,7 @@ namespace Deadfall.Enemies
             Die(killer, Time.timeAsDouble);
         }
 
-        private void Die(GameObject killer, double now)
+        private void Die(GameObject killer, double now, bool headshot = false)
         {
             _health = 0f;
             _diedAt = now;
@@ -653,7 +665,7 @@ namespace Deadfall.Enemies
                 if (_agent.isOnNavMesh) _agent.isStopped = true;
                 _agent.enabled = false; // stop avoidance so the living walk through
             }
-            EventBus<EnemyDied>.Publish(new EnemyDied { Enemy = this, Definition = _definition, Killer = killer, Position = transform.position });
+            EventBus<EnemyDied>.Publish(new EnemyDied { Enemy = this, Definition = _definition, Killer = killer, Position = transform.position, Headshot = headshot });
             // A Pyre bursts when killed too; chain kills are credited to whoever killed it. Deferred to its next tick so a
             // blast that kills another Pyre never runs inside the first blast's overlap loop. Culls (no killer) don't burst.
             if (_stats.CanExplode && _stats.ExplodesOnDeath && killer != null && !_exploded)
@@ -872,8 +884,8 @@ namespace Deadfall.Enemies
             }
             else if (o.PathToTarget && hasTarget)
             {
-                Move(o.Speed * speedScale, s.Acceleration);
-                if (perceive || !_agent.hasPath) _agent.SetDestination(targetPos + Weave(targetPos, now, s));
+                Move(o.Speed * speedScale * _paceJitter, s.Acceleration);
+                ChaseStep(targetPos, now, perceive, s);
             }
             else
             {
@@ -931,6 +943,60 @@ namespace Deadfall.Enemies
             _moving = false;
             _agent.isStopped = true;
             _agent.velocity = Vector3.zero;
+        }
+
+        private static readonly Vector3[] CornerBuffer = new Vector3[8];
+
+        /// <summary>Paths towards the target, swinging wide around corners on the way (see <see cref="_detouring"/>).</summary>
+        private void ChaseStep(Vector3 targetPos, double now, bool perceive, EnemyStats s)
+        {
+            if (_detouring)
+            {
+                bool reached = Flat(_detour - transform.position).sqrMagnitude < 1.1f * 1.1f;
+                // Close fights and expired detours go straight back to the target.
+                if (!reached && now < _detourUntil && _targetDistance > 5f) return;
+                _detouring = false;
+                _agent.SetDestination(targetPos + Weave(targetPos, now, s));
+                _checkCorners = true;
+                return;
+            }
+            if (perceive || !_agent.hasPath)
+            {
+                _agent.SetDestination(targetPos + Weave(targetPos, now, s));
+                _checkCorners = true;
+                return;
+            }
+            if (_checkCorners && !_agent.pathPending && _agent.hasPath)
+            {
+                _checkCorners = false;
+                TryCornerDetour(now);
+            }
+        }
+
+        private void TryCornerDetour(double now)
+        {
+            if (_targetDistance < 7f || _definition.IsBoss || _target is IBlocker || Random.value < 0.25f) return; // some still cut the corner
+            int n = _agent.path.GetCornersNonAlloc(CornerBuffer);
+            if (n < 3) return; // a straight run: nothing to round
+            Vector3 c0 = transform.position, c1 = CornerBuffer[1], c2 = CornerBuffer[2];
+            float toCorner = Flat(c1 - c0).magnitude;
+            if (toCorner < 2.5f || toCorner > 16f) return;
+            if (Flat(c1 - _lastDetourCorner).sqrMagnitude < 2.5f * 2.5f) return; // already rounded this one
+            Vector3 inDir = Flat(c1 - c0).normalized, outDir = Flat(c2 - c1).normalized;
+            Vector3 bend = outDir - inDir;
+            if (bend.sqrMagnitude < 0.04f) return; // barely a turn
+            Vector3 outside = -bend.normalized;
+            float wide = Random.Range(0.8f, 2.4f);
+            Vector3 goal = c1 + outside * wide - inDir * Random.Range(0f, 1f);
+            // Keep the point on the walkable floor (stop at the wall if the corridor is narrow).
+            if (NavMesh.Raycast(c1, goal, out NavMeshHit hit, _agent.areaMask)) goal = hit.position - (goal - c1).normalized * (_definition.Radius + 0.1f);
+            if (!NavMesh.SamplePosition(goal, out NavMeshHit on, 1f, _agent.areaMask)) return;
+            if (Flat(on.position - c1).sqrMagnitude < 0.5f * 0.5f) return; // no room to swing out
+            _lastDetourCorner = c1;
+            _detour = on.position;
+            _detouring = true;
+            _detourUntil = now + Mathf.Clamp(toCorner / Mathf.Max(1f, _agent.speed) * 1.6f + 0.5f, 1f, 5f);
+            _agent.SetDestination(_detour);
         }
 
         private Vector3 Weave(Vector3 targetPos, double now, EnemyStats s)
