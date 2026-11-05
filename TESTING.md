@@ -647,6 +647,10 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Supply caches sit just off the wall, not clipping into it.
 - [ ] Glow outline on every interactable: FOB facility consoles and the range's return console, Engineering structures (when there's something to do), downed teammates (blue while down), plus everything that already had it.
 
+### 3.53 Hub music
+
+- [ ] After the title screen, "Bunker Pulse" fades in at FOB Halcyon and the range and loops. Deploying to a map crossfades to the level tracks; returning to the FOB (or Quit to HUB) crossfades back. Quit to title still plays the title theme.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
