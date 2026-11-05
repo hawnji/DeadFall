@@ -165,7 +165,7 @@ namespace Deadfall.Rules.Combat
     }
 
     /// <summary>
-    /// Run economy numbers (placeholder, T-36): weapon drops, tier odds, attachment rolls and Supply Cache prices.
+    /// Run economy numbers (T-36; first balance pass T-77, see BALANCE.md): weapon drops, tier odds, attachment rolls and Supply Cache prices.
     /// </summary>
     public static class LootRules
     {

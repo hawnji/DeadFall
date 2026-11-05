@@ -542,6 +542,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Tank shield: translucent blue hex field between two posts, grows in when deployed, pulses when hit, turns red as it weakens, flickers when low or about to expire, and bursts into sparks when it breaks. Enemies still attack it and player bullets still pass through.
 - [ ] Objectives use models: generator, data/lockdown terminal, containment console, cryo tank, reactor valve, sample case, keycard pedestal and security locker. Each status light still changes colour with progress, and the objective glow outlines the model.
 
+### 3.39 Balance pass (T-77)
+
+- [ ] FOB skill tree: at class rank 2 you have 1 point, at rank 10 you have 6; the whole tree only fits at rank 28.
+- [ ] Last Stand card says +60%; Frenzy (Warrior) says +12% melee damage; Field Repairs (Engineer) says heal 2 on kill and 12 after each surge; Gunner Marksman shows 8% / 12%, Demolitionist Sapper 5% / 7% / 10%.
+- [ ] Stacking damage reduction mods stops helping past 45% (watch the damage you take as Tank with several Kevlar/Hardened/Juggernaut).
+- [ ] Stacking cooldown mods stops past +75% faster.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

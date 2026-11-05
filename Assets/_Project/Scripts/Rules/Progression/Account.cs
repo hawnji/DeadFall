@@ -118,8 +118,18 @@ namespace Deadfall.Rules.Progression
             return rank;
         }
 
-        /// <summary>One skill point per rank after the first.</summary>
-        public static int SkillPoints(int rank) => Math.Max(0, Math.Min(MaxRank, rank) - 1);
+        /// <summary>Points for one full tree (3 branches x tiers costing 1 + 2 + 3).</summary>
+        public const int FullTreePoints = 18;
+
+        /// <summary>
+        /// Skill points at a rank: about two for every three ranks (1 at rank 2, 6 at rank 10), reaching the full tree
+        /// at rank 28 (T-77). Before that, players choose which branches to finish first.
+        /// </summary>
+        public static int SkillPoints(int rank)
+        {
+            int r = Math.Max(1, Math.Min(MaxRank, rank));
+            return r <= 1 ? 0 : Math.Min(FullTreePoints, ((r - 1) * 2 + 2) / 3);
+        }
 
         public static bool CanPrestige(long classXp, int prestige) => RankForXp(classXp) >= MaxRank && prestige < MaxPrestige;
 
