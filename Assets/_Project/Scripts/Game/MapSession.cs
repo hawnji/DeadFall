@@ -716,7 +716,13 @@ namespace Deadfall.Game
                 foreach (int i in _pendingDoors) OpenDoor(i, null, sync: false);
             }
             foreach ((int index, int boards) in _pendingBoards)
-                if (index >= 0 && index < Map.Breaches.Count) Map.Breaches[index].SetBoards(boards);
+                if (index >= 0 && index < Map.Breaches.Count)
+                {
+                    BreachBarricade b = Map.Breaches[index];
+                    bool repaired = boards == b.Boards + 1;
+                    b.SetBoards(boards);
+                    if (repaired) b.PlayNailing();
+                }
             _pendingBoards.Clear();
         }
 

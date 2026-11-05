@@ -515,6 +515,14 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Outlines follow moving parts (spinning drops, opening doors) and don't cast shadows. Check frame rate in a busy room.
 - [ ] Build check: the minimap draws in a player build (it uses the built-in UI/Default shader).
 
+### 3.36 Barricade nailing sound
+
+- [ ] Repair a barricade board: the nail sound plays three times in quick succession at the barricade.
+- [ ] Each board repaired plays its own three hits; holding repair through several boards repeats it per board.
+- [ ] A client standing near the barricade hears the three hits when the host (or another player) repairs it.
+- [ ] Starting a new run (all boards reset to full) does not play the sound.
+- [ ] Boards breaking still play the break sound, not the nail sound.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
