@@ -27,7 +27,7 @@ namespace Deadfall.Game
     }
 
     /// <summary>
-    /// A placeholder objective object built from primitives. Pressing F asks the <see cref="ObjectiveDirector"/>
+    /// An objective object: primitive parts for colliders and the status light, dressed with a Blender model. Pressing F asks the <see cref="ObjectiveDirector"/>
     /// (host-authoritative) to use it; the director syncs its progress and state to every peer by <see cref="Id"/>.
     /// </summary>
     public sealed class ObjectiveProp : MonoBehaviour, IInteractable
@@ -107,8 +107,29 @@ namespace Deadfall.Game
                 p._lightMaterial = RuntimeMaterials.CreateLit(p._light.sharedMaterial.color);
                 p._light.sharedMaterial = p._lightMaterial;
             }
+            // Blender model (obj_*) over the placeholder parts. The parts keep their colliders, and the status light
+            // stays visible because its colour shows progress.
+            GameObject model = ModelLibrary.Spawn(ModelId(kind), root.transform);
+            if (model != null) ModelLibrary.HideExcept(root.transform, model.transform, r => r == p._light);
             InteractGlow.Add(root, InteractGlow.Objectives, () => !p.Done);
             return p;
+        }
+
+        private static string ModelId(ObjectivePropKind kind)
+        {
+            switch (kind)
+            {
+                case ObjectivePropKind.Generator: return "obj_generator";
+                case ObjectivePropKind.DataTerminal:
+                case ObjectivePropKind.LockdownTerminal: return "obj_terminal";
+                case ObjectivePropKind.ContainmentConsole: return "obj_console";
+                case ObjectivePropKind.CryoContainer: return "obj_cryo";
+                case ObjectivePropKind.ReactorValve: return "obj_valve";
+                case ObjectivePropKind.SampleCase: return "obj_sample_case";
+                case ObjectivePropKind.Keycard: return "obj_keycard";
+                case ObjectivePropKind.SecurityLocker: return "obj_locker";
+                default: return null;
+            }
         }
 
         private static Renderer Part(Transform parent, Vector3 local, Vector3 size, Color color, bool solid)
