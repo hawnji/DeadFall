@@ -549,6 +549,14 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Stacking damage reduction mods stops helping past 45% (watch the damage you take as Tank with several Kevlar/Hardened/Juggernaut).
 - [ ] Stacking cooldown mods stops past +75% faster.
 
+### 3.40 Jump, enemy steps, doors and heartbeat sounds
+
+- [ ] Jumping plays PlayerJump (landing still plays the heavy footstep).
+- [ ] Infected within about 20 m make footsteps as they move; big ones (Bulwark, bosses) step slower, lower and louder. A big horde doesn't drown everything out.
+- [ ] Buying a door with credits plays PurchaseDoor then DoorOpening at the door; security switch and power relay doors play only DoorOpening.
+- [ ] A client hears door sounds when someone else opens a door, but not a burst of them on joining a run or when an Operation opens every door.
+- [ ] Below 30% health a heartbeat plays every 0.9 s, every 0.62 s below 15% and while downed; it stops when healed or revived.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

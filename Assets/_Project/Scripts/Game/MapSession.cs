@@ -6,6 +6,7 @@ using Deadfall.Core;
 using Deadfall.Encounters;
 using Deadfall.Net;
 using Deadfall.Player;
+using Deadfall.Rules.Common;
 using Deadfall.Rules.Encounters;
 using Deadfall.Rules.World;
 using Deadfall.RunSystems;
@@ -286,7 +287,7 @@ namespace Deadfall.Game
         {
             if (!IsAuthority || Map == null) return;
             for (int i = 0; i < Map.Layout.Connections.Count; i++)
-                if (Map.Layout.Connections[i].IsDoor && !_doorOpen[i]) OpenDoor(i, null, sync: false);
+                if (Map.Layout.Connections[i].IsDoor && !_doorOpen[i]) OpenDoor(i, null, sync: false, sound: false);
             SendDoors(ulong.MaxValue);
         }
 
@@ -302,7 +303,11 @@ namespace Deadfall.Game
         /// Opens a door here (host/offline, and clients applying the host's state): sector doors raise
         /// <see cref="OpenSectors"/>, side doors open their branch. Spawn breaches behind it come into play.
         /// </summary>
-        private void OpenDoor(int connection, string announce, bool sync = true)
+        /// <summary>
+        /// Opens a door. <paramref name="sound"/> plays the opening sound at the door (and the purchase sound for
+        /// credit doors); off for bulk opens such as Operations starting or a client catching up on join.
+        /// </summary>
+        private void OpenDoor(int connection, string announce, bool sync = true, bool sound = true)
         {
             if (Map == null || connection < 0 || connection >= _doorOpen.Length || _doorOpen[connection]) return;
             _doorOpen[connection] = true;
@@ -310,7 +315,13 @@ namespace Deadfall.Game
             bool sectorDoor = c.Locked;
             if (sectorDoor && c.UnlockSector + 1 > OpenSectors) OpenSectors = c.UnlockSector + 1;
             foreach (SectorDoor d in Map.Doors)
-                if (d.ConnectionIndex == connection && !Sealed) d.Open();
+            {
+                if (d.ConnectionIndex != connection || Sealed) continue;
+                d.Open();
+                if (!sound) continue;
+                if (c.Lock == DoorLock.Credits) GameAudio.Play(SfxId.PurchaseDoor, d.transform.position + Vector3.up * 1.2f);
+                GameAudio.Play(SfxId.DoorOpening, d.transform.position + Vector3.up * 1.2f);
+            }
             foreach (DoorSwitch sw in Map.Switches)
                 if (sw.ConnectionIndex == connection) sw.SetUsed(true);
             ApplySpawnPoints();
@@ -725,7 +736,10 @@ namespace Deadfall.Game
                     _usedSwitches.Add(i);
                     foreach (DoorSwitch sw in Map.Switches) if (sw.ConnectionIndex == i) sw.SetUsed(true);
                 }
-                foreach (int i in _pendingDoors) OpenDoor(i, null, sync: false);
+                int newlyOpen = 0;
+                foreach (int i in _pendingDoors) if (i >= 0 && i < _doorOpen.Length && !_doorOpen[i]) newlyOpen++;
+                bool live = newlyOpen <= 2; // a bigger batch is a join catch-up or an Operation start: stay quiet
+                foreach (int i in _pendingDoors) OpenDoor(i, null, sync: false, sound: live);
             }
             foreach ((int index, int boards) in _pendingBoards)
                 if (index >= 0 && index < Map.Breaches.Count)

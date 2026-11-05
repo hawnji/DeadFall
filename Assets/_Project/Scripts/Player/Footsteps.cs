@@ -6,7 +6,7 @@ namespace Deadfall.Player
 {
     /// <summary>
     /// The local player's footsteps: one step sound per stride of ground covered (longer strides when sprinting,
-    /// shorter and quieter when crouched or downed), plus a heavier step on landing.
+    /// shorter and quieter when crouched or downed), a jump sound, plus a heavier step on landing.
     /// </summary>
     [RequireComponent(typeof(PlayerMotor))]
     public sealed class Footsteps : MonoBehaviour
@@ -27,12 +27,12 @@ namespace Deadfall.Player
 
         private void OnEnable()
         {
-            if (_motor != null) _motor.Landed += OnLanded;
+            if (_motor != null) { _motor.Landed += OnLanded; _motor.Jumped += OnJumped; }
         }
 
         private void OnDisable()
         {
-            if (_motor != null) _motor.Landed -= OnLanded;
+            if (_motor != null) { _motor.Landed -= OnLanded; _motor.Jumped -= OnJumped; }
         }
 
         private void OnLanded(float fallSpeed)
@@ -40,6 +40,11 @@ namespace Deadfall.Player
             if (fallSpeed < 2f || IsDead) return;
             _travelled = 0f;
             GameAudio.Play2D(SfxId.Footstep, Mathf.Clamp(0.7f + fallSpeed / 12f, 0.7f, 1.3f), 0.85f);
+        }
+
+        private void OnJumped()
+        {
+            if (!IsDead) GameAudio.Play2D(SfxId.PlayerJump);
         }
 
         private bool IsDead => _status != null && _status.IsDead;
