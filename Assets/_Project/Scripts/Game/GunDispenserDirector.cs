@@ -120,7 +120,11 @@ namespace Deadfall.Game
             SetMode(GunDispenser.Mode.Idle, 0f);
         }
 
-        /// <summary>One spot per sector, in a main-route room away from the grid generators.</summary>
+        /// <summary>
+        /// One spot per sector, in a main-route room away from the grid generators: backed against a solid stretch
+        /// of wall, facing into the room, and well clear of doorways, breach closets, switches, vents and loot so it
+        /// never blocks a way through.
+        /// </summary>
         private void BuildSpots()
         {
             _spots.Clear();
@@ -143,30 +147,133 @@ namespace Deadfall.Game
                 // Prefer a real room over the airlock.
                 if (rooms.Count > 1) rooms.RemoveAll(i => map.Layout.Rooms[i].Template.Role == RoomRole.Spawn);
                 if (rooms.Count == 0) continue;
-                int room = rooms[rng.Range(0, rooms.Count)];
-                Bounds b = map.RoomBounds[room];
-                Vector3 c = map.RoomCenter(room);
-                // Room bounds include the walls, so their centre is half way up the room. Search at floor level:
-                // a ray down from just above the floor finds it, and the NavMesh point must sit on that floor
-                // (not on a ceiling slab, shelf or crate top).
-                float floorGuess = b.min.y;
-                Vector3 p = FloorPoint(new Vector3(c.x, floorGuess, c.z), floorGuess) ?? new Vector3(c.x, floorGuess, c.z);
-                for (int attempt = 0; attempt < 12; attempt++)
+                // Shuffle, then take the first room with a good wall spot.
+                for (int i = rooms.Count - 1; i > 0; i--)
                 {
-                    var guess = new Vector3(rng.Range(b.min.x + 2f, b.max.x - 2f), floorGuess, rng.Range(b.min.z + 2f, b.max.z - 2f));
-                    Vector3? floor = FloorPoint(guess, floorGuess);
-                    if (floor == null) continue;
-                    if (!NavMesh.SamplePosition(floor.Value, out NavMeshHit hit, 0.6f, NavMesh.AllAreas)) continue;
-                    if (Mathf.Abs(hit.position.y - floor.Value.y) > 0.3f) continue;
-                    // Room to stand the dispenser: nothing solid in the box it occupies.
-                    if (Physics.CheckBox(hit.position + Vector3.up * 1.1f, new Vector3(0.7f, 0.9f, 0.6f), Quaternion.identity, ~(1 << 2), QueryTriggerInteraction.Ignore)) continue;
-                    p = hit.position;
+                    int j = rng.Range(0, i + 1);
+                    (rooms[i], rooms[j]) = (rooms[j], rooms[i]);
+                }
+                bool placed = false;
+                foreach (int room in rooms)
+                {
+                    if (!WallSpot(map, room, rng, out Vector3 pos, out float yaw)) continue;
+                    _spots.Add(new Spot { Position = pos, Yaw = yaw, Sector = sector });
+                    placed = true;
                     break;
                 }
-                Vector3 face = c - p;
-                float yaw = face.sqrMagnitude > 0.25f ? Quaternion.LookRotation(new Vector3(face.x, 0f, face.z)).eulerAngles.y : rng.Range(0, 4) * 90f;
-                _spots.Add(new Spot { Position = p, Yaw = yaw, Sector = sector });
+                if (!placed) GameLog.Warn("Guns", $"No wall spot for the Gun Dispenser in sector {sector}.");
             }
+        }
+
+        /// <summary>Half the cabinet's footprint (1.5 m wide, 0.9 m deep) plus the roof band's overhang.</summary>
+        private const float HalfWidth = 0.8f;
+        private const float HalfDepth = 0.5f;
+        /// <summary>Gap between the wall and the cabinet's back.</summary>
+        private const float WallGap = 0.06f;
+        /// <summary>Minimum distance from a doorway or breach centre (half a doorway, the cabinet, and a walkway).</summary>
+        private const float DoorClearance = 3.2f;
+        /// <summary>Minimum distance from switches, vents, loot and secret panels.</summary>
+        private const float PropClearance = 1.8f;
+
+        private readonly List<Vector3> _avoidDoors = new List<Vector3>(16);
+        private readonly List<Vector3> _avoidProps = new List<Vector3>(32);
+        private readonly List<Vector3> _wallSpots = new List<Vector3>(32);
+        private readonly List<float> _wallYaws = new List<float>(32);
+
+        /// <summary>A spot against a wall of <paramref name="room"/>, or false when none is clear.</summary>
+        private bool WallSpot(BuiltMap map, int room, DeterministicRandom rng, out Vector3 pos, out float yaw)
+        {
+            pos = default;
+            yaw = 0f;
+            Layout layout = map.Layout;
+            PlacedRoom r = layout.Rooms[room];
+            float cs = map.CellSize;
+            float floorY = map.RoomBounds[room].min.y;
+
+            // Doorways and breach openings of this room (any room's, really: neighbours share the wall).
+            _avoidDoors.Clear();
+            for (int i = 0; i < layout.Rooms.Count; i++)
+            {
+                PlacedRoom other = layout.Rooms[i];
+                for (int s = 0; s < other.Template.Sockets.Count; s++)
+                    if (layout.IsConnected(i, s, out _)) _avoidDoors.Add(Edge(other.SocketCell(s), other.SocketFacing(s), cs));
+            }
+            foreach (Breach br in layout.Breaches) _avoidDoors.Add(Edge(br.Inner, br.Facing, cs));
+            _avoidProps.Clear();
+            foreach (DoorSwitch sw in map.Switches) if (sw != null) _avoidProps.Add(sw.transform.position);
+            foreach (SecretPanel sp in map.SecretPanels) if (sp != null) _avoidProps.Add(sp.transform.position);
+            foreach (CrawlVent v in map.CrawlVents) _avoidProps.Add(v.Position);
+            foreach (MapLootPoint l in map.Loot) _avoidProps.Add(l.Position);
+            foreach (SectorDoor d in map.Doors) if (d != null) _avoidDoors.Add(d.transform.position);
+
+            _wallSpots.Clear();
+            _wallYaws.Clear();
+            foreach (Cell c in r.Cells())
+            {
+                for (int d = 0; d < 4; d++)
+                {
+                    Dir dir = (Dir)d;
+                    if (r.Contains(c.Step(dir))) continue; // not an outer wall of the room
+                    Vector3 edge = Edge(c, dir, cs);
+                    var outward = new Vector3(dir.Dx(), 0f, dir.Dz());
+                    var guess = edge - outward * (HalfDepth + WallGap);
+                    if (Near(guess, _avoidDoors, DoorClearance) || Near(guess, _avoidProps, PropClearance)) continue;
+                    if (!Fits(guess, outward, floorY, out Vector3 floor)) continue;
+                    _wallSpots.Add(floor);
+                    _wallYaws.Add(Quaternion.LookRotation(-outward).eulerAngles.y);
+                }
+            }
+            if (_wallSpots.Count == 0) return false;
+            int pick = rng.Range(0, _wallSpots.Count);
+            pos = _wallSpots[pick];
+            yaw = _wallYaws[pick];
+            return true;
+        }
+
+        /// <summary>
+        /// The cabinet fits at <paramref name="at"/> with its back to the wall in <paramref name="outward"/>: floor
+        /// under it, solid wall behind its whole width, nothing in its footprint, and a clear standing area in front
+        /// that is on the NavMesh.
+        /// </summary>
+        private static bool Fits(Vector3 at, Vector3 outward, float floorY, out Vector3 floor)
+        {
+            floor = default;
+            Vector3? f = FloorPoint(at, floorY);
+            if (f == null) return false;
+            floor = f.Value;
+            const int mask = ~(1 << 2);
+            Vector3 side = Vector3.Cross(Vector3.up, outward);
+            // Wall right behind the back, at both sides and the middle (no doorway or gap behind it).
+            for (int i = -1; i <= 1; i++)
+            {
+                Vector3 from = floor + Vector3.up * 1.2f + side * (i * (HalfWidth - 0.1f));
+                if (!Physics.Raycast(from, outward, out RaycastHit hit, HalfDepth + WallGap + 0.35f, mask, QueryTriggerInteraction.Ignore)) return false;
+                if (Vector3.Dot(hit.normal, -outward) < 0.9f) return false; // a corner or a prop, not the flat wall
+            }
+            Quaternion rot = Quaternion.LookRotation(-outward);
+            // Footprint (shrunk a touch so the wall itself and the floor don't count).
+            if (Physics.CheckBox(floor + Vector3.up * 1.2f, new Vector3(HalfWidth - 0.05f, 1f, HalfDepth - 0.05f), rot, mask, QueryTriggerInteraction.Ignore))
+                return false;
+            // A clear place to stand and use it.
+            Vector3 front = floor - outward * (HalfDepth + 0.9f);
+            if (Physics.CheckBox(front + Vector3.up * 1f, new Vector3(HalfWidth, 0.8f, 0.6f), rot, mask, QueryTriggerInteraction.Ignore))
+                return false;
+            if (!NavMesh.SamplePosition(front, out NavMeshHit hitNav, 0.6f, NavMesh.AllAreas)) return false;
+            return Mathf.Abs(hitNav.position.y - floor.y) <= 0.3f;
+        }
+
+        private static Vector3 Edge(Cell c, Dir facing, float cs) =>
+            new Vector3((c.X + 0.5f + facing.Dx() * 0.5f) * cs, 0f, (c.Z + 0.5f + facing.Dz() * 0.5f) * cs);
+
+        private static bool Near(Vector3 p, List<Vector3> points, float distance)
+        {
+            float sq = distance * distance;
+            foreach (Vector3 q in points)
+            {
+                float dx = p.x - q.x, dz = p.z - q.z;
+                if (dx * dx + dz * dz < sq) return true;
+            }
+            return false;
         }
 
         /// <summary>The floor under <paramref name="at"/> (a ray down from 1.5 m above the room's floor level), or null.</summary>

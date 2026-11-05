@@ -561,7 +561,7 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 
 - [ ] Entering a generated map (Survival, Endless or an Operation) fades in "Endless Infestation"; near its end it crossfades into "Endless Infestation 2", then back, for as long as you stay on the map.
 - [ ] Going back to the FOB fades the level music out. Quit to title: the title theme plays instead, and the level music resumes after you close the title while still on a map.
-- [ ] Fresh install (or a settings file still on the old 70% default): the Music slider starts at 25%. A Music value you set yourself is kept.
+- [ ] Fresh install (or a settings file still on the old 70% or 25% default): the Music slider starts at 10%. A Music value you set yourself is kept.
 
 ### 3.42 Stats readout, dispenser placement, closets
 
@@ -569,6 +569,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Gun Dispenser always stands on the floor of its room (never on the ceiling, a shelf or inside furniture), in Survival and Endless.
 - [ ] L-shaped / notched rooms: no stray walls in the notch; every breach closet behind the boards is an open dark void that enemies come out of.
 - [ ] Entering a map logs `[Music] Level music: Music/EndlessInfestation (195 s)` in the Console.
+
+### 3.43 Breach spawn pacing, far barricades, Gun Dispenser on a wall
+
+- [ ] During a surge, each barricade lets in one zombie at a time, sometimes two together, then waits a few seconds before the next.
+- [ ] Zombies that spawn in closets far from you still tear their barricade down (boards break and the break sound plays even when you are across the map).
+- [ ] The Gun Dispenser always stands on the floor with its back against a wall, facing into the room.
+- [ ] It is never in front of a doorway, sector door, breach closet, switch or vent, and you can walk past it on both sides.
 
 ## 4. Regression map
 

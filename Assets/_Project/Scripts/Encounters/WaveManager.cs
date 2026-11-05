@@ -166,7 +166,8 @@ namespace Deadfall.Encounters
 
         // ---------------------------------------------------------------- setup
 
-        public void AddSpawnPoint(Vector3 position, int group, bool sheltered = false) => _director.AddPoint(position, group, sheltered);
+        public void AddSpawnPoint(Vector3 position, int group, bool sheltered = false, Deadfall.Combat.IBlocker blocker = null) =>
+            _director.AddPoint(position, group, sheltered, blocker);
 
         /// <summary>Host/offline: gives Field Credits to a player (secret stashes, objectives). Synced to clients.</summary>
         public void AwardCredits(ulong clientId, int amount, string reason)

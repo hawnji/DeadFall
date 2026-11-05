@@ -352,7 +352,11 @@ namespace Deadfall.Game
             if (waves == null || Map == null) return;
             waves.ClearSpawnPoints();
             foreach (MapSpawnPoint p in Map.EnemySpawns)
-                if (IsRoomOpen(p.Room)) waves.AddSpawnPoint(p.Position, p.Room, sheltered: true);
+            {
+                if (!IsRoomOpen(p.Room)) continue;
+                BreachBarricade blocker = p.Breach >= 0 && p.Breach < Map.Breaches.Count ? Map.Breaches[p.Breach] : null;
+                waves.AddSpawnPoint(p.Position, p.Room, sheltered: true, blocker);
+            }
         }
 
         private void OnPhaseChanged(RunPhase from, RunPhase to)
