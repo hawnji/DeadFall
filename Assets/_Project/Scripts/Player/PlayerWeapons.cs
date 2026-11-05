@@ -594,6 +594,10 @@ namespace Deadfall.Player
         public void RefillAllAmmo()
         {
             foreach (Slot s in _slots) s.Firearm?.AddReserve(int.MaxValue / 2);
+            AmmoRefilled?.Invoke();
         }
+
+        /// <summary>Raised by <see cref="RefillAllAmmo"/> (ammo stations, caches, Max Ammo): grenades refill too.</summary>
+        public event System.Action AmmoRefilled;
     }
 }

@@ -18,6 +18,8 @@ namespace Deadfall.Game
     {
         private const string MsgRequest = "df.proj";
         private const string MsgSpawn = "df.projsp";
+        private const string MsgThrow = "df.throw";
+        private const string MsgThrown = "df.thrown";
         private const float MaxClaimedMultiplier = 3f;
 
         private SessionService _session;
@@ -27,6 +29,8 @@ namespace Deadfall.Game
             _session = SessionService.Instance;
             _session.RegisterHandler(MsgRequest, OnRequest);
             _session.RegisterHandler(MsgSpawn, OnSpawn);
+            _session.RegisterHandler(MsgThrow, OnThrow);
+            _session.RegisterHandler(MsgThrown, OnThrown);
             ServiceRegistry.Register<IProjectileService>(this);
             Grenade.Exploded += OnExploded;
         }
@@ -39,6 +43,8 @@ namespace Deadfall.Game
             if (_session == null) return;
             _session.UnregisterHandler(MsgRequest);
             _session.UnregisterHandler(MsgSpawn);
+            _session.UnregisterHandler(MsgThrow);
+            _session.UnregisterHandler(MsgThrown);
         }
 
         private static void OnExploded(Vector3 p, float radius) => ExplosionFx.Spawn(p, radius);
@@ -65,6 +71,62 @@ namespace Deadfall.Game
             }
             Grenade.Spawn(origin, velocity, damage, radius, ClassNetwork.SelfBlastMultiplier(me), owner, weaponId, authoritative: true);
             if (_session.IsHost && index >= 0) Broadcast(index, origin, velocity, ulong.MaxValue);
+        }
+
+        // ---------------------------------------------------------------- thrown frag grenades
+
+        public void Throw(GameObject owner, Vector3 origin, Vector3 velocity)
+        {
+            if (_session.IsConnectedClient)
+            {
+                // A harmless copy right away; the host throws the real one.
+                Grenade.Spawn(origin, velocity, 0f, GrenadeRules.Radius, 0f, owner, GrenadeRules.Id, authoritative: false, GrenadeRules.FuseSeconds);
+                using (var w = new FastBufferWriter(32, Allocator.Temp))
+                {
+                    w.WriteValueSafe(origin);
+                    w.WriteValueSafe(velocity);
+                    _session.SendToServer(MsgThrow, w, NetworkDelivery.ReliableSequenced);
+                }
+                return;
+            }
+            SpawnFrag(owner, origin, velocity, _session.LocalClientId);
+            if (_session.IsHost) BroadcastThrow(origin, velocity, ulong.MaxValue);
+        }
+
+        private static void SpawnFrag(GameObject owner, Vector3 origin, Vector3 velocity, ulong thrower) =>
+            Grenade.Spawn(origin, velocity, GrenadeRules.Damage, GrenadeRules.Radius,
+                GrenadeRules.SelfDamageMultiplier * ClassNetwork.SelfBlastMultiplier(thrower), owner, GrenadeRules.Id, authoritative: true, GrenadeRules.FuseSeconds);
+
+        private void BroadcastThrow(Vector3 origin, Vector3 velocity, ulong except)
+        {
+            using (var w = new FastBufferWriter(32, Allocator.Temp))
+            {
+                w.WriteValueSafe(origin);
+                w.WriteValueSafe(velocity);
+                _session.SendToRemoteClients(MsgThrown, w, NetworkDelivery.ReliableSequenced, except);
+            }
+        }
+
+        private void OnThrow(ulong sender, FastBufferReader r)
+        {
+            if (!_session.IsHost) return;
+            r.ReadValueSafe(out Vector3 origin);
+            r.ReadValueSafe(out Vector3 velocity);
+            PlayerIdentity who = PlayerIdentity.Find(sender);
+            if (who == null || float.IsNaN(origin.x) || float.IsNaN(velocity.x)) return;
+            if ((origin - (who.transform.position + Vector3.up * 1.6f)).sqrMagnitude > 3f * 3f) return;
+            float max = GrenadeRules.ThrowSpeed + GrenadeRules.UpwardSpeed + 1f;
+            if (velocity.sqrMagnitude > max * max) velocity = velocity.normalized * max;
+            SpawnFrag(who.gameObject, origin, velocity, sender);
+            BroadcastThrow(origin, velocity, sender);
+        }
+
+        private void OnThrown(ulong sender, FastBufferReader r)
+        {
+            if (_session.IsHost) return;
+            r.ReadValueSafe(out Vector3 origin);
+            r.ReadValueSafe(out Vector3 velocity);
+            Grenade.Spawn(origin, velocity, 0f, GrenadeRules.Radius, 0f, null, GrenadeRules.Id, authoritative: false, GrenadeRules.FuseSeconds);
         }
 
         private void Broadcast(int index, Vector3 origin, Vector3 velocity, ulong except)

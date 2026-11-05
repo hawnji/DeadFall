@@ -194,7 +194,7 @@ namespace Deadfall.DebugTools
             if (_spawner == null) _spawner = GetComponent<SandboxEnemySpawner>();
             if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
             if (_showHelp)
-                text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · 1-4 / wheel swap · Esc pause" +
+                text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · E grenade · 1-4 / wheel swap · Esc pause" +
                         "\nF1/F2/F3/F4 cap 30/60/144/off (turns VSync off; Esc › Settings to change back) · F9 respawn · F10 god mode · H hide help" +
                         "\nF12 next advanced enemy (Ctrl: variant) · F5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap" +
                         "\nN start / stop survival run · G ready (ends the lull)" +

@@ -357,9 +357,18 @@ namespace Deadfall.Classes
         {
             Ctx.Weapons.LoadoutBuilt -= Apply;
             Ctx.Weapons.SetExplosiveBonus(0, false);
+            GrenadeThrower g = Ctx.Weapons.GetComponent<GrenadeThrower>();
+            if (g != null) g.BonusCapacity = 0;
         }
 
-        private void Apply() => Ctx.Weapons.SetExplosiveBonus(Mathf.RoundToInt(Def.Magnitude), true);
+        private void Apply()
+        {
+            int extra = Mathf.RoundToInt(Def.Magnitude);
+            Ctx.Weapons.SetExplosiveBonus(extra, true);
+            // Thrown grenades too: Bandolier carries this many more.
+            GrenadeThrower g = Ctx.Weapons.GetComponent<GrenadeThrower>();
+            if (g != null) g.BonusCapacity = extra;
+        }
     }
 
     /// <summary>A passive the host applies from the class roster (Blast Padding, Salvager, Handy); nothing to do on the player.</summary>
