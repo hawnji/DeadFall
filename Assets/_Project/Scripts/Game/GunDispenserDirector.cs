@@ -125,15 +125,17 @@ namespace Deadfall.Game
 
         /// <summary>
         /// One spot per sector, in a main-route room away from the grid generators: backed against a solid stretch
-        /// of wall, facing into the room, clear of doorways, breach closets, switches, vents, loot and ammo stations.
+        /// of wall, facing into the room, clear of doorways, breach closets, switches, vents, loot, ammo stations, perk machines and the forge.
         /// </summary>
         private void BuildSpots()
         {
             _spots.Clear();
             BuiltMap map = _map.Map;
             var rng = new DeterministicRandom(map.Layout.Seed ^ 0x5D15A5E7UL);
+            // Keep clear of the ammo stations, perk machines and forge (the perk director builds the stations first).
             AmmoStationDirector stations = AmmoStationDirector.Current;
-            IReadOnlyList<Vector3> avoid = stations != null ? stations.EnsureBuilt(map) : null;
+            PerkMachineDirector perks = PerkMachineDirector.Current;
+            IReadOnlyList<Vector3> avoid = perks != null ? perks.EnsureBuilt(map) : stations != null ? stations.EnsureBuilt(map) : null;
             var rooms = new List<int>(8);
             for (int sector = 0; sector < map.Layout.SectorCount; sector++)
             {

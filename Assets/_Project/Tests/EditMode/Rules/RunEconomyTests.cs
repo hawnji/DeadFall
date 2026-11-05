@@ -66,6 +66,28 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void ForgeRaisesTierAndKeepsAttachments()
+        {
+            var rng = new DeterministicRandom(21);
+            for (int i = 0; i < 200; i++)
+            {
+                WeaponCategory cat = i % 4 == 0 ? WeaponCategory.Heavy : WeaponCategory.AssaultRifle;
+                WeaponMods start = LootRules.RollMods(rng, (WeaponTier)(i % 2), cat);
+                WeaponMods up = LootRules.Upgrade(rng, start, cat);
+                Assert.AreEqual(start.Tier + 1, up.Tier);
+                Assert.GreaterOrEqual(up.DamageRoll, start.DamageRoll);
+                Assert.LessOrEqual(up.Attachments.Count, WeaponModder.SlotsFor(up.Tier));
+                Assert.Greater(up.Attachments.Count, start.Attachments.Count);
+                foreach (AttachmentDef a in start.Attachments) Assert.Contains(a, up.Attachments);
+                if (cat == WeaponCategory.Heavy) foreach (AttachmentDef a in up.Attachments) Assert.AreNotEqual(AttachmentSlot.Optic, a.Slot);
+            }
+            Assert.IsNull(LootRules.Upgrade(rng, new WeaponMods { Tier = WeaponTier.Prototype }, WeaponCategory.Pistol));
+            Assert.IsEmpty(LootRules.Upgrade(rng, null, WeaponCategory.Melee).Attachments);
+            Assert.Less(LootRules.ForgePrice(WeaponTier.Standard), LootRules.ForgePrice(WeaponTier.Refined));
+            Assert.AreEqual(0, LootRules.ForgePrice(WeaponTier.Prototype));
+        }
+
+        [Test]
         public void BetterTiersGetLikelierAndCostMore()
         {
             int Count(int surge)

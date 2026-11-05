@@ -14,6 +14,8 @@ namespace Deadfall.Player
         public float WeaponMoveMultiplier = 1f;
         /// <summary>Move speed bonus from Field Mods and skills (1 = none).</summary>
         public float BonusMoveMultiplier = 1f;
+        /// <summary>Extra speed while sprinting only (Fleet Foot perk; 1 = none).</summary>
+        public float SprintMultiplier = 1f;
         /// <summary>0..1 aim-down-sights blend, read by look (sensitivity, FOV) and motor (speed).</summary>
         public float AimBlend;
         /// <summary>Downed (D-01): crawling, sidearm only, no abilities.</summary>

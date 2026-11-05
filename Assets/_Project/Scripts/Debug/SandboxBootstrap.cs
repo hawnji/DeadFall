@@ -116,6 +116,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<GunDispenserDirector>();
             // Wall-mounted ammo refill stations, one per sector.
             net.AddComponent<AmmoStationDirector>();
+            // Perk machines (one of each perk) and the Weapon Forge on the walls.
+            net.AddComponent<PerkMachineDirector>();
             // Power-ups from kills: Max Ammo, Double Credits, Insta-Kill, Nuke.
             net.AddComponent<PowerUpDirector>();
             // M9: Engineering structures and the squad's Scrap (host-run).
