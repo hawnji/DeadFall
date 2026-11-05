@@ -4,7 +4,8 @@ using UnityEngine;
 namespace Deadfall.Combat
 {
     /// <summary>
-    /// An impact grenade. Explodes on the first thing it touches after a short arming time (or after 4 s). Only an
+    /// An impact grenade (launchers): explodes on the first thing it touches after a short arming time (or after 4 s).
+    /// With a fuse (thrown frag grenades) it ignores contact, rolls, and goes off when the fuse runs out. Only an
     /// authoritative copy deals damage; mirrors just fly and flash.
     /// </summary>
     public sealed class Grenade : MonoBehaviour
@@ -13,7 +14,7 @@ namespace Deadfall.Combat
         private const float ArmSeconds = 0.06f;
         private const float MaxLife = 4f;
 
-        private float _damage, _radius, _selfMultiplier;
+        private float _damage, _radius, _selfMultiplier, _fuse;
         private bool _authoritative, _exploded;
         private double _spawnedAt;
         private Material _material;
@@ -25,7 +26,7 @@ namespace Deadfall.Combat
         public static event System.Action<Vector3, float> Exploded;
 
         public static Grenade Spawn(Vector3 origin, Vector3 velocity, float damage, float radius, float selfMultiplier,
-            GameObject owner, string weaponId, bool authoritative)
+            GameObject owner, string weaponId, bool authoritative, float fuseSeconds = 0f)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = authoritative ? "Grenade" : "Grenade (mirror)";
@@ -44,7 +45,8 @@ namespace Deadfall.Combat
             g.Owner = owner;
             g.WeaponId = weaponId;
             g._spawnedAt = Time.timeAsDouble;
-            g._material = RuntimeMaterials.CreateLit(new Color(0.85f, 0.75f, 0.3f));
+            g._fuse = fuseSeconds;
+            g._material = RuntimeMaterials.CreateLit(fuseSeconds > 0f ? new Color(0.22f, 0.27f, 0.18f) : new Color(0.85f, 0.75f, 0.3f));
             go.GetComponent<Renderer>().sharedMaterial = g._material;
             if (owner != null)
             {
@@ -56,12 +58,12 @@ namespace Deadfall.Combat
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (Time.timeAsDouble - _spawnedAt >= ArmSeconds) Explode();
+            if (_fuse <= 0f && Time.timeAsDouble - _spawnedAt >= ArmSeconds) Explode();
         }
 
         private void Update()
         {
-            if (Time.timeAsDouble - _spawnedAt > MaxLife) Explode();
+            if (Time.timeAsDouble - _spawnedAt > (_fuse > 0f ? _fuse : MaxLife)) Explode();
         }
 
         private void Explode()

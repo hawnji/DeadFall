@@ -598,6 +598,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Co-op: drops, banners and timers match on both screens; a client can pick one up.
 - [ ] Ending the run removes any drops left.
 
+### 3.47 Thrown grenades
+
+- [ ] E (or the left shoulder button) lobs a dark green grenade where you look. It rolls and goes off about 2 s later (no blast on contact), hurting infected within about 5 m and you at half damage.
+- [ ] You start with 2, shown above the weapon card ("● 2  E"). At 0 nothing happens. Ammo stations, Supply Cache refills and Max Ammo bring you back to full.
+- [ ] Engineer with Bandolier carries 4.
+- [ ] Co-op: the other player sees your grenade fly and explode; a client's grenade kills and earns credits.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

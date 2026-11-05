@@ -20,6 +20,8 @@ namespace Deadfall.Player
         public bool InteractPressed;
         public bool InteractHeld;
         public bool AbilityPressed;
+        /// <summary>Throw a frag grenade (E).</summary>
+        public bool GrenadePressed;
         /// <summary>-1, 0, or +1 from the scroll wheel.</summary>
         public int WeaponScroll;
         /// <summary>0-based slot from number keys, or -1.</summary>
@@ -36,7 +38,7 @@ namespace Deadfall.Player
     public sealed class PlayerInputReader : MonoBehaviour
     {
         private InputActionMap _map;
-        private InputAction _move, _look, _sprint, _jump, _crouch, _fire, _aim, _reload, _melee, _interact, _ability, _scroll, _next, _prev, _pause;
+        private InputAction _move, _look, _sprint, _jump, _crouch, _fire, _aim, _reload, _melee, _interact, _ability, _grenade, _scroll, _next, _prev, _pause;
         private InputAction[] _slots;
 
         public PlayerInputFrame Current { get; private set; }
@@ -80,6 +82,8 @@ namespace Deadfall.Player
             _interact = _map.AddAction("Interact", InputActionType.Button, "<Keyboard>/f");
             _ability = _map.AddAction("Ability", InputActionType.Button, "<Keyboard>/q");
             _ability.AddBinding("<Gamepad>/rightShoulder");
+            _grenade = _map.AddAction("Grenade", InputActionType.Button, "<Keyboard>/e");
+            _grenade.AddBinding("<Gamepad>/leftShoulder");
             _scroll = _map.AddAction("Scroll", InputActionType.Value, "<Mouse>/scroll/y");
             _next = _map.AddAction("NextWeapon", InputActionType.Button, "<Gamepad>/buttonNorth");
             _prev = _map.AddAction("PrevWeapon", InputActionType.Button);
@@ -120,6 +124,7 @@ namespace Deadfall.Player
                 f.InteractPressed = _interact.WasPressedThisFrame();
                 f.InteractHeld = _interact.IsPressed();
                 f.AbilityPressed = _ability.WasPressedThisFrame();
+                f.GrenadePressed = _grenade.WasPressedThisFrame();
 
                 float scroll = _scroll.ReadValue<float>();
                 f.WeaponScroll = scroll > 0.01f ? -1 : scroll < -0.01f ? 1 : 0;
@@ -137,7 +142,7 @@ namespace Deadfall.Player
             }
             if (WeaponsBlocked)
             {
-                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.InteractHeld = f.AbilityPressed = false;
+                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.InteractHeld = f.AbilityPressed = f.GrenadePressed = false;
                 f.WeaponScroll = 0;
                 f.WeaponSlotPressed = -1;
             }
