@@ -146,16 +146,36 @@ namespace Deadfall.Game
                 int room = rooms[rng.Range(0, rooms.Count)];
                 Bounds b = map.RoomBounds[room];
                 Vector3 c = map.RoomCenter(room);
-                Vector3 p = c;
-                for (int attempt = 0; attempt < 8; attempt++)
+                // Room bounds include the walls, so their centre is half way up the room. Search at floor level:
+                // a ray down from just above the floor finds it, and the NavMesh point must sit on that floor
+                // (not on a ceiling slab, shelf or crate top).
+                float floorGuess = b.min.y;
+                Vector3 p = FloorPoint(new Vector3(c.x, floorGuess, c.z), floorGuess) ?? new Vector3(c.x, floorGuess, c.z);
+                for (int attempt = 0; attempt < 12; attempt++)
                 {
-                    var guess = new Vector3(rng.Range(b.min.x + 2f, b.max.x - 2f), c.y, rng.Range(b.min.z + 2f, b.max.z - 2f));
-                    if (NavMesh.SamplePosition(guess, out NavMeshHit hit, 2f, NavMesh.AllAreas)) { p = hit.position; break; }
+                    var guess = new Vector3(rng.Range(b.min.x + 2f, b.max.x - 2f), floorGuess, rng.Range(b.min.z + 2f, b.max.z - 2f));
+                    Vector3? floor = FloorPoint(guess, floorGuess);
+                    if (floor == null) continue;
+                    if (!NavMesh.SamplePosition(floor.Value, out NavMeshHit hit, 0.6f, NavMesh.AllAreas)) continue;
+                    if (Mathf.Abs(hit.position.y - floor.Value.y) > 0.3f) continue;
+                    // Room to stand the dispenser: nothing solid in the box it occupies.
+                    if (Physics.CheckBox(hit.position + Vector3.up * 1.1f, new Vector3(0.7f, 0.9f, 0.6f), Quaternion.identity, ~(1 << 2), QueryTriggerInteraction.Ignore)) continue;
+                    p = hit.position;
+                    break;
                 }
                 Vector3 face = c - p;
                 float yaw = face.sqrMagnitude > 0.25f ? Quaternion.LookRotation(new Vector3(face.x, 0f, face.z)).eulerAngles.y : rng.Range(0, 4) * 90f;
                 _spots.Add(new Spot { Position = p, Yaw = yaw, Sector = sector });
             }
+        }
+
+        /// <summary>The floor under <paramref name="at"/> (a ray down from 1.5 m above the room's floor level), or null.</summary>
+        private static Vector3? FloorPoint(Vector3 at, float floorY)
+        {
+            var from = new Vector3(at.x, floorY + 1.5f, at.z);
+            if (!Physics.Raycast(from, Vector3.down, out RaycastHit hit, 3f, ~(1 << 2), QueryTriggerInteraction.Ignore)) return null;
+            if (hit.point.y > floorY + 0.5f) return null; // landed on furniture
+            return hit.point;
         }
 
         private static bool Contains(IReadOnlyList<int> list, int v)
