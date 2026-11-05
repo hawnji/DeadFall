@@ -224,8 +224,34 @@ namespace Deadfall.Game
                 desired = eye + d.normalized * Mathf.Max(0.8f, hit.distance - 0.2f);
             Vector3 pos = Vector3.SmoothDamp(camera.transform.position, desired, ref _camVel, 0.6f, 20f, Mathf.Max(0.0001f, dt));
             if ((camera.transform.position - desired).sqrMagnitude > 40f * 40f) pos = desired; // first frame
+            pos = KeepInside(eye, pos);
             Quaternion look = Quaternion.LookRotation(focus - pos);
             camera.transform.SetPositionAndRotation(pos, Quaternion.Slerp(camera.transform.rotation, look, 1f - Mathf.Exp(-dt * 4f)));
+        }
+
+        /// <summary>
+        /// Keeps the camera in the play area: under the ceiling, with a clear line back to the lure (smoothing can drag it
+        /// round a corner and through a wall), and inside a room cell rather than out in the void around the map.
+        /// </summary>
+        private Vector3 KeepInside(Vector3 eye, Vector3 pos)
+        {
+            float floor = _lure.transform.position.y;
+            float ceiling = floor + Mathf.Max(2f, (_map.Kit != null ? _map.Kit.WallHeight : 4f) - 0.6f);
+            pos.y = Mathf.Clamp(pos.y, floor + 1.2f, ceiling);
+            Vector3 d = pos - eye;
+            float len = d.magnitude;
+            if (len > 0.01f && Physics.SphereCast(eye, 0.25f, d / len, out RaycastHit hit, len, Mask, QueryTriggerInteraction.Ignore))
+            {
+                pos = eye + d / len * Mathf.Max(0.5f, hit.distance - 0.15f);
+                _camVel = Vector3.zero;
+            }
+            BuiltMap m = _map.Map;
+            for (int i = 0; i < 8 && m.RoomAt(pos) < 0; i++)
+            {
+                pos = Vector3.Lerp(pos, eye, 0.35f);
+                _camVel = Vector3.zero;
+            }
+            return pos;
         }
 
         /// <summary>The invisible thing the horde chases: a target every enemy prefers over the (far away) player.</summary>
