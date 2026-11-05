@@ -154,12 +154,7 @@ namespace Deadfall.Game
                 }
                 if (candidates.Count == 0) continue;
                 int room = candidates[rng.Range(0, candidates.Count)];
-                Vector3 c = map.RoomCenter(room);
-                float a = rng.NextFloat() * Mathf.PI * 2f;
-                Vector3 p = c + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 1.8f;
-                if (NavMesh.SamplePosition(p, out NavMeshHit hit, 3f, NavMesh.AllAreas)) p = hit.position;
-                else if (NavMesh.SamplePosition(c, out hit, 4f, NavMesh.AllAreas)) p = hit.position;
-                float yaw = Mathf.Round(rng.NextFloat() * 4f) * 90f;
+                FindSpot(map, room, rng, out Vector3 p, out float yaw);
                 _rooms.Add(room);
                 _generators.Add(GridGenerator.Create(_generators.Count, p, yaw, transform));
                 _channels.Add(new ChannelProgress(PowerGridRules.RestartSeconds));
@@ -167,6 +162,46 @@ namespace Deadfall.Game
             _rng = new DeterministicRandom(map.Layout.Seed ^ 0xC0FFEEUL);
             _dirty = true;
             GameLog.Info("Grid", $"{_generators.Count} grid generators placed.");
+        }
+
+        private const int PlaceMask = ~(1 << 2);
+        private static readonly List<Vector3> Doorways = new List<Vector3>(32);
+
+        /// <summary>
+        /// A floor spot in <paramref name="room"/> for a generator: well clear of every doorway and breach-closet
+        /// opening (so it never blocks a closet or a way through), not touching walls or props, and on the NavMesh.
+        /// Deterministic from the seed, so every peer picks the same spot.
+        /// </summary>
+        private static void FindSpot(BuiltMap map, int room, DeterministicRandom rng, out Vector3 position, out float yaw)
+        {
+            Physics.SyncTransforms();
+            WallPlacement.Doorways(map, Doorways);
+            Vector3 c = map.RoomCenter(room);
+            Bounds bounds = map.RoomBounds[room];
+            Vector3 fallback = c;
+            float fallbackYaw = 0f;
+            bool haveFallback = false;
+            for (int attempt = 0; attempt < 24; attempt++)
+            {
+                float a = rng.NextFloat() * Mathf.PI * 2f;
+                float radius = attempt == 0 ? 1.8f : rng.NextFloat() * 4f;
+                float y = Mathf.Round(rng.NextFloat() * 4f) * 90f;
+                Vector3 p = c + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+                if (!NavMesh.SamplePosition(p, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) continue;
+                p = hit.position;
+                if (p.x < bounds.min.x || p.x > bounds.max.x || p.z < bounds.min.z || p.z > bounds.max.z) continue;
+                if (WallPlacement.NearAny(p, Doorways, 3.6f)) continue;
+                if (!haveFallback) { fallback = p; fallbackYaw = y; haveFallback = true; }
+                // Footprint (1.9 x 1.2 skid) plus a walkway around it must be free of walls and props.
+                Quaternion rot = Quaternion.Euler(0f, y, 0f);
+                if (Physics.CheckBox(p + Vector3.up * 1f, new Vector3(1.35f, 0.85f, 1.0f), rot, PlaceMask, QueryTriggerInteraction.Ignore)) continue;
+                position = p;
+                yaw = y;
+                return;
+            }
+            if (!haveFallback && NavMesh.SamplePosition(c, out NavMeshHit h, 4f, NavMesh.AllAreas)) fallback = h.position;
+            position = fallback;
+            yaw = fallbackYaw;
         }
 
         private void Clear()

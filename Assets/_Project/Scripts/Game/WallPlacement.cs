@@ -51,15 +51,7 @@ namespace Deadfall.Game
             float cs = map.CellSize;
             float floorY = map.RoomBounds[room].min.y;
 
-            AvoidDoors.Clear();
-            for (int i = 0; i < layout.Rooms.Count; i++)
-            {
-                PlacedRoom other = layout.Rooms[i];
-                for (int s = 0; s < other.Template.Sockets.Count; s++)
-                    if (layout.IsConnected(i, s, out _)) AvoidDoors.Add(Edge(other.SocketCell(s), other.SocketFacing(s), cs));
-            }
-            foreach (Breach br in layout.Breaches) AvoidDoors.Add(Edge(br.Inner, br.Facing, cs));
-            foreach (SectorDoor d in map.Doors) if (d != null) AvoidDoors.Add(d.transform.position);
+            Doorways(map, AvoidDoors);
             AvoidProps.Clear();
             foreach (DoorSwitch sw in map.Switches) if (sw != null) AvoidProps.Add(sw.transform.position);
             foreach (SecretPanel sp in map.SecretPanels) if (sp != null) AvoidProps.Add(sp.transform.position);
@@ -90,6 +82,28 @@ namespace Deadfall.Game
             yaw = Yaws[pick];
             return true;
         }
+
+        /// <summary>
+        /// Fills <paramref name="into"/> with the centre of every connected doorway, breach-closet opening and sector
+        /// door on the map: spots that must stay clear so players and enemies can get through.
+        /// </summary>
+        public static void Doorways(BuiltMap map, List<Vector3> into)
+        {
+            into.Clear();
+            Layout layout = map.Layout;
+            float cs = map.CellSize;
+            for (int i = 0; i < layout.Rooms.Count; i++)
+            {
+                PlacedRoom other = layout.Rooms[i];
+                for (int s = 0; s < other.Template.Sockets.Count; s++)
+                    if (layout.IsConnected(i, s, out _)) into.Add(Edge(other.SocketCell(s), other.SocketFacing(s), cs));
+            }
+            foreach (Breach br in layout.Breaches) into.Add(Edge(br.Inner, br.Facing, cs));
+            foreach (SectorDoor d in map.Doors) if (d != null) into.Add(d.transform.position);
+        }
+
+        /// <summary>True when <paramref name="p"/> is within <paramref name="distance"/> of any of the points (flat).</summary>
+        public static bool NearAny(Vector3 p, List<Vector3> points, float distance) => Near(p, points, distance);
 
         private static bool Fits(Vector3 at, Vector3 outward, float floorY, Shape shape, out Vector3 floor)
         {
