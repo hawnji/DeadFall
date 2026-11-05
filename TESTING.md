@@ -162,7 +162,7 @@ Solo:
 - [ ] Walls have doorways only where rooms connect. Rooms have a light, a few crates, and a coloured square showing their sector.
 - [ ] Doors to later sectors are closed and tinted. **Open next sector (debug)** slides the next set open.
 - [ ] M shows the minimap: rooms in sector colours (faded while locked), red/green door dots, orange spawn points, yellow loot, you in green, enemies in red. It says "Validation: OK".
-- [ ] Press N: enemies spawn only in open sectors and path to you around closed doors. After surge 3 a "SECTOR 1 UNLOCKED" banner shows and those doors open; later surges also spawn there.
+- [ ] Press N: enemies spawn only in open sectors and path to you around closed doors. Buying a sector door with credits opens it; later surges also spawn in that sector.
 - [ ] Look at an ammo crate or medkit: "[F] Take ammo" / "[F] Take medkit". F uses it once.
 - [ ] Find the cyan dot on the M map (a vent cover low on a wall). Shoot it; crouch through into the vent crawl and open the gold stash (full refill, +250 credits during a run).
 - [ ] A Cluster Charge thrown on the other side of a wall doesn't hurt enemies behind it.

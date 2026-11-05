@@ -138,7 +138,10 @@ namespace Deadfall.Rules.World
         private static SocketDef W(int w, int d) => new SocketDef(0, d / 2, Dir.West);
     }
 
-    /// <summary>When sectors open in Survival: sector 1 after surge 3, sector 2 after 7, sector 3 after 12, then every 5.</summary>
+    /// <summary>
+    /// Original surge-based sector timetable (T-33). Not used at runtime since the map rework: players open sectors by
+    /// buying doors. Kept for the layout validator and tests.
+    /// </summary>
     public static class SectorSchedule
     {
         public static int UnlockAfterSurge(int sector)

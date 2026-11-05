@@ -205,7 +205,7 @@ namespace Deadfall.Game
             op = PickedMission(picked);
             GUI.enabled = !client && WorldControl.EnterMap != null;
             Mission(op.Name.Replace("Operation ", "Operation: "), op.Briefing + " Surges continue until you extract. Pays the most Intel.", () => Deploy(DeployMode.Operation));
-            Mission("Survival", "Hold out through every surge. Sectors open after surges 3, 7 and 12; a Specimen waits at the end.", () => Deploy(DeployMode.Survival));
+            Mission("Survival", "Hold out through every surge. Buy doors with credits to open new sectors; a Specimen waits at the end.", () => Deploy(DeployMode.Survival));
             long best = p.Stat(StatKeys.EndlessBest);
             Mission("Endless", "No final surge. From surge 21 a new escalation stacks every 5 surges (Armored, Swarming, Frenzied, Elite Tide, Relentless). Rewards keep growing." +
                     (best > 0 ? $" Your best: surge {best}." : string.Empty), () => Deploy(DeployMode.Endless));
