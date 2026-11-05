@@ -128,6 +128,13 @@ namespace Deadfall.Game
             Grant(to, GrantWeapon, def, mods);
         }
 
+        /// <summary>Host/offline: refills every gun's reserve for one player (ammo stations).</summary>
+        public void GiveAmmo(ulong to)
+        {
+            if (!IsAuthority) return;
+            Grant(to, GrantAmmo, null, null);
+        }
+
         /// <summary>Host/offline: shows a red toast to one player (refused purchases).</summary>
         public void Notify(ulong to, string reason) => Deny(to, reason);
 

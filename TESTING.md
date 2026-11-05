@@ -577,6 +577,14 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The Gun Dispenser always stands on the floor with its back against a wall, facing into the room.
 - [ ] It is never in front of a doorway, sector door, breach closet, switch or vent, and you can walk past it on both sides.
 
+### 3.44 Map textures, floor clutter, ammo stations
+
+- [ ] Room walls show steel panels with seams and bolts, floors show worn 1 m tiles with grout lines, ceilings show a drop-ceiling grid with a few stained tiles. Service tunnels show sooty brick walls with bare concrete floors and ceilings.
+- [ ] Room colours still differ by theme (the textures are tinted, not replacing the colours). Tile grout lines line up across each floor plate.
+- [ ] No grime squares, blood smears, paper sheets or rubble piles on floors. Crates, lockers and furniture are still there.
+- [ ] Each sector has one ammo station on a wall (olive cabinet, yellow bands, glowing strip). It doesn't block a doorway, closet or the Gun Dispenser.
+- [ ] Outside a run its prompt says to start a run. During a run, F with 200 or more credits takes 200 and shows "Ammo refilled", and every gun's reserve is full. With fewer credits it says "Not enough Field Credits". In co-op a client gets the same.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

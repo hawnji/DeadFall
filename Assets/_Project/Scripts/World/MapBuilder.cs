@@ -244,7 +244,7 @@ namespace Deadfall.World
             {
                 var dir = (Dir)d;
                 if (dir == back) continue;
-                BuildWall(t, c, dir, Opening.None, _h, dark);
+                BuildWall(t, c, dir, Opening.None, _h, dark, Surface.None);
             }
             for (int i = first; i < t.childCount; i++) Matte(t.GetChild(i).gameObject);
 
@@ -309,7 +309,9 @@ namespace Deadfall.World
                     while (x < room.Width && room.Contains(new Cell(room.Origin.X + x, room.Origin.Z + z))) x++;
                     float x0 = (room.Origin.X + start) * _cs, x1 = (room.Origin.X + x) * _cs, zc = (room.Origin.Z + z + 0.5f) * _cs;
                     Box(t, "Floor", new Vector3((x0 + x1) * 0.5f, -0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), floor);
-                    Box(t, "Ceiling", new Vector3((x0 + x1) * 0.5f, ceilingY + 0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), new Color(0.2f, 0.2f, 0.22f));
+                    // Drop-ceiling tiles (lighter, so the texture reads under the room lights); tunnels keep bare concrete.
+                    if (theme.Tunnel) Box(t, "Ceiling", new Vector3((x0 + x1) * 0.5f, ceilingY + 0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), new Color(0.2f, 0.2f, 0.22f));
+                    else Box(t, "Ceiling", new Vector3((x0 + x1) * 0.5f, ceilingY + 0.1f, zc), new Vector3(x1 - x0, 0.2f, _cs), new Color(0.4f, 0.4f, 0.4f), surface: Surface.CeilingTile);
                 }
             }
             // A square of the sector colour in the middle helps reading the map while sectors are new.
@@ -330,7 +332,7 @@ namespace Deadfall.World
                         var dir = (Dir)d;
                         if (room.Contains(c.Step(dir))) continue;
                         Opening opening = OpeningAt(layout, room, c, dir);
-                        BuildWall(t, c, dir, opening, ceilingY, wall);
+                        BuildWall(t, c, dir, opening, ceilingY, wall, theme.Tunnel ? Surface.Brick : Surface.WallPanel);
                     }
                 }
 
@@ -373,7 +375,7 @@ namespace Deadfall.World
             return Opening.None;
         }
 
-        private void BuildWall(Transform parent, Cell c, Dir dir, Opening opening, float height, Color color)
+        private void BuildWall(Transform parent, Cell c, Dir dir, Opening opening, float height, Color color, Surface surface)
         {
             Vector3 mid = EdgeMid(c, dir);
             Vector3 inward = new Vector3(-dir.Dx(), 0f, -dir.Dz());
@@ -385,15 +387,15 @@ namespace Deadfall.World
 
             if (opening == Opening.None)
             {
-                Box(parent, "Wall", center + Vector3.up * (height * 0.5f), Size(_cs, height), color);
+                Box(parent, "Wall", center + Vector3.up * (height * 0.5f), Size(_cs, height), color, surface: surface);
                 return;
             }
             float gap = opening == Opening.Door ? DoorWidth : opening == Opening.Breach ? BreachBarricade.OpeningWidth : VentWidth;
             float gapH = opening == Opening.Door ? DoorHeight : opening == Opening.Breach ? BreachBarricade.OpeningHeight : VentHeight;
             float side = (_cs - gap) * 0.5f;
-            Box(parent, "Wall", center + axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color);
-            Box(parent, "Wall", center - axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color);
-            Box(parent, "Lintel", center + Vector3.up * (gapH + (height - gapH) * 0.5f), Size(gap, height - gapH), color);
+            Box(parent, "Wall", center + axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color, surface: surface);
+            Box(parent, "Wall", center - axis * (gap * 0.5f + side * 0.5f) + Vector3.up * (height * 0.5f), Size(side, height), color, surface: surface);
+            Box(parent, "Lintel", center + Vector3.up * (gapH + (height - gapH) * 0.5f), Size(gap, height - gapH), color, surface: surface);
         }
 
         /// <summary>
@@ -616,7 +618,8 @@ namespace Deadfall.World
             return m;
         }
 
-        private GameObject Box(Transform parent, string name, Vector3 position, Vector3 size, Color color, bool collider = true)
+        /// <param name="surface">Texture set; None guesses from the name (see <see cref="SurfaceArt.Guess"/>).</param>
+        private GameObject Box(Transform parent, string name, Vector3 position, Vector3 size, Color color, bool collider = true, Surface surface = Surface.None)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -625,7 +628,8 @@ namespace Deadfall.World
             go.transform.localScale = size;
             go.isStatic = true;
             if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>()); // gone before the NavMesh bake this frame
-            if (!SurfaceArt.ApplyAuto(go, color)) go.GetComponent<Renderer>().sharedMaterial = Mat(color);
+            bool textured = surface != Surface.None ? SurfaceArt.Apply(go, surface, color) || SurfaceArt.ApplyAuto(go, color) : SurfaceArt.ApplyAuto(go, color);
+            if (!textured) go.GetComponent<Renderer>().sharedMaterial = Mat(color);
             return go;
         }
     }

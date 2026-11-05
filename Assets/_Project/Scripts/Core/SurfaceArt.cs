@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Deadfall.Core
 {
     /// <summary>What a surface is made of; picks its texture set (Resources/Textures/&lt;name&gt;_albedo/_normal).</summary>
-    public enum Surface : byte { None, Concrete, Plaster, Metal, Wood, Dirt }
+    public enum Surface : byte { None, Concrete, Plaster, Metal, Wood, Dirt, FloorTile, WallPanel, CeilingTile, Brick }
 
     /// <summary>
     /// Textured surfaces for the code-built world (maps, FOB, sandbox). Textures come from
@@ -31,6 +31,12 @@ namespace Deadfall.Core
             Surface.Metal => new Spec("metal", 1.6f, 0.45f, 1f),
             Surface.Wood => new Spec("wood", 1.4f, 0.22f, 0.9f),
             Surface.Dirt => new Spec("dirt", 4f, 0.05f, 0.9f),
+            // Map surfaces: one texture = 4 x 4 one-metre tiles on a 3.92 m floor plate, two 1 m steel panels,
+            // a 4 m patch of drop ceiling, 2 m of brick.
+            Surface.FloorTile => new Spec("floortile", 3.92f, 0.3f, 1f),
+            Surface.WallPanel => new Spec("wallpanel", 2f, 0.28f, 0.9f),
+            Surface.CeilingTile => new Spec("ceilingtile", 4f, 0.05f, 0.8f),
+            Surface.Brick => new Spec("brick", 2f, 0.1f, 1f),
             _ => default,
         };
 

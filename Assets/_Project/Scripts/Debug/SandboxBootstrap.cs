@@ -114,6 +114,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<PowerGrid>();
             // Gun Dispenser: random weapons for Field Credits in Survival and Endless.
             net.AddComponent<GunDispenserDirector>();
+            // Wall-mounted ammo refill stations, one per sector.
+            net.AddComponent<AmmoStationDirector>();
             // M9: Engineering structures and the squad's Scrap (host-run).
             net.AddComponent<EngineeringDirector>();
             // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.
