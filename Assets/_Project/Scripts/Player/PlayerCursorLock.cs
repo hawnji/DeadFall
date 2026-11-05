@@ -18,7 +18,7 @@ namespace Deadfall.Player
         private void Update()
         {
             if (_input == null) return;
-            if (_input.Current.PausePressed) SetLocked(!_locked);
+            if (_input.Current.PausePressed && !Deadfall.Core.KeyBindings.Capturing) SetLocked(!_locked);
         }
 
         private void OnApplicationFocus(bool focus)

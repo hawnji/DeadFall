@@ -5,6 +5,8 @@ using Deadfall.Encounters;
 using Deadfall.Enemies;
 using Deadfall.Net;
 using Deadfall.Rules.Common;
+using Deadfall.Rules.World;
+using Deadfall.World;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -97,7 +99,7 @@ namespace Deadfall.Game
             if (waves.Surge != _surgeSeen) { _surgeSeen = waves.Surge; _droppedThisSurge = 0; }
             if (_droppedThisSurge >= MaxPerSurge || Time.time - _lastDropAt < MinGapSeconds) return;
             if (_rng.NextFloat() >= DropChance) return;
-            Vector3 at = e.Position;
+            Vector3 at = OutOfCloset(e.Position);
             if (NavMesh.SamplePosition(at, out NavMeshHit hit, 2f, NavMesh.AllAreas)) at = hit.position;
             _droppedThisSurge++;
             _lastDropAt = Time.time;
@@ -106,6 +108,27 @@ namespace Deadfall.Game
             if (_nextId == 0) _nextId = 1;
             Spawn(id, kind, at);
             Send(OpSpawn, w => { w.WriteValueSafe(id); w.WriteValueSafe((byte)kind); w.WriteValueSafe(at); });
+        }
+
+        /// <summary>
+        /// A kill inside a breach closet drops its power-up in the room instead, a step in front of the boarded
+        /// opening, where players can reach it.
+        /// </summary>
+        private static Vector3 OutOfCloset(Vector3 p)
+        {
+            BuiltMap map = MapSession.Current != null ? MapSession.Current.Map : null;
+            if (map == null || map.Layout == null) return p;
+            float cs = map.CellSize;
+            var cell = new Cell(Mathf.FloorToInt(p.x / cs), Mathf.FloorToInt(p.z / cs));
+            foreach (Breach br in map.Layout.Breaches)
+            {
+                if (!br.Closet.Equals(cell)) continue;
+                var facing = new Vector3(br.Facing.Dx(), 0f, br.Facing.Dz());
+                Vector3 inner = new Vector3((br.Inner.X + 0.5f) * cs, p.y, (br.Inner.Z + 0.5f) * cs);
+                // Centre of the room-side cell, pulled a little towards the opening (still well clear of the boards).
+                return inner + facing * (cs * 0.15f);
+            }
+            return p;
         }
 
         private PowerUpKind RollKind()

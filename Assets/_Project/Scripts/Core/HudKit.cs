@@ -34,7 +34,7 @@ namespace Deadfall.Core
         /// <summary>Top of the pause screen's centre column (PAUSED, Resume/Settings, Quit to title).</summary>
         public static float PauseTop => H * 0.2f;
         /// <summary>Where panels below the pause column (co-op) start, clear of its buttons and hint.</summary>
-        public static float PauseColumnBottom => PauseTop + 200f;
+        public static float PauseColumnBottom => PauseTop + 260f;
 
         private static Matrix4x4 _saved;
         private static Texture2D _round, _roundSmall, _ring, _vignette;

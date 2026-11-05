@@ -27,7 +27,12 @@ namespace Deadfall.UI
         private bool _hitMarkerCrit;
         private bool _hitMarkerKill;
         private float _damageFlashUntil;
-        private float _quitConfirmUntil;
+        private float _quitConfirmUntil, _hubConfirmUntil;
+
+        /// <summary>Pause screen "Quit to HUB": ends the run and returns to the FOB (set by the bootstrap).</summary>
+        public static System.Action QuitToHub;
+        /// <summary>Why Quit to HUB is unavailable right now (already at the hub, co-op client), or null.</summary>
+        public static System.Func<string> QuitToHubBlocked;
         private Vector3 _lastDamageDir;
 
 
@@ -171,19 +176,36 @@ namespace Deadfall.UI
                 HudKit.Backdrop(0.5f);
                 HudKit.Label(new Rect(0f, HudKit.PauseTop, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
                 HudKit.Prompt(w * 0.5f, HudKit.PauseTop + 66f, "Esc", "Resume", true);
-                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f + 86f, HudKit.PauseTop + 66f, 150f, 40f), "Settings"))
+                float top = HudKit.PauseTop + 112f;
+                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f - 206f, top, 412f, 40f), "Settings"))
                     _settingsPanel.Open();
+                // Quit row: two clicks each (the first arms it for a few seconds, so a stray click doesn't end a run).
+                var titleRect = new Rect(w * 0.5f - 206f, top + 52f, 200f, 40f);
+                var hubRect = new Rect(w * 0.5f + 6f, top + 52f, 200f, 40f);
+                string note = null;
                 if (TitleScreen.Current != null)
                 {
-                    // Two clicks: the first arms it for a few seconds, so a stray click doesn't end a run.
                     bool armed = now < _quitConfirmUntil;
-                    if (HudKit.Button(new Rect(w * 0.5f - 130f, HudKit.PauseTop + 122f, 260f, 40f), armed ? "Click again to quit" : "Quit to title", on: armed, accent: HudKit.Bad))
+                    if (HudKit.Button(titleRect, armed ? "Click again to quit" : "Quit to title", on: armed, accent: HudKit.Bad))
                     {
                         if (armed) { _quitConfirmUntil = 0f; TitleScreen.Current.ReturnToTitle(); }
-                        else _quitConfirmUntil = now + 3f;
+                        else { _quitConfirmUntil = now + 3f; _hubConfirmUntil = 0f; }
                     }
-                    if (armed) HudKit.Label(new Rect(0f, HudKit.PauseTop + 168f, w, 22f), "Leaves co-op and ends the current run.", 13, HudKit.TextDim, TextAnchor.MiddleCenter);
+                    if (armed) note = "Leaves co-op and ends the current run.";
                 }
+                if (QuitToHub != null)
+                {
+                    string blocked = QuitToHubBlocked != null ? QuitToHubBlocked() : null;
+                    bool armed = blocked == null && now < _hubConfirmUntil;
+                    if (HudKit.Button(hubRect, armed ? "Click again to leave" : "Quit to HUB", on: armed, enabled: blocked == null, accent: HudKit.Warn))
+                    {
+                        if (armed) { _hubConfirmUntil = 0f; QuitToHub(); }
+                        else { _hubConfirmUntil = now + 3f; _quitConfirmUntil = 0f; }
+                    }
+                    if (armed) note = "Ends the current run and takes the squad back to FOB Halcyon.";
+                    else if (blocked != null && hubRect.Contains(Event.current.mousePosition)) note = blocked;
+                }
+                if (note != null) HudKit.Label(new Rect(0f, top + 100f, w, 22f), note, 13, HudKit.TextDim, TextAnchor.MiddleCenter);
                 HudKit.Label(new Rect(w - 320f, h - 30f, 300f, 20f), BuildInfo.Label, 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             }
             HudKit.End();

@@ -491,7 +491,7 @@ namespace Deadfall.World
         }
 
         /// <summary>Furniture that stands against a wall instead of out in the room.</summary>
-        private static bool AgainstWall(string id) => id == "prop_server_rack" || id == "rack_row" || id == "prop_locker";
+        private static bool AgainstWall(string id) => id == "prop_server_rack" || id == "rack_row" || id == "prop_locker" || id == "prop_shelf" || id == "prop_desk";
 
         /// <summary>Floor footprint radius used to keep furniture apart.</summary>
         private static float FootprintRadius(string id)

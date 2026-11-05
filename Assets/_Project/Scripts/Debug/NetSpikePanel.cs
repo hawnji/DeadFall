@@ -83,7 +83,7 @@ namespace Deadfall.DebugTools
             if (!paused || Deadfall.Core.UiModal.Active) return;
 
             float w = 380f, h = s.IsActive ? (s.IsRelay ? 200f : 170f) : (OnlineRelay.Available ? 330f : 230f);
-            var area = new Rect((Deadfall.Core.HudKit.W - w) * 0.5f, Deadfall.Core.HudKit.PauseColumnBottom, w, h);
+            var area = new Rect(Deadfall.Core.HudKit.W - w - 28f, 28f, w, h); // top right of the pause screen
             Deadfall.Core.HudKit.Panel(area);
             GUILayout.BeginArea(new Rect(area.x + 14f, area.y + 10f, w - 28f, h - 20f));
             GUILayout.Label("CO-OP", _label);

@@ -39,6 +39,8 @@ namespace Deadfall.Core
         public bool ShowFps;
         /// <summary>Floating damage numbers on hits.</summary>
         public bool DamageNumbers = true;
+        /// <summary>Rebound keys as "ActionId=path" entries; actions not listed use their default (see <see cref="KeyBindings"/>).</summary>
+        public string[] KeyBindings = new string[0];
 
         public void Sanitize()
         {
@@ -55,6 +57,7 @@ namespace Deadfall.Core
             if (Version < 3 && Mathf.Abs(AmbienceVolume - OldDefaultMusicVolume) < 0.001f) AmbienceVolume = DefaultMusicVolume;
             if (Version < 4 && Mathf.Abs(AmbienceVolume - V3DefaultMusicVolume) < 0.001f) AmbienceVolume = DefaultMusicVolume;
             QualityLevel = Mathf.Clamp(QualityLevel, -1, 32);
+            if (KeyBindings == null) KeyBindings = new string[0];
             Version = CurrentVersion;
         }
     }

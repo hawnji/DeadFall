@@ -1,3 +1,4 @@
+using Deadfall.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -30,9 +31,9 @@ namespace Deadfall.Player
     }
 
     /// <summary>
-    /// Reads the Input System. Actions are defined in code for now so the project works without an
-    /// .inputactions asset; a rebinding asset replaces this in the settings milestone. Gamepad bindings
-    /// are included so controller support is a tuning task, not a rewrite.
+    /// Reads the Input System. Actions are defined in code so the project works without an .inputactions asset;
+    /// keyboard and mouse keys come from <see cref="KeyBindings"/> (Settings › Keybinds) and the map is rebuilt when
+    /// they change. Gamepad bindings are included so controller support is a tuning task, not a rewrite.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class PlayerInputReader : MonoBehaviour
@@ -52,37 +53,66 @@ namespace Deadfall.Player
         /// </summary>
         public bool WeaponsBlocked { get; set; }
 
+        private ISettingsService _settings;
+        private string _builtFor;
+
         private void Awake()
         {
+            ServiceRegistry.TryGet(out _settings);
+            Build();
+            if (_settings != null) _settings.Changed += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(GameSettings s)
+        {
+            if (Signature(s) != _builtFor) Build();
+        }
+
+        private static string Signature(GameSettings s) => s != null && s.KeyBindings != null ? string.Join("|", s.KeyBindings) : string.Empty;
+
+        /// <summary>(Re)creates the action map from the current key bindings (Settings › Keybinds).</summary>
+        private void Build()
+        {
+            GameSettings gs = _settings != null ? _settings.Current : null;
+            _builtFor = Signature(gs);
+            bool wasEnabled = _map == null || _map.enabled;
+            _map?.Dispose();
+            string Key(string id) => KeyBindings.Path(gs, id);
+            bool Free(string path)
+            {
+                foreach (KeyBindings.Entry e in KeyBindings.All) if (Key(e.Id) == path) return false;
+                return true;
+            }
+
             _map = new InputActionMap("Player");
 
             _move = _map.AddAction("Move", InputActionType.Value);
             _move.AddCompositeBinding("2DVector")
-                .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
-                .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
+                .With("Up", Key("MoveUp")).With("Down", Key("MoveDown"))
+                .With("Left", Key("MoveLeft")).With("Right", Key("MoveRight"));
             _move.AddBinding("<Gamepad>/leftStick");
 
             _look = _map.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
-            _sprint = _map.AddAction("Sprint", InputActionType.Button, "<Keyboard>/leftShift");
+            _sprint = _map.AddAction("Sprint", InputActionType.Button, Key("Sprint"));
             _sprint.AddBinding("<Gamepad>/leftStickPress");
-            _jump = _map.AddAction("Jump", InputActionType.Button, "<Keyboard>/space");
+            _jump = _map.AddAction("Jump", InputActionType.Button, Key("Jump"));
             _jump.AddBinding("<Gamepad>/buttonSouth");
-            _crouch = _map.AddAction("Crouch", InputActionType.Button, "<Keyboard>/leftCtrl");
-            _crouch.AddBinding("<Keyboard>/c");
+            _crouch = _map.AddAction("Crouch", InputActionType.Button, Key("Crouch"));
+            if (KeyBindings.IsDefault(gs, "Crouch") && Free("<Keyboard>/c")) _crouch.AddBinding("<Keyboard>/c");
             _crouch.AddBinding("<Gamepad>/buttonEast");
-            _fire = _map.AddAction("Fire", InputActionType.Button, "<Mouse>/leftButton");
+            _fire = _map.AddAction("Fire", InputActionType.Button, Key("Fire"));
             _fire.AddBinding("<Gamepad>/rightTrigger");
-            _aim = _map.AddAction("Aim", InputActionType.Button, "<Mouse>/rightButton");
+            _aim = _map.AddAction("Aim", InputActionType.Button, Key("Aim"));
             _aim.AddBinding("<Gamepad>/leftTrigger");
-            _reload = _map.AddAction("Reload", InputActionType.Button, "<Keyboard>/r");
+            _reload = _map.AddAction("Reload", InputActionType.Button, Key("Reload"));
             _reload.AddBinding("<Gamepad>/buttonWest");
-            _melee = _map.AddAction("Melee", InputActionType.Button, "<Keyboard>/v");
-            _melee.AddBinding("<Mouse>/middleButton");
+            _melee = _map.AddAction("Melee", InputActionType.Button, Key("Melee"));
+            if (KeyBindings.IsDefault(gs, "Melee") && Free("<Mouse>/middleButton")) _melee.AddBinding("<Mouse>/middleButton");
             _melee.AddBinding("<Gamepad>/rightStickPress");
-            _interact = _map.AddAction("Interact", InputActionType.Button, "<Keyboard>/f");
-            _ability = _map.AddAction("Ability", InputActionType.Button, "<Keyboard>/q");
+            _interact = _map.AddAction("Interact", InputActionType.Button, Key("Interact"));
+            _ability = _map.AddAction("Ability", InputActionType.Button, Key("Ability"));
             _ability.AddBinding("<Gamepad>/rightShoulder");
-            _grenade = _map.AddAction("Grenade", InputActionType.Button, "<Keyboard>/e");
+            _grenade = _map.AddAction("Grenade", InputActionType.Button, Key("Grenade"));
             _grenade.AddBinding("<Gamepad>/leftShoulder");
             _scroll = _map.AddAction("Scroll", InputActionType.Value, "<Mouse>/scroll/y");
             _next = _map.AddAction("NextWeapon", InputActionType.Button, "<Gamepad>/buttonNorth");
@@ -94,7 +124,7 @@ namespace Deadfall.Player
             for (int i = 0; i < _slots.Length; i++)
                 _slots[i] = _map.AddAction("Slot" + (i + 1), InputActionType.Button, "<Keyboard>/" + (i + 1));
 
-            _map.Enable();
+            if (wasEnabled) _map.Enable();
         }
 
         private void OnEnable() => _map?.Enable();
@@ -102,12 +132,19 @@ namespace Deadfall.Player
 
         private void OnDestroy()
         {
+            if (_settings != null) _settings.Changed -= OnSettingsChanged;
             _map?.Dispose();
             _map = null;
         }
 
         private void Update()
         {
+            // The settings service may register after the player is built.
+            if (_settings == null && ServiceRegistry.TryGet(out _settings))
+            {
+                _settings.Changed += OnSettingsChanged;
+                OnSettingsChanged(_settings.Current);
+            }
             var f = new PlayerInputFrame { WeaponSlotPressed = -1, PausePressed = _pause.WasPressedThisFrame() };
             if (GameplayEnabled)
             {

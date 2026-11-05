@@ -6,7 +6,7 @@ namespace Deadfall.UI
 {
     /// <summary>
     /// The Settings window (M13), opened from the pause screen: volumes, mouse, field of view, frame rate, quality
-    /// and window mode. Changes apply live and are saved when the window closes (Done, or Esc back to the game).
+    /// and window mode, plus a Keybinds tab for keyboard and mouse controls. Changes apply live and are saved when the window closes (Done, or Esc back to the game).
     /// </summary>
     public sealed class SettingsPanel : MonoBehaviour
     {
@@ -16,6 +16,12 @@ namespace Deadfall.UI
         private ISettingsService _settings;
         private PlayerCursorLock _cursor;
         private bool _open;
+        private enum Tab { General, Keybinds }
+        private Tab _tab;
+        /// <summary>The action waiting for a key press, or null.</summary>
+        private string _capturing;
+        private int _captureFrame;
+        private string _captureNote = string.Empty;
 
         public bool IsOpen => _open;
 
@@ -36,6 +42,7 @@ namespace Deadfall.UI
         {
             if (!_open) return;
             _open = false;
+            StopCapture();
             UiModal.Close(Owner);
             _settings?.Save();
         }
@@ -54,11 +61,19 @@ namespace Deadfall.UI
             GameSettings s = _settings.Current;
             HudKit.Begin();
             GUI.depth = -20;
-            Rect c = HudKit.Window(760f, 680f, "SETTINGS", BuildInfo.Label);
+            Rect c = HudKit.Window(760f, 720f, "SETTINGS", BuildInfo.Label);
             bool changed = false;
             float colW = (c.width - 40f) * 0.5f;
             float lx = c.x, rx = c.x + colW + 40f;
-            float y = c.y + 6f;
+            if (HudKit.Button(new Rect(c.x, c.y, 160f, 34f), "General", on: _tab == Tab.General, size: 14)) { _tab = Tab.General; StopCapture(); }
+            if (HudKit.Button(new Rect(c.x + 170f, c.y, 160f, 34f), "Keybinds", on: _tab == Tab.Keybinds, size: 14)) _tab = Tab.Keybinds;
+            float y = c.y + 52f;
+            if (_tab == Tab.Keybinds)
+            {
+                changed |= DrawKeybinds(s, c, lx, rx, colW, y);
+                FinishWindow(s, c, changed);
+                return;
+            }
 
             HudKit.Section(new Rect(lx, y, colW, 22f), "Audio");
             y += 34f;
@@ -74,7 +89,7 @@ namespace Deadfall.UI
             changed |= Number(lx, ref y, colW, "Aim sensitivity", ref s.AimSensitivityMultiplier, 0.2f, 1.5f, $"{Mathf.RoundToInt(s.AimSensitivityMultiplier * 100f)}%");
             changed |= Toggle(lx, ref y, colW, "Invert look", ref s.InvertY);
 
-            float y2 = c.y + 6f;
+            float y2 = c.y + 52f;
             HudKit.Section(new Rect(rx, y2, colW, 22f), "Video");
             y2 += 34f;
             changed |= Number(rx, ref y2, colW, "Field of view", ref s.FieldOfView, 70f, 110f, $"{Mathf.RoundToInt(s.FieldOfView)}°");
@@ -96,17 +111,92 @@ namespace Deadfall.UI
             changed |= Toggle(lx, ref y, colW, "Damage numbers", ref s.DamageNumbers);
             HudKit.Label(new Rect(rx, y2, colW, 40f), "Window mode applies in builds only. The frame rate cap is used when VSync is off.", 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
 
+            FinishWindow(s, c, changed);
+        }
+
+        private void FinishWindow(GameSettings s, Rect c, bool changed)
+        {
             float by = c.yMax - 44f;
-            if (HudKit.Button(new Rect(c.x, by, 200f, 40f), "Reset to defaults"))
+            if (HudKit.Button(new Rect(c.x, by, 200f, 40f), _tab == Tab.Keybinds ? "Reset keybinds" : "Reset to defaults"))
             {
-                var d = new GameSettings();
-                JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(d), s);
+                StopCapture();
+                if (_tab == Tab.Keybinds) s.KeyBindings = new string[0];
+                else
+                {
+                    string[] keys = s.KeyBindings;
+                    var d = new GameSettings();
+                    JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(d), s);
+                    s.KeyBindings = keys; // keybinds have their own reset on their tab
+                }
                 changed = true;
             }
             if (HudKit.Button(new Rect(c.xMax - 200f, by, 200f, 40f), "Done", on: true)) Close();
 
             if (changed) _settings.NotifyChanged();
             HudKit.End();
+        }
+
+        private bool DrawKeybinds(GameSettings s, Rect c, float lx, float rx, float colW, float y)
+        {
+            bool changed = false;
+            if (_capturing != null) changed |= TryCapture(s);
+            KeyBindings.Entry[] all = KeyBindings.All;
+            int half = (all.Length + 1) / 2;
+            for (int i = 0; i < all.Length; i++)
+            {
+                KeyBindings.Entry e = all[i];
+                float x = i < half ? lx : rx;
+                float ry = y + (i < half ? i : i - half) * 42f;
+                bool waiting = _capturing == e.Id;
+                HudKit.Label(new Rect(x, ry, colW - 180f, 32f), e.Label, 14, HudKit.Text);
+                string shown = waiting ? "Press a key..." : KeyBindings.Display(KeyBindings.Path(s, e.Id));
+                if (HudKit.Button(new Rect(x + colW - 170f, ry, 170f, 32f), shown, on: waiting, size: 13))
+                {
+                    if (waiting) StopCapture();
+                    else
+                    {
+                        _capturing = e.Id;
+                        _captureFrame = Time.frameCount;
+                        _captureNote = string.Empty;
+                        KeyBindings.Capturing = true;
+                    }
+                }
+            }
+            float ny = y + half * 42f + 8f;
+            string help = _capturing != null
+                ? "Press a key or mouse button for this action. Esc cancels."
+                : "Click an action, then press its new key or mouse button. Taking a key another action uses swaps the two. Esc, 1-4 and controller buttons are fixed.";
+            HudKit.Label(new Rect(lx, ny, c.width, 40f), help, 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
+            if (_captureNote.Length > 0) HudKit.Label(new Rect(lx, ny + 40f, c.width, 22f), _captureNote, 12, HudKit.Warn, TextAnchor.UpperLeft);
+            return changed;
+        }
+
+        /// <summary>Reads the next key or mouse press from IMGUI while an action is waiting for one.</summary>
+        private bool TryCapture(GameSettings s)
+        {
+            Event e = Event.current;
+            string path = null;
+            if (e.type == EventType.KeyDown && e.keyCode != KeyCode.None)
+            {
+                if (e.keyCode == KeyCode.Escape) { StopCapture(); e.Use(); return false; }
+                path = KeyBindings.FromKeyCode(e.keyCode);
+                if (path == null) { _captureNote = $"{e.keyCode} can't be bound."; e.Use(); return false; }
+            }
+            else if (e.type == EventType.MouseDown && Time.frameCount > _captureFrame + 1)
+            {
+                path = KeyBindings.FromMouseButton(e.button);
+            }
+            if (path == null) return false;
+            KeyBindings.Set(s, _capturing, path);
+            e.Use();
+            StopCapture();
+            return true;
+        }
+
+        private void StopCapture()
+        {
+            _capturing = null;
+            KeyBindings.Capturing = false;
         }
 
         private static bool Volume(float x, ref float y, float w, string label, ref float value) =>

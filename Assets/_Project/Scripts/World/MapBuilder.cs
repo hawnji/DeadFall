@@ -647,12 +647,41 @@ namespace Deadfall.World
                 Vector3 p = pts.Count > 0 ? pts[(l.Slot * 5 + 2) % pts.Count] : map.RoomCenter(l.Room);
                 Vector3 toCenter = map.RoomCenter(l.Room) - p;
                 toCenter.y = 0f;
+                float yaw = toCenter.sqrMagnitude > 0.01f ? Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg : 0f;
+                // Square to the nearest wall (facing into the room) instead of aiming at the room centre, which left
+                // supply caches cockeyed; a cache also backs up to the wall.
+                if (pts.Count > 0 && NearestWall(room, p, toCenter, out Vector3 outward))
+                {
+                    yaw = Mathf.Round(Quaternion.LookRotation(-outward).eulerAngles.y / 90f) * 90f;
+                    if (l.Kind == LootKind.SupplyCache) p += outward * (0.9f - 0.5f);
+                }
                 map.Loot.Add(new MapLootPoint
                 {
-                    Id = l.Room * 16 + l.Slot, Position = p, Kind = l.Kind, Room = l.Room, Sector = room.Sector,
-                    Yaw = toCenter.sqrMagnitude > 0.01f ? Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg : 0f,
+                    Id = l.Room * 16 + l.Slot, Position = p, Kind = l.Kind, Room = l.Room, Sector = room.Sector, Yaw = yaw,
                 });
             }
+        }
+
+        /// <summary>
+        /// The outward normal of the room wall closest to <paramref name="p"/> (a wall-strip point); in a corner, the
+        /// wall that faces most directly away from the room centre.
+        /// </summary>
+        private bool NearestWall(PlacedRoom room, Vector3 p, Vector3 toCenter, out Vector3 outward)
+        {
+            outward = default;
+            var c = new Cell(Mathf.FloorToInt(p.x / _cs), Mathf.FloorToInt(p.z / _cs));
+            float best = float.MaxValue;
+            foreach (Dir d in new[] { Dir.North, Dir.South, Dir.East, Dir.West })
+            {
+                if (room.Contains(c.Step(d))) continue;
+                var n = new Vector3(d.Dx(), 0f, d.Dz());
+                float dist = d == Dir.West ? p.x - c.X * _cs : d == Dir.East ? (c.X + 1) * _cs - p.x
+                    : d == Dir.South ? p.z - c.Z * _cs : (c.Z + 1) * _cs - p.z;
+                // Ties (corners) go to the wall the room centre is furthest behind.
+                float score = dist - 0.01f * Vector3.Dot(n, -toCenter.normalized);
+                if (score < best) { best = score; outward = n; }
+            }
+            return best < float.MaxValue;
         }
 
         private static readonly Color ClosetBlack = new Color(0.012f, 0.012f, 0.014f);

@@ -76,9 +76,9 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 2. **GameObject → Create Empty**, then **Add Component → Sandbox Bootstrap**.
 3. Press Play. FOB Halcyon (M10), the range, melee pit, movement course, and pads build themselves; the scene's own camera is switched off. You start in the FOB; the Training Range console (or its "Go to the firing range" button) takes you to the range.
 
-Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, E throw grenade, 1–4 or wheel to swap, Esc pause.
+Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, E throw grenade, 1–4 or wheel to swap, Esc pause. Keyboard and mouse keys can be rebound in Esc › Settings › Keybinds.
 Settings (M13): Esc → Settings for volumes, sensitivity, FOV, VSync, frame cap, quality, window mode, FPS counter and damage numbers.
-Debug (editor and development builds only, or a release build started with `-devtools`): F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, ` (backquote) shows or hides the stats readout (FPS, speed, enemies, waves, network; hidden by default), H toggles help while it is shown.
+Debug (editor and development builds only, or a release build started with `-devtools`): F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode. (The on-screen stats readout was removed; Settings › Show FPS still shows a frame counter.)
 Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill all, `[` / `]` lower or raise the alive cap.
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.

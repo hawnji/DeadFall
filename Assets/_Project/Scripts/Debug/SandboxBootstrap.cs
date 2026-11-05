@@ -2,6 +2,7 @@ using Deadfall.Core;
 using Deadfall.Encounters;
 using Deadfall.Enemies;
 using Deadfall.Game;
+using Deadfall.Net;
 using Deadfall.Player;
 using Deadfall.UI;
 using Deadfall.World;
@@ -144,6 +145,13 @@ namespace Deadfall.DebugTools
             WorldControl.ReturnToFob = EnterSandbox;
             WorldControl.EnterTrainingRange = GoToRange;
             WorldControl.AtBase = () => !InMap;
+            PrototypeHud.QuitToHub = () => WorldControl.ReturnToFob?.Invoke();
+            PrototypeHud.QuitToHubBlocked = () =>
+            {
+                if (!InMap) return "You're already at the hub.";
+                SessionService s = SessionService.Current;
+                return s != null && s.IsActive && !s.IsHost ? "Only the host can take the squad back to the hub." : null;
+            };
 
             // Title screen over the FOB until the player picks Play, Host or Join.
             new GameObject("[Title]").AddComponent<TitleScreen>().Bind(player, ui, FobOrigin, () =>
