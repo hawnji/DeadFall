@@ -18,6 +18,8 @@ namespace Deadfall.Player
         private PlayerWeapons _weapons;
         private int _bonus;
         private float _readyAt;
+        private ISettingsService _settings;
+        private static Texture2D _icon;
 
         public int Count { get; private set; } = GrenadeRules.BaseCapacity;
         public int Capacity => GrenadeRules.BaseCapacity + _bonus;
@@ -41,6 +43,7 @@ namespace Deadfall.Player
             _look = GetComponent<PlayerLook>();
             _health = GetComponent<PlayerHealth>();
             _weapons = GetComponent<PlayerWeapons>();
+            ServiceRegistry.TryGet(out _settings);
         }
 
         private void OnEnable() { if (_weapons != null) _weapons.AmmoRefilled += Refill; }
@@ -71,11 +74,27 @@ namespace Deadfall.Player
             if (Event.current.type != EventType.Repaint || UiModal.Active) return;
             if (_health != null && !_health.IsAlive) return;
             HudKit.Begin();
-            var r = new Rect(HudKit.W - 28f - 70f, HudKit.H - 28f - 84f - 42f, 70f, 34f); // just above the weapon card
+            string key = KeyBindings.Display(KeyBindings.Path(_settings != null ? _settings.Current : null, "Grenade"));
+            if (key.Length > 6) key = key.Substring(0, 6);
+            float keyW = Mathf.Max(18f, HudKit.TextWidth(key, 11, head: true) + 10f);
+            float width = 30f + 24f + keyW + 12f;
+            var r = new Rect(HudKit.W - 28f - width, HudKit.H - 28f - 84f - 42f, width, 34f); // just above the weapon card
             HudKit.Panel(r);
-            Color c = Count > 0 ? HudKit.Text : HudKit.TextDim;
-            HudKit.Label(new Rect(r.x + 8f, r.y, 30f, r.height), "●", 18, Count > 0 ? new Color(0.55f, 0.7f, 0.4f) : HudKit.TextDim, TextAnchor.MiddleLeft);
-            HudKit.Label(new Rect(r.x + 26f, r.y, 40f, r.height), $"{Count}  E", 13, c, TextAnchor.MiddleLeft, head: true);
+            bool have = Count > 0;
+            if (_icon == null) _icon = Resources.Load<Texture2D>("Textures/UI/GrenadeIcon");
+            var iconRect = new Rect(r.x + 6f, r.y + 3f, 28f, 28f);
+            if (_icon != null)
+            {
+                Color was = GUI.color;
+                GUI.color = have ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.55f);
+                GUI.DrawTexture(iconRect, _icon, ScaleMode.ScaleToFit, true);
+                GUI.color = was;
+            }
+            else HudKit.Label(iconRect, "●", 18, have ? new Color(0.55f, 0.7f, 0.4f) : HudKit.TextDim, TextAnchor.MiddleCenter);
+            HudKit.Label(new Rect(r.x + 36f, r.y, 22f, r.height), Count.ToString(), 15, have ? HudKit.Text : HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
+            var keyRect = new Rect(r.xMax - 8f - keyW, r.y + 8f, keyW, 18f);
+            HudKit.Round(keyRect, new Color(1f, 1f, 1f, 0.12f), true);
+            HudKit.Label(keyRect, key, 11, HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
             HudKit.End();
         }
     }
