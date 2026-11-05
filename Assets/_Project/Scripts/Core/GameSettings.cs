@@ -7,7 +7,7 @@ namespace Deadfall.Core
     [Serializable]
     public sealed class GameSettings
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public int Version = CurrentVersion;
         /// <summary>Degrees of rotation per mouse count at sensitivity 1.</summary>
@@ -23,8 +23,11 @@ namespace Deadfall.Core
         public float MasterVolume = 1f;
         /// <summary>Gunfire, enemies, explosions (M13).</summary>
         public float EffectsVolume = 1f;
-        /// <summary>Music (title theme) and any looping background bed. Shown as "Music" in Settings.</summary>
-        public float AmbienceVolume = 0.7f;
+        /// <summary>Music (title theme, level tracks) and any looping background bed. Shown as "Music" in Settings.</summary>
+        public float AmbienceVolume = DefaultMusicVolume;
+        public const float DefaultMusicVolume = 0.25f;
+        /// <summary>The v2 default, moved to <see cref="DefaultMusicVolume"/> when an untouched v2 file loads.</summary>
+        private const float OldDefaultMusicVolume = 0.7f;
         /// <summary>Menu clicks and HUD cues.</summary>
         public float InterfaceVolume = 0.8f;
         /// <summary>Index into the project's quality levels; -1 keeps the project default.</summary>
@@ -46,6 +49,8 @@ namespace Deadfall.Core
             AmbienceVolume = Mathf.Clamp01(AmbienceVolume);
             InterfaceVolume = Mathf.Clamp01(InterfaceVolume);
             // v1 files have no per-bus volumes or display fields; JsonUtility leaves the defaults, which is right.
+            // v2 defaulted Music to 70%; files still on that value move to the new 25% default.
+            if (Version < 3 && Mathf.Abs(AmbienceVolume - OldDefaultMusicVolume) < 0.001f) AmbienceVolume = DefaultMusicVolume;
             QualityLevel = Mathf.Clamp(QualityLevel, -1, 32);
             Version = CurrentVersion;
         }
