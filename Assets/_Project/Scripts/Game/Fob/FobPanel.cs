@@ -199,7 +199,10 @@ namespace Deadfall.Game
             for (int i = 0; i < ObjectiveRules.Missions.Length; i++)
             {
                 MissionTemplate m = ObjectiveRules.Missions[i];
-                if (GUILayout.Toggle(op == m, m.Name.Replace("Operation ", string.Empty), GUI.skin.button, GUILayout.Height(24f))) _missionId = m.Id;
+                // Only a click on an unselected one changes the pick (a selected toggle keeps returning true every frame,
+                // which used to overwrite the new pick and lock out earlier Operations in the row).
+                bool on = op == m;
+                if (GUILayout.Toggle(on, m.Name.Replace("Operation ", string.Empty), GUI.skin.button, GUILayout.Height(24f)) && !on) _missionId = m.Id;
             }
             GUILayout.EndHorizontal();
             op = PickedMission(picked);

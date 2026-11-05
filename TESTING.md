@@ -614,6 +614,17 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The forge prompt names the gun in your hands: Standard to Refined costs 1,000, Refined to Prototype 2,000, and a Prototype says it's already maxed. The upgraded gun keeps its attachments, gains one, and comes back with full ammo.
 - [ ] Co-op: a client can buy perks and forge; the host takes the credits and only the buyer gets the perk.
 
+### 3.49 Pause menu, keybinds and map tidy-ups
+
+- [ ] Esc: PAUSED and Resume in the middle, then a wide Settings button, then Quit to title and Quit to HUB side by side. The Co-op host/join panel sits top right.
+- [ ] Quit to HUB in a run takes two clicks and puts the squad back at FOB Halcyon (run ended). It's greyed out at the FOB and for co-op clients (hover says why).
+- [ ] Settings has General and Keybinds tabs. Click an action, press a key or mouse button (Mouse 4/5 work), and it applies straight away. Taking a key another action uses swaps them. Esc cancels the rebind without closing the menu. Reset keybinds restores WASD etc., and binds survive a restart.
+- [ ] The backquote dev readout (FPS / speed / enemies) is gone; Settings › Show FPS still shows the small counter.
+- [ ] Command center: you can switch between every Operation in the row, back and forth, including earlier ones.
+- [ ] Supply caches sit square to the wall with their backs against it.
+- [ ] A power-up from a zombie killed inside a breach closet lands in the room just in front of the boards.
+- [ ] Storage shelves and desks stand against walls, clear of doorways, closets, switches and loot.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

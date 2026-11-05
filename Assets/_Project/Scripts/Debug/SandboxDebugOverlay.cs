@@ -9,9 +9,8 @@ using UnityEngine.InputSystem;
 namespace Deadfall.DebugTools
 {
     /// <summary>
-    /// Developer overlay for tuning feel: FPS and frame time, movement state, frame-rate cap hotkeys
-    /// (F1 30, F2 60, F3 144, F4 unlimited), damage numbers, respawn (F9), god mode (F10). The text readout is hidden
-    /// until ` (backquote) shows it; the FPS counter from Settings still works without it.
+    /// Developer helpers: frame-rate cap hotkeys (F1 30, F2 60, F3 144, F4 unlimited), damage numbers, respawn (F9),
+    /// god mode (F10) and the optional FPS counter from Settings. The on-screen dev stats readout was removed.
     /// </summary>
     public sealed class SandboxDebugOverlay : MonoBehaviour
     {
@@ -29,15 +28,9 @@ namespace Deadfall.DebugTools
         private Vector3 _spawnPos;
         private float _spawnYaw;
         private InputActionMap _map;
-        private InputAction _f1, _f2, _f3, _f4, _f9, _f10, _help, _readout;
+        private InputAction _f1, _f2, _f3, _f4, _f9, _f10;
         private readonly List<DamageNumber> _numbers = new List<DamageNumber>(32);
         private float _smoothedDt = 1f / 60f;
-        private float _worstDt;
-        private float _worstResetAt;
-        private bool _showHelp;
-        /// <summary>The dev stats readout (FPS, speed, enemies, waves, network) is hidden until ` toggles it.</summary>
-        private bool _showReadout;
-        private SandboxEnemySpawner _spawner;
 
         public void Bind(GameObject player, Vector3 spawnPos, float spawnYaw)
         {
@@ -57,8 +50,6 @@ namespace Deadfall.DebugTools
             _f4 = _map.AddAction("Uncapped", InputActionType.Button, "<Keyboard>/f4");
             _f9 = _map.AddAction("Respawn", InputActionType.Button, "<Keyboard>/f9");
             _f10 = _map.AddAction("God", InputActionType.Button, "<Keyboard>/f10");
-            _help = _map.AddAction("Help", InputActionType.Button, "<Keyboard>/h");
-            _readout = _map.AddAction("Readout", InputActionType.Button, "<Keyboard>/backquote");
             _map.Enable();
         }
 
@@ -88,12 +79,6 @@ namespace Deadfall.DebugTools
         {
             float dt = Time.unscaledDeltaTime;
             _smoothedDt = Mathf.Lerp(_smoothedDt, dt, 0.05f);
-            if (Time.unscaledTime > _worstResetAt)
-            {
-                _worstDt = 0f;
-                _worstResetAt = Time.unscaledTime + 2f;
-            }
-            _worstDt = Mathf.Max(_worstDt, dt);
 
             if (BuildInfo.DevTools) DevKeys();
 
@@ -120,8 +105,6 @@ namespace Deadfall.DebugTools
             if (_f2.WasPressedThisFrame()) SetCap(60);
             if (_f3.WasPressedThisFrame()) SetCap(144);
             if (_f4.WasPressedThisFrame()) SetCap(0);
-            if (_readout.WasPressedThisFrame()) _showReadout = !_showReadout;
-            if (_help.WasPressedThisFrame() && _showReadout) _showHelp = !_showHelp;
             if (_f9.WasPressedThisFrame() && _player != null)
             {
                 _health.Revive();
@@ -164,44 +147,10 @@ namespace Deadfall.DebugTools
 
         private void DrawGui()
         {
-            if (!BuildInfo.DevTools || !_showReadout)
-            {
-                GameSettings gs = Settings;
-                if (gs != null && gs.ShowFps)
-                    HudKit.Label(new Rect(HudKit.W - 140f, 8f, 130f, 20f), $"{1f / Mathf.Max(0.0001f, _smoothedDt):0} FPS", 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
-                DrawNumbers();
-                return;
-            }
-            int cap = Application.targetFrameRate;
-            string capText = QualitySettings.vSyncCount > 0 ? "vsync" : cap > 0 ? cap.ToString() : "off";
-            string text = $"FPS {1f / Mathf.Max(0.0001f, _smoothedDt):0}  ({_smoothedDt * 1000f:0.0} ms, worst {_worstDt * 1000f:0.0} ms)  cap {capText}";
-            if (_motor != null)
-                text += $"\nSpeed {_motor.HorizontalSpeed:0.00} m/s  {(_motor.IsGrounded ? "grounded" : "air")}{(_motor.IsSprinting ? "  sprint" : "")}{(_motor.IsCrouched ? "  crouch" : "")}";
-            if (_health != null && _health.Invulnerable) text += "\nGOD MODE";
-            EnemyManager enemies = EnemyManager.Current;
-            if (enemies != null && enemies.ActiveCount > 0)
-                text += $"\nEnemies {enemies.AliveCount} / cap {enemies.MaxAlive}  ·  AI {enemies.UpdateMilliseconds:0.00} ms";
-            Deadfall.Encounters.WaveManager waves = Deadfall.Encounters.WaveManager.Current;
-            if (waves != null && waves.IsAuthority && waves.CurrentPlan != null && waves.IsRunning)
-            {
-                var plan = waves.CurrentPlan;
-                text += $"\nWaves seed {waves.Seed} · surge {plan.Surge} {plan.Type}: {plan.Spawns.Count} planned, budget {plan.Budget:0}, " +
-                        $"at once {plan.Concurrency}, dirs {waves.Director.ActiveGroups.Count}, hp x{plan.HealthScale:0.00}" +
-                        (waves.Director.Skipped > 0 ? $", {waves.Director.Skipped} skipped" : "");
-            }
-            Deadfall.Net.SessionService session = Deadfall.Net.SessionService.Current;
-            if (session != null && session.IsActive) text += "\n" + session.Stats.Summary();
-            if (_spawner == null) _spawner = GetComponent<SandboxEnemySpawner>();
-            if (_spawner != null && !string.IsNullOrEmpty(_spawner.LastMessage)) text += "\n" + _spawner.LastMessage;
-            if (_showHelp)
-                text += "\n\nWASD move · Mouse look · Shift sprint · Space jump · Ctrl/C crouch\nLMB fire · RMB aim · R reload · V melee · E grenade · 1-4 / wheel swap · Esc pause" +
-                        "\nF1/F2/F3/F4 cap 30/60/144/off (turns VSync off; Esc › Settings to change back) · F9 respawn · F10 god mode · H hide help" +
-                        "\nF12 next advanced enemy (Ctrl: variant) · F5 Husk · F6 Bolter · F7 Bulwark · F8 horde of 12 · F11 kill all · [ ] enemy cap" +
-                        "\nN start / stop survival run · G ready (ends the lull)" +
-                        "\nQ class ability · Esc to pick a class";
-            else text += "\nH: controls";
-            // Small dev readout under the location card (top left), out of the way of the real HUD.
-            HudKit.Label(new Rect(30f, 108f, 900f, 220f), text, 12, new Color(0.72f, 0.9f, 0.75f, 0.85f), TextAnchor.UpperLeft, wrap: false);
+            // The old dev readout (frame time, speed, enemies, waves, network) is gone; only Settings' FPS counter is left.
+            GameSettings gs = Settings;
+            if (gs != null && gs.ShowFps)
+                HudKit.Label(new Rect(HudKit.W - 140f, 8f, 130f, 20f), $"{1f / Mathf.Max(0.0001f, _smoothedDt):0} FPS", 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             DrawNumbers();
         }
 
