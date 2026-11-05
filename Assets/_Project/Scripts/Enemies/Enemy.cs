@@ -46,6 +46,12 @@ namespace Deadfall.Enemies
         private double _lastDamagedAt;
         private bool _hasLineOfSight;
         private double _blockerUntil;
+
+        /// <summary>
+        /// The barricade of the breach closet this enemy spawned in (set by the spawn director). While it stands and
+        /// the enemy is still on the closet side, the enemy breaks it however far away the players are.
+        /// </summary>
+        public IBlocker HomeBlocker { get; set; }
         private double _slowUntil;
         private float _slow;
         private bool _exploded;
@@ -489,6 +495,7 @@ namespace Deadfall.Enemies
             _health = _maxHealth;
             _knockRemaining = 0f;
             _target = null;
+            HomeBlocker = null;
             _targetDistance = 0f;
             _ventStage = 0;
             foreach (Collider c in _hurtColliders) c.enabled = true;
@@ -766,6 +773,16 @@ namespace Deadfall.Enemies
             if ((perceive && !stickToBlocker) || (_target != null && !_target.IsTargetable))
                 _target = _stats.CanExplode ? EnemyAttacks.BiggestCluster(transform.position, out _targetDistance)
                                             : CombatTargets.Nearest(transform.position, out _targetDistance);
+            // Still in the closet it spawned in: break that barricade first, whatever the path finder says. Far from
+            // the squad, the partial path can end in a back corner of the closet, which the checks below don't trust.
+            if (HomeBlocker != null && (!HomeBlocker.IsTargetable || !HomeBlocker.BreakableFrom(transform.position)
+                                        || HomeBlocker.DistanceFrom(transform.position) > SealedBlockerRange))
+                HomeBlocker = null;
+            if (perceive && HomeBlocker != null && !(_target is IBlocker))
+            {
+                _target = HomeBlocker;
+                _blockerUntil = now + 2.5;
+            }
             // A barricade has cut the path to the player: tear down the nearest blocker instead (never stuck for good).
             if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.isOnNavMesh
                 && !_agent.pathPending && ((_agent.hasPath && _agent.pathStatus == NavMeshPathStatus.PathPartial) || _agent.pathStatus == NavMeshPathStatus.PathInvalid))
@@ -878,7 +895,10 @@ namespace Deadfall.Enemies
         {
             if (!b.BreakableFrom(transform.position)) return false;
             if (_blockerPath == null) _blockerPath = new NavMeshPath();
-            if (!NavMesh.CalculatePath(transform.position, b.TargetTransform.position, _agent.areaMask, _blockerPath)) return false;
+            // The opening's centre sits in the carved hole, off the NavMesh; path to the nearest NavMesh point instead.
+            Vector3 goal = b.TargetTransform.position;
+            if (NavMesh.SamplePosition(goal, out NavMeshHit near, 2.5f, _agent.areaMask)) goal = near.position;
+            if (!NavMesh.CalculatePath(transform.position, goal, _agent.areaMask, _blockerPath)) return false;
             Vector3[] corners = _blockerPath.corners;
             return corners.Length > 0 && b.DistanceFrom(corners[corners.Length - 1]) <= PathEndBlockerRange;
         }

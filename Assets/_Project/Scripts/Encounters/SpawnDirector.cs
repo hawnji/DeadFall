@@ -16,6 +16,8 @@ namespace Deadfall.Encounters
         public int Group;
         /// <summary>A sealed breach closet: no distance or sight rules, picked by <see cref="BreachSpawns"/>.</summary>
         public bool Sheltered;
+        /// <summary>The closet's barricade: enemies spawned here break it first, however far the squad is.</summary>
+        public IBlocker Blocker;
     }
 
     /// <summary>
@@ -35,6 +37,11 @@ namespace Deadfall.Encounters
         public const int MaxBurst = 3;
         /// <summary>Spawn attempts for one enemy before it is skipped (no NavMesh near any point).</summary>
         public const int MaxAttempts = 25;
+        /// <summary>After an enemy appears in a breach closet, that closet waits this long (min..max) before the next.</summary>
+        public const float BreachGapMin = 3.5f;
+        public const float BreachGapMax = 6f;
+        /// <summary>Chance a closet sends two at once instead of one.</summary>
+        public const float BreachPairChance = 0.25f;
         private const float EyeHeight = 1.6f;
         private const float ChestHeight = 1.2f;
 
@@ -75,10 +82,15 @@ namespace Deadfall.Encounters
         private readonly List<float> _breachDistances = new List<float>(32);
         private readonly List<int> _breachScratch = new List<int>(32);
         private int _sheltered;
+        /// <summary>Per point: when its closet may send the next enemy (one at a time per barricade).</summary>
+        private readonly List<double> _busyUntil = new List<double>(32);
+        /// <summary>A closet sending a pair: the second enemy comes from here next, or -1.</summary>
+        private int _pairPoint = -1;
 
-        public void AddPoint(Vector3 position, int group, bool sheltered = false)
+        public void AddPoint(Vector3 position, int group, bool sheltered = false, IBlocker blocker = null)
         {
-            _points.Add(new SpawnPoint { Position = position, Group = group, Sheltered = sheltered });
+            _points.Add(new SpawnPoint { Position = position, Group = group, Sheltered = sheltered, Blocker = blocker });
+            _busyUntil.Add(0.0);
             if (sheltered) _sheltered++;
             if (!_groups.Contains(group)) _groups.Add(group);
         }
@@ -86,6 +98,8 @@ namespace Deadfall.Encounters
         public void ClearPoints()
         {
             _points.Clear();
+            _busyUntil.Clear();
+            _pairPoint = -1;
             _groups.Clear();
             _sheltered = 0;
         }
@@ -103,6 +117,8 @@ namespace Deadfall.Encounters
             _groupCursor = 0;
             Skipped = 0;
             _nextSpawnAt = now;
+            _pairPoint = -1;
+            for (int i = 0; i < _busyUntil.Count; i++) _busyUntil[i] = 0.0;
             _rng = new DeterministicRandom(seed ^ ((ulong)plan.Surge * 0xD1B54A32D192ED03UL));
 
             // Pick this surge's arrival directions.
@@ -144,12 +160,12 @@ namespace Deadfall.Encounters
             int burst = Mathf.Clamp(room / 8 + 1, 0, MaxBurst);
             for (int i = 0; i < burst && room > 0 && !AllSpawned; i++)
             {
-                if (!TrySpawnNext(manager)) break;
+                if (!TrySpawnNext(manager, now)) break;
                 room--;
             }
         }
 
-        private bool TrySpawnNext(EnemyManager manager)
+        private bool TrySpawnNext(EnemyManager manager, double now)
         {
             string id = _plan.Spawns[_next];
             if (!_definitions.TryGetValue(id, out EnemyDefinition def))
@@ -160,7 +176,13 @@ namespace Deadfall.Encounters
             }
 
             int point;
-            if (_sheltered > 0) point = PickBreach();
+            bool pairSecond = false;
+            if (_sheltered > 0)
+            {
+                pairSecond = _pairPoint >= 0 && _pairPoint < _points.Count;
+                point = pairSecond ? _pairPoint : PickBreach(now);
+                if (point < 0) return false; // every closet near the squad just sent one; wait for the next tick
+            }
             else
             {
                 int group = _activeGroups.Count > 0 ? _activeGroups[_groupCursor++ % _activeGroups.Count] : int.MinValue;
@@ -173,6 +195,8 @@ namespace Deadfall.Encounters
             if (point >= 0)
             {
                 Vector3 pos = _points[point].Position;
+                // The second of a pair stands beside the first.
+                if (pairSecond) pos += new Vector3(_rng.Range(-0.7f, 0.7f), 0f, _rng.Range(-0.7f, 0.7f));
                 Vector3 toPlayer = NearestPlayer(pos) - pos;
                 float yaw = toPlayer.sqrMagnitude > 0.01f ? Mathf.Atan2(toPlayer.x, toPlayer.z) * Mathf.Rad2Deg : 0f;
                 float health = _plan.HealthScale;
@@ -193,6 +217,14 @@ namespace Deadfall.Encounters
                 return false;
             }
             enemy.Alert(); // surge enemies come for the squad, however far away they spawn
+            SpawnPoint sp = _points[point];
+            if (sp.Sheltered)
+            {
+                enemy.HomeBlocker = sp.Blocker;
+                // One at a time per barricade, sometimes two, then the closet rests a few seconds.
+                _busyUntil[point] = now + _rng.Range(BreachGapMin, BreachGapMax);
+                _pairPoint = !pairSecond && _rng.NextFloat() < BreachPairChance ? point : -1;
+            }
             _alive.Add(enemy);
             _next++;
             _attempts = 0;
@@ -246,6 +278,7 @@ namespace Deadfall.Encounters
                 Enemy e = manager.Spawn(def, pos, yaw, _plan != null ? _plan.HealthScale : 1f);
                 if (e == null) continue;
                 e.Alert();
+                e.HomeBlocker = _points[index].Blocker;
                 _alive.Add(e);
                 spawnedInto?.Add(e);
                 spawned++;
@@ -255,6 +288,7 @@ namespace Deadfall.Encounters
 
         private void SkipCurrent()
         {
+            _pairPoint = -1;
             _next++;
             _attempts = 0;
             Skipped++;
@@ -308,14 +342,14 @@ namespace Deadfall.Encounters
             return _candidates[_rng.Range(0, usable)];
         }
 
-        /// <summary>Generated maps: a breach closet near the squad (see <see cref="BreachSpawns"/>).</summary>
-        private int PickBreach()
+        /// <summary>Generated maps: a resting breach closet near the squad (see <see cref="BreachSpawns"/>), or -1 while all near ones are busy.</summary>
+        private int PickBreach(double now)
         {
             _breachDistances.Clear();
             for (int i = 0; i < _points.Count; i++)
             {
                 SpawnPoint p = _points[i];
-                if (!p.Sheltered) { _breachDistances.Add(-1f); continue; }
+                if (!p.Sheltered || now < _busyUntil[i]) { _breachDistances.Add(-1f); continue; }
                 float nearest = float.MaxValue;
                 for (int k = 0; k < _players.Count; k++)
                 {
