@@ -605,6 +605,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Engineer with Bandolier carries 4.
 - [ ] Co-op: the other player sees your grenade fly and explode; a client's grenade kills and earns credits.
 
+### 3.48 Perk machines and the Weapon Forge
+
+- [ ] Every map has four perk machines standing against walls (one of each, the first in the starting sector) and one Weapon Forge workbench mid-map. None blocks a doorway, breach closet, ammo station or the Gun Dispenser.
+- [ ] Swift Hands (1,200): reloads 1.5x and swaps 1.3x faster. Iron Hide (1,500): max health 150. Field Medic (1,000): reviving a teammate takes 2 s instead of 4. Fleet Foot (1,000): sprint about 15% faster.
+- [ ] Buying shows a toast and a badge right of the health card. An owned perk's machine says "(owned)" and can't be bought again. Too few credits shows "Not enough Field Credits".
+- [ ] Going down loses every perk ("Perks lost"). Ending the run clears them too.
+- [ ] The forge prompt names the gun in your hands: Standard to Refined costs 1,000, Refined to Prototype 2,000, and a Prototype says it's already maxed. The upgraded gun keeps its attachments, gains one, and comes back with full ammo.
+- [ ] Co-op: a client can buy perks and forge; the host takes the credits and only the buyer gets the perk.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

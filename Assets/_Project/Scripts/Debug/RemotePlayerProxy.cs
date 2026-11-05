@@ -65,7 +65,7 @@ namespace Deadfall.DebugTools
         }
 
         // Revive (D-01): hold Interact near a downed teammate. No colliders, so it is found by distance.
-        public float ChannelSeconds => DownedRules.ReviveSeconds;
+        public float ChannelSeconds => DownedRules.ReviveSeconds / Mathf.Max(0.1f, PerkMachineDirector.LocalReviveSpeed);
         public bool InReach(Vector3 feet, out float distance)
         {
             distance = Vector3.Distance(feet, transform.position);

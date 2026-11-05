@@ -148,7 +148,20 @@ namespace Deadfall.Player
         public float Heal(float amount) => IsAlive ? _model.Heal(amount) : 0f;
 
         /// <summary>Extra max health (Field Mods, skills).</summary>
-        public void SetBonusMaxHealth(float bonus) => _model?.SetBonusMax(bonus);
+        public void SetBonusMaxHealth(float bonus)
+        {
+            _modBonusMax = bonus;
+            _model?.SetBonusMax(_modBonusMax + _perkBonusMax);
+        }
+
+        /// <summary>Extra max health from a perk machine (Iron Hide), kept apart from the Field Mod bonus.</summary>
+        public void SetPerkBonusMaxHealth(float bonus)
+        {
+            _perkBonusMax = bonus;
+            _model?.SetBonusMax(_modBonusMax + _perkBonusMax);
+        }
+
+        private float _modBonusMax, _perkBonusMax;
 
         private void GoDown(GameObject killer)
         {

@@ -198,6 +198,32 @@ namespace Deadfall.Rules.Combat
             return m;
         }
 
+        /// <summary>
+        /// The Weapon Forge: the same weapon one tier up. Keeps its attachments, adds one for the new tier's slot,
+        /// and never lowers the damage roll. Returns null at Prototype.
+        /// </summary>
+        public static WeaponMods Upgrade(DeterministicRandom rng, WeaponMods current, WeaponCategory category)
+        {
+            current = current ?? WeaponMods.Standard();
+            if (current.Tier >= WeaponTier.Prototype) return null;
+            var m = new WeaponMods { Tier = current.Tier + 1, DamageRoll = Math.Max(current.DamageRoll, 0.95f + rng.NextFloat() * 0.1f) };
+            foreach (AttachmentDef a in current.Attachments)
+                if (!m.Has(a.Slot) && m.Attachments.Count < WeaponModder.SlotsFor(m.Tier)) m.Attachments.Add(a);
+            if (category == WeaponCategory.Melee) return m;
+            int want = Math.Min(WeaponModder.SlotsFor(m.Tier), m.Attachments.Count + 1);
+            for (int tries = 0; m.Attachments.Count < want && tries < 30; tries++)
+            {
+                AttachmentDef a = AttachmentCatalog.All[rng.Range(0, AttachmentCatalog.All.Length)];
+                if (m.Has(a.Slot)) continue;
+                if (category == WeaponCategory.Heavy && a.Slot == AttachmentSlot.Optic) continue;
+                m.Attachments.Add(a);
+            }
+            return m;
+        }
+
+        /// <summary>Weapon Forge price to raise a weapon from <paramref name="current"/> (0 when it can't go higher).</summary>
+        public static int ForgePrice(WeaponTier current) => current == WeaponTier.Standard ? 1000 : current == WeaponTier.Refined ? 2000 : 0;
+
         public static int BasePrice(WeaponCategory c)
         {
             switch (c)
