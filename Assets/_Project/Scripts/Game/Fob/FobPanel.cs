@@ -217,12 +217,6 @@ namespace Deadfall.Game
 
             GUILayout.Space(10f);
             GUILayout.Label("Rewards: XP, Requisition and Intel are paid when a run ends. A failed run keeps half (D-03); challenge progress always counts.", _small);
-            GUILayout.Space(6f);
-            if (GUILayout.Button("Dev: grant 20,000 REQ, 100 Intel and operator level 6", GUILayout.Height(22f)))
-            {
-                svc.GrantDev();
-                Say("Granted dev progress.");
-            }
         }
 
         private GUIStyle _section;

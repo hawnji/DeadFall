@@ -201,13 +201,5 @@ namespace Deadfall.Game
             Save();
             return s;
         }
-
-        /// <summary>Dev: enough currency and XP to open every facility and try research and skills.</summary>
-        public void GrantDev()
-        {
-            Data.Wallet.Add(new Cost(20000, 100));
-            Data.OperatorXp = Math.Max(Data.OperatorXp, OperatorLevels.XpForLevel(6));
-            MarkDirty();
-        }
     }
 }

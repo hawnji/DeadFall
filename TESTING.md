@@ -254,7 +254,7 @@ Solo:
 
 - [ ] Play starts in FOB Halcyon: a hangar with seven coloured booths and floating names. Locked ones show the operator level they need.
 - [ ] F at a console opens the FOB screen on that facility's tab; Esc, Close or walking away closes it. Tabs switch between facilities.
-- [ ] **Command Center**: "Dev: grant..." gives 20,000 REQ, 100 Intel and operator level 6 (use it to open everything). Deploy on Operation Cold Start builds a map and starts the Operation; Deploy on Survival builds a map and starts a run.
+- [ ] **Command Center**: Deploy on Operation Cold Start builds a map and starts the Operation; Deploy on Survival builds a map and starts a run.
 - [ ] **Armory**: Engineer and Demolitionist are locked at operator level 1 and open at 2 and 3. Picking a class equips its loadout. < and > change each slot; the Anvil LMG, Tether Cleaver and Mule Launcher only appear after their research (or when the class starts with them). The new weapons are in your hands at once and on the next deployment.
 - [ ] **Training Range**: rank, XP to next rank and skill points. Unlock a tier 1 node (after a run or two, or with dev XP), see its effect (for example Tank Plating: max health goes up on the HUD). Respec refunds for 500 REQ. "Go to the firing range" teleports to the M1 range; the gold console near the range spawn brings you back.
 - [ ] **Research Lab / Workshop / Intelligence Center**: research a project, REQ and Intel drop, it shows ✔; locked ones say why. Field Medicine raises max health. Field Dossiers reveal the common infected in the Intelligence Center.
