@@ -655,6 +655,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Press M in a run: the minimap disappears and the whole open map shows in the middle of the screen at half opacity, north up, with an orange arrow for you that turns as you look around. Doors, objectives, generators, the Gun Dispenser, caches and teammates show as dots. Press M again: it closes and the minimap is back.
 - [ ] The grenade pane above the weapon card shows the grenade icon, the count, and the bound throw key in a little key cap (rebind Throw grenade in Settings › Keybinds and it updates). With 0 grenades the icon greys out.
 
+### 3.55 Title attract mode, centred pause menu, restock on game start
+- [ ] Open the game: behind the title menu a random map plays, with a horde of infected breaking out of closets and chasing from room to room while the camera follows. Reopen the game: a different map. Play solo, Host and Join all close it and you land in the FOB with no map or zombies left over. Quit to title from a run shows a fresh one.
+- [ ] Pause (Esc): PAUSED, Resume, Settings and the Quit to title / Quit to HUB row sit in the middle of the screen. Resume closes the pause screen.
+- [ ] In the hub, fire off some ammo and throw grenades, then start a game mode: every magazine, reserve and grenade is full again.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

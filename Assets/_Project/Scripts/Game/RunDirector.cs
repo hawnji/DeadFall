@@ -60,7 +60,11 @@ namespace Deadfall.Game
         /// <summary>Back to the class's starting loadout with no Field Mods (deployment or run start).</summary>
         public void ResetRunState()
         {
-            if (_weapons != null) _weapons.ResetLoadout(RunLoadouts.For(ClassId));
+            if (_weapons != null)
+            {
+                _weapons.ResetLoadout(RunLoadouts.For(ClassId));
+                _weapons.RestockAll(); // ammo and grenades spent in the hub come back for the next game mode
+            }
             if (_mods != null) _mods.ResetRun();
             if (RunEconomy.Current != null) RunEconomy.Current.ClearDrops();
         }

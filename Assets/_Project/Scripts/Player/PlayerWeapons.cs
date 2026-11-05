@@ -597,6 +597,13 @@ namespace Deadfall.Player
             AmmoRefilled?.Invoke();
         }
 
+        /// <summary>Full magazines, full reserves and full grenades (a game mode starting).</summary>
+        public void RestockAll()
+        {
+            foreach (Slot s in _slots) s.Firearm?.FillMagazine();
+            RefillAllAmmo();
+        }
+
         /// <summary>Raised by <see cref="RefillAllAmmo"/> (ammo stations, caches, Max Ammo): grenades refill too.</summary>
         public event System.Action AmmoRefilled;
     }
