@@ -46,6 +46,11 @@ namespace Deadfall.UI
         private float _openedAt;
         private float _closingAt = -1f;
 
+        /// <summary>Live scene behind the menu (attract mode); null keeps the FOB drift.</summary>
+        public ITitleBackdrop Backdrop { get; set; }
+        private bool _backdropOn;
+        private float _lastPlace;
+
         public static bool Showing { get; private set; }
         public static TitleScreen Current { get; private set; }
 
@@ -122,6 +127,13 @@ namespace Deadfall.UI
             _camera.fieldOfView = 55f;
             _camera.nearClipPlane = 0.1f;
             _camera.farClipPlane = 200f;
+            _backdropOn = false;
+            if (Backdrop != null)
+            {
+                try { _backdropOn = Backdrop.Begin(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            _lastPlace = Time.unscaledTime;
             PlaceCamera(0f);
         }
 
@@ -135,6 +147,12 @@ namespace Deadfall.UI
             if (_hud != null) _hud.SetActive(true);
             foreach (Camera c in _playerCameras) if (c != null) { c.enabled = true; c.tag = "MainCamera"; }
             if (_camera != null) Destroy(_camera.gameObject);
+            if (_backdropOn)
+            {
+                _backdropOn = false;
+                try { Backdrop?.End(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
             Showing = false;
             GameAudio.StopMusic(2.5f);
             if (_cursor != null) _cursor.SetLocked(true);
@@ -151,6 +169,13 @@ namespace Deadfall.UI
         private void PlaceCamera(float t)
         {
             if (_camera == null) return;
+            if (_backdropOn && Backdrop != null)
+            {
+                float now = Time.unscaledTime;
+                Backdrop.Place(_camera, now - _lastPlace);
+                _lastPlace = now;
+                return;
+            }
             float sway = Mathf.Sin(t * 0.07f);
             Vector3 pos = _center + new Vector3(sway * 9f, 3.4f + Mathf.Sin(t * 0.11f) * 0.25f, -11.5f);
             Vector3 look = _center + new Vector3(-sway * 4f, 1.6f, 9f);

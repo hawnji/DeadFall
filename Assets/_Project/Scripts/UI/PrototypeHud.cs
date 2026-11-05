@@ -174,11 +174,16 @@ namespace Deadfall.UI
             if (_cursor != null && !_cursor.IsLocked && !UiModal.Active)
             {
                 HudKit.Backdrop(0.5f);
-                HudKit.Label(new Rect(0f, HudKit.PauseTop, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
-                HudKit.Prompt(w * 0.5f, HudKit.PauseTop + 66f, "Esc", "Resume", true);
-                float top = HudKit.PauseTop + 112f;
-                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f - 206f, top, 412f, 40f), "Settings"))
+                // The menu column sits in the middle of the screen: title, Resume, Settings, then the quit row.
+                float mid = h * 0.5f;
+                HudKit.Label(new Rect(0f, mid - 150f, w, 60f), "PAUSED", 48, Color.white, TextAnchor.MiddleCenter, head: true);
+                HudKit.Label(new Rect(0f, mid - 92f, w, 20f), "Esc to resume", 13, HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
+                float top = mid - 56f;
+                if (HudKit.Button(new Rect(w * 0.5f - 206f, top, 412f, 40f), "Resume", accent: HudKit.Good))
+                    _cursor.SetLocked(true);
+                if (_settingsPanel != null && HudKit.Button(new Rect(w * 0.5f - 206f, top + 52f, 412f, 40f), "Settings"))
                     _settingsPanel.Open();
+                top += 52f;
                 // Quit row: two clicks each (the first arms it for a few seconds, so a stray click doesn't end a run).
                 var titleRect = new Rect(w * 0.5f - 206f, top + 52f, 200f, 40f);
                 var hubRect = new Rect(w * 0.5f + 6f, top + 52f, 200f, 40f);

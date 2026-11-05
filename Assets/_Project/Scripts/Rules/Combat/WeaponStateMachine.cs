@@ -81,6 +81,9 @@ namespace Deadfall.Rules.Combat
         public int MaxReserve => _maxReserve;
 
         /// <summary>Changes the reserve capacity. Current reserve is clamped; <paramref name="fill"/> tops it up.</summary>
+        /// <summary>Tops the magazine up to capacity without touching the reserve (a new run or game mode).</summary>
+        public void FillMagazine() => Magazine = _stats.MagazineSize;
+
         public void SetMaxReserve(int max, bool fill)
         {
             _maxReserve = Math.Max(0, max);

@@ -157,7 +157,11 @@ namespace Deadfall.DebugTools
             };
 
             // Title screen over the FOB until the player picks Play, Host or Join.
-            new GameObject("[Title]").AddComponent<TitleScreen>().Bind(player, ui, FobOrigin, () =>
+            var title = new GameObject("[Title]").AddComponent<TitleScreen>();
+            var attract = title.gameObject.AddComponent<AttractMode>();
+            attract.Bind(_map);
+            title.Backdrop = attract;
+            title.Bind(player, ui, FobOrigin, () =>
             {
                 EnterSandbox();
                 run.ResetRunState();
