@@ -114,7 +114,7 @@ namespace Deadfall.Game
         /// A kill inside a breach closet drops its power-up in the room instead, a step in front of the boarded
         /// opening, where players can reach it.
         /// </summary>
-        private static Vector3 OutOfCloset(Vector3 p)
+        internal static Vector3 OutOfCloset(Vector3 p)
         {
             BuiltMap map = MapSession.Current != null ? MapSession.Current.Map : null;
             if (map == null || map.Layout == null) return p;

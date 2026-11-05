@@ -228,7 +228,7 @@ namespace Deadfall.Game
             ulong finder = killer != null && !boss ? killer.ClientId : ulong.MaxValue; // the boss drop is anyone's
             ushort id = _nextDropId++;
             if (_nextDropId == 0) _nextDropId = 1;
-            SpawnDrop(id, def, mods, e.Position, finder, Time.timeAsDouble + FinderSeconds);
+            SpawnDrop(id, def, mods, PowerUpDirector.OutOfCloset(e.Position), finder, Time.timeAsDouble + FinderSeconds);
             if (_session.IsHost) SendDrop(_drops[id], ulong.MaxValue);
         }
 

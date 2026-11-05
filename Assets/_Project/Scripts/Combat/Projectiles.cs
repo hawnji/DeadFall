@@ -21,8 +21,10 @@ namespace Deadfall.Combat
         public const float Damage = 180f;
         public const float Radius = 5.5f;
         public const float FuseSeconds = 2.2f;
-        public const float ThrowSpeed = 15f;
-        public const float UpwardSpeed = 3.5f;
+        public const float ThrowSpeed = 12.5f;
+        public const float UpwardSpeed = 3.2f;
+        /// <summary>Gravity on a thrown frag, in g (a heavier, dropping arc than a ball's).</summary>
+        public const float GravityScale = 1.6f;
         /// <summary>Grenades carried by default; Bandolier adds to it.</summary>
         public const int BaseCapacity = 2;
         public const float Cooldown = 0.9f;

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
+using Deadfall.Encounters;
+using Deadfall.Rules.Encounters;
 using Deadfall.Player;
 using Deadfall.Rules.Progression;
 using UnityEngine;
@@ -17,6 +19,8 @@ namespace Deadfall.Game
         private const string ModalId = "field_mods";
         private InputAction _open;
         private bool _visible;
+        /// <summary>The surge whose lull already popped the picker up (once per lull; Esc puts it away until T).</summary>
+        private int _autoShownSurge = -1;
 
         private void OnEnable()
         {
@@ -42,10 +46,17 @@ namespace Deadfall.Game
                 if (runner == null || runner.PendingOffers <= 0 || (c != null && c.IsLocked)) Hide();
                 return;
             }
-            if (runner == null || runner.PendingOffers <= 0 || _open == null || !_open.WasPressedThisFrame()) return;
+            if (runner == null || runner.PendingOffers <= 0 || _open == null) return;
+            bool pressed = _open.WasPressedThisFrame();
+            // In the lull between surges the picker pops up by itself (once per lull).
+            WaveManager waves = WaveManager.Current;
+            bool lull = waves != null && waves.IsRunning && waves.Phase == RunPhase.Lull;
+            bool auto = lull && _autoShownSurge != waves.Surge && !UiModal.Active;
+            if (!pressed && !auto) return;
             PlayerCursorLock cursor = Cursor();
             if (cursor != null && !cursor.IsLocked) return; // paused
             if (!UiModal.TryOpen(ModalId)) return;
+            if (auto) _autoShownSurge = waves.Surge;
             _visible = true;
             if (cursor != null) cursor.SetLocked(false);
         }
