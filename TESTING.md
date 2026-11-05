@@ -557,6 +557,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] A client hears door sounds when someone else opens a door, but not a burst of them on joining a run or when an Operation opens every door.
 - [ ] Below 30% health a heartbeat plays every 0.9 s, every 0.62 s below 15% and while downed; it stops when healed or revived.
 
+### 3.41 Level music and music volume
+
+- [ ] Entering a generated map (Survival, Endless or an Operation) fades in "Endless Infestation"; near its end it crossfades into "Endless Infestation 2", then back, for as long as you stay on the map.
+- [ ] Going back to the FOB fades the level music out. Quit to title: the title theme plays instead, and the level music resumes after you close the title while still on a map.
+- [ ] Fresh install (or a settings file still on the old 70% default): the Music slider starts at 25%. A Music value you set yourself is kept.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

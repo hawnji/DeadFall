@@ -42,6 +42,12 @@ namespace Deadfall.Core
             Sink.PlayMusic(clip, fadeSeconds);
         }
 
+        /// <summary>Loops an already loaded track, following the Music slider.</summary>
+        public static void PlayMusic(AudioClip clip, float fadeSeconds = 1.5f)
+        {
+            if (Sink != null && clip != null) Sink.PlayMusic(clip, fadeSeconds);
+        }
+
         public static void StopMusic(float fadeSeconds = 1.5f) => Sink?.PlayMusic(null, fadeSeconds);
     }
 }
