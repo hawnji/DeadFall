@@ -587,7 +587,7 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 
 ### 3.45 One minimap, wall furniture, no sector squares
 
-- [ ] Only one minimap, at the top left under the location card: the map, its frame and the markers all in the same square. Nothing at the bottom left. It turns with you (forward is up) and M still hides it.
+- [ ] Only one minimap, at the top left under the location card: the map, its frame and the markers all in the same square. Nothing at the bottom left. It turns with you (forward is up) and M still hides it. It only shows open sectors and opened side rooms; a sector appears when its door is bought, and markers (objectives, generators, caches) in locked areas stay hidden.
 - [ ] No coloured squares in the middle of room floors.
 - [ ] Server racks (singles and rows of three) and lockers stand with their backs to a wall, facing into the room. None sit in front of a doorway, breach, switch, crawl vent, loot spot, fuse box or extinguisher.
 
