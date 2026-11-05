@@ -14,7 +14,8 @@ namespace Deadfall.Game
     /// sectors or side doors open; each frame the visible square is resampled, rotated, into a small view texture
     /// that is drawn with plain IMGUI. (It used to be a GL quad, which some graphics backends drew upside down at the
     /// bottom left of the screen, away from its frame and markers.) Markers on top: closed doors, objectives, the Gun Dispenser, grid generators, Supply Caches and the
-    /// squad. M hides or shows it.
+    /// squad. M opens the full map: the whole open layout, north up, centred on screen at half opacity, with the same
+    /// markers and an arrow for you (the minimap hides while it is open).
     /// </summary>
     public sealed class Minimap : MonoBehaviour
     {
@@ -38,7 +39,9 @@ namespace Deadfall.Game
         private int _paintedState = -1;
         private int _minX, _minZ, _cellsX, _cellsZ;
         private float _cellSize = 4f;
-        private bool _visible = true;
+        private bool _fullOpen;
+        private Texture2D _full;
+        private const float FullAlpha = 0.5f;
         private InputAction _toggle;
         private readonly List<Vector3> _markers = new List<Vector3>(16);
 
@@ -52,11 +55,12 @@ namespace Deadfall.Game
         {
             _toggle?.Disable();
             if (_view != null) Destroy(_view);
+            if (_full != null) Destroy(_full);
         }
 
         private void Update()
         {
-            if (_toggle != null && _toggle.WasPressedThisFrame() && !UiModal.Active) _visible = !_visible;
+            if (_toggle != null && _toggle.WasPressedThisFrame() && !UiModal.Active) _fullOpen = !_fullOpen;
         }
 
         // ---------------------------------------------------------------- painting
@@ -130,6 +134,10 @@ namespace Deadfall.Game
             _px = px;
             _pxW = w;
             _pxH = h;
+            if (_full != null) Destroy(_full);
+            _full = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Point, name = "FullMap" };
+            _full.SetPixels32(px);
+            _full.Apply(false);
         }
 
         /// <summary>Resamples the square around the player, turned so forward is up, into the view texture.</summary>
@@ -171,7 +179,7 @@ namespace Deadfall.Game
 
         private void OnGUI()
         {
-            if (!_visible || UiModal.Active || Event.current.type != EventType.Repaint) return;
+            if (UiModal.Active || Event.current.type != EventType.Repaint) return;
             MapSession s = MapSession.Current;
             PlayerIdentity me = PlayerIdentity.Local;
             Camera cam = Camera.main;
@@ -191,6 +199,11 @@ namespace Deadfall.Game
             fwd.Normalize();
             var right = new Vector3(fwd.z, 0f, -fwd.x);
 
+            if (_fullOpen)
+            {
+                DrawFull(s, pos, fwd);
+                return;
+            }
             UpdateView(pos, fwd, right);
             HudKit.Begin();
             var frame = new Rect(Left, Top, Size, Size);
@@ -219,8 +232,73 @@ namespace Deadfall.Game
                 if (p != null && !p.IsLocal) Marker(centre, pos, fwd, right, p.transform.position, Color.white, 6f, edge: true);
             // You: an arrow pointing up (the map turns, not the arrow).
             HudKit.Label(new Rect(centre.x - 10f, centre.y - 12f, 20f, 22f), "▲", 16, HudKit.Accent, TextAnchor.MiddleCenter);
-            HudKit.Label(new Rect(frame.x + 6f, frame.yMax - 18f, frame.width - 12f, 16f), "M  minimap", 10, HudKit.TextDim, TextAnchor.MiddleRight);
+            HudKit.Label(new Rect(frame.x + 6f, frame.yMax - 18f, frame.width - 12f, 16f), "M  full map", 10, HudKit.TextDim, TextAnchor.MiddleRight);
             HudKit.End();
+        }
+
+        // ---------------------------------------------------------------- full map
+
+        private Rect _fullRect;
+
+        /// <summary>The whole open layout, north up, in the middle of the screen at half opacity.</summary>
+        private void DrawFull(MapSession s, Vector3 pos, Vector3 fwd)
+        {
+            if (_full == null) return;
+            HudKit.Begin();
+            float maxW = HudKit.W * 0.7f, maxH = HudKit.H * 0.78f;
+            float scale = Mathf.Min(maxW / _pxW, maxH / _pxH);
+            float w = _pxW * scale, h = _pxH * scale;
+            _fullRect = new Rect((HudKit.W - w) * 0.5f, (HudKit.H - h) * 0.5f, w, h);
+            Color was = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, FullAlpha);
+            GUI.DrawTexture(_fullRect, _full, ScaleMode.StretchToFill, true);
+            GUI.color = was;
+            HudKit.Outline(new Rect(_fullRect.x - 2f, _fullRect.y - 2f, _fullRect.width + 4f, _fullRect.height + 4f), new Color(1f, 1f, 1f, 0.25f));
+
+            foreach (SectorDoor d in s.Map.Doors)
+                if (d != null && !d.IsOpen) FullMarker(d.transform.position, new Color(1f, 0.6f, 0.15f), 7f);
+            _markers.Clear();
+            ObjectiveDirector.Current?.CollectMarkers(_markers);
+            foreach (Vector3 m in _markers) if (Revealed(s, m)) FullMarker(m, InteractGlow.Objectives, 9f);
+            PowerGrid grid = PowerGrid.Current;
+            if (grid != null)
+                foreach (GridGenerator g in grid.Generators)
+                    if (g != null && Revealed(s, g.transform.position)) FullMarker(g.transform.position, g.Online ? new Color(0.4f, 0.75f, 1f) : new Color(1f, 0.3f, 0.25f), 8f);
+            GunDispenser dispenser = GunDispenserDirector.Current != null ? GunDispenserDirector.Current.Dispenser : null;
+            if (dispenser != null && dispenser.State != GunDispenser.Mode.Hidden) FullMarker(dispenser.transform.position, InteractGlow.Guns, 10f);
+            RunEconomy economy = RunEconomy.Current;
+            if (economy != null)
+                foreach (SupplyCache c in economy.Caches) if (c != null && Revealed(s, c.transform.position)) FullMarker(c.transform.position, InteractGlow.Guns, 8f);
+            foreach (PlayerIdentity p in PlayerIdentity.All)
+                if (p != null && !p.IsLocal) FullMarker(p.transform.position, Color.white, 8f);
+
+            // You: an arrow turned to where you're facing.
+            Vector2 me = ToFull(pos);
+            Matrix4x4 m0 = GUI.matrix;
+            GUIUtility.RotateAroundPivot(Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg, me);
+            HudKit.Label(new Rect(me.x - 12f, me.y - 13f, 24f, 26f), "▲", 20, HudKit.Accent, TextAnchor.MiddleCenter);
+            GUI.matrix = m0;
+
+            HudKit.Label(new Rect(_fullRect.x, _fullRect.y - 26f, _fullRect.width, 22f), "MAP", 16, Color.white, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(_fullRect.x, _fullRect.y - 26f, _fullRect.width, 22f), "M  close", 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
+            HudKit.End();
+        }
+
+        /// <summary>World point to a point on the full map (north up; texture row 0 is the south edge).</summary>
+        private Vector2 ToFull(Vector3 world)
+        {
+            float pxPerMeter = CellPixels / _cellSize;
+            float u = world.x * pxPerMeter - _minX * CellPixels, v = world.z * pxPerMeter - _minZ * CellPixels;
+            return new Vector2(_fullRect.x + u / _pxW * _fullRect.width, _fullRect.yMax - v / _pxH * _fullRect.height);
+        }
+
+        private void FullMarker(Vector3 world, Color color, float size)
+        {
+            Vector2 p = ToFull(world);
+            if (!_fullRect.Contains(p)) return;
+            var r = new Rect(p.x - size * 0.5f, p.y - size * 0.5f, size, size);
+            HudKit.Fill(new Rect(r.x - 1f, r.y - 1f, r.width + 2f, r.height + 2f), new Color(0f, 0f, 0f, 0.8f));
+            HudKit.Fill(r, color);
         }
 
         /// <summary>True when <paramref name="world"/> is in an open room (or outside every room), so its marker may show.</summary>
