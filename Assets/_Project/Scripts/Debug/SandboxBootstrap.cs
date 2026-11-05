@@ -116,6 +116,8 @@ namespace Deadfall.DebugTools
             net.AddComponent<GunDispenserDirector>();
             // Wall-mounted ammo refill stations, one per sector.
             net.AddComponent<AmmoStationDirector>();
+            // Power-ups from kills: Max Ammo, Double Credits, Insta-Kill, Nuke.
+            net.AddComponent<PowerUpDirector>();
             // M9: Engineering structures and the squad's Scrap (host-run).
             net.AddComponent<EngineeringDirector>();
             // M11: squad life (revives, self-revive kits, returns) and D-16 rejoins.
