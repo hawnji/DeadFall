@@ -95,8 +95,10 @@ namespace Deadfall.DebugTools
         public float ApplyDamage(in DamageInfo info)
         {
             if (_dead || _downed || info.Amount <= 0f) return 0f;
-            DamageRequested?.Invoke(this, info.Amount, info.Direction);
-            return info.Amount;
+            float amount = info.Amount * DamageModifiers.For(info, gameObject);
+            if (amount <= 0f) return 0f;
+            DamageRequested?.Invoke(this, amount, info.Direction);
+            return amount;
         }
 
         private void OnEnable()

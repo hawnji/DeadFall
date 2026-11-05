@@ -7,8 +7,8 @@ namespace Deadfall.Classes
 {
     /// <summary>
     /// The five launch classes (C-03) with their prototype kits from GAME_DESIGN §5, created in memory so they work
-    /// with no asset setup. They become ClassDefinition assets in Data/Classes once tuning settles. Passives that need
-    /// Scrap, grenades or structures arrive later (their behaviour id has no code yet, so the HUD marks them "soon").
+    /// with no asset setup. They become ClassDefinition assets in Data/Classes once tuning settles. Every passive and
+    /// doctrine is live; a behaviour id with no code would show as "soon" on the HUD.
     /// </summary>
     public static class PrototypeClasses
     {
@@ -54,7 +54,7 @@ namespace Deadfall.Classes
             }
         }
 
-        /// <summary>Squad Doctrines from GAME_DESIGN §5.1 (effects come after M4 playtests, D-17).</summary>
+        /// <summary>Squad Doctrines from GAME_DESIGN §5.1. Damage effects live in <see cref="DoctrineEffects"/>.</summary>
         public static readonly DoctrineRule[] Doctrines =
         {
             DoctrineRule.Pair(CoveringFire, "class.gunner", "class.tank"),
@@ -93,14 +93,14 @@ namespace Deadfall.Classes
                 new[] { WeaponCategory.SubmachineGun, WeaponCategory.Pistol },
                 AbilityDefinition.CreateRuntime("ability.deploy_sentry", "Deploy Sentry", "deploy_sentry",
                     "Place a light turret for 60 s that shoots the nearest enemy in range (scrap upgrades come with Engineering).", 35f, 60f, 9f, 6f, 22f),
-                PassiveDefinition.CreateRuntime("passive.salvager", "Salvager", "scrap_gain", "+50% Scrap (arrives with Scrap, M9).", 0.5f),
-                PassiveDefinition.CreateRuntime("passive.handy", "Handy", "repair_speed", "Repairs structures faster (arrives with Engineering, M9).", 0.5f));
+                PassiveDefinition.CreateRuntime("passive.salvager", "Salvager", "scrap_gain", "+50% Scrap from your kills.", 0.5f),
+                PassiveDefinition.CreateRuntime("passive.handy", "Handy", "repair_speed", "Structure repairs restore more for less Scrap; barricade boards go up 50% faster.", 0.5f));
 
             var demolitionist = ClassDefinition.CreateRuntime("class.demolitionist", "Demolitionist", "Explosives, area control", new Color(0.75f, 0.45f, 0.9f),
                 new[] { WeaponCategory.Heavy, WeaponCategory.Shotgun },
                 AbilityDefinition.CreateRuntime("ability.cluster_charge", "Cluster Charge", "cluster_charge",
                     "Throw a charge that bursts on impact and scatters 5 bomblets.", 25f, 0f, 5f, 90f, 4.5f),
-                PassiveDefinition.CreateRuntime("passive.bandolier", "Bandolier", "grenade_capacity", "+2 grenades (arrives with grenades).", 2f),
+                PassiveDefinition.CreateRuntime("passive.bandolier", "Bandolier", "grenade_capacity", "Explosive weapons hold +2 grenades per magazine and +6 in reserve.", 2f),
                 PassiveDefinition.CreateRuntime("passive.blast_padding", "Blast Padding", "self_blast_reduction",
                     "50% less damage from your own explosives.", 0.5f));
 

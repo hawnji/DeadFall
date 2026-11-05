@@ -121,7 +121,7 @@ namespace Deadfall.Player
         public float ApplyDamage(in DamageInfo info)
         {
             if (Invulnerable || !IsAlive) return 0f;
-            float applied = _model.ApplyDamage(info.Amount, Time.timeAsDouble);
+            float applied = _model.ApplyDamage(info.Amount * DamageModifiers.For(info, gameObject), Time.timeAsDouble);
             if (applied <= 0f) return 0f;
 
             EventBus<PlayerDamaged>.Publish(new PlayerDamaged

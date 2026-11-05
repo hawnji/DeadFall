@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Deadfall.Classes;
 using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Encounters;
@@ -105,6 +106,7 @@ namespace Deadfall.Game
             DoorSwitch.Use = UseSwitch;
             BreachBarricade.PromptFor = BreachPrompt;
             BreachBarricade.Use = UseBreach;
+            BreachBarricade.LocalRepairSpeed = () => RepairSpeed(PlayerIdentity.Local != null ? PlayerIdentity.Local.ClientId : 0UL);
             BreachBarricade.BrokenBoard += OnBoardBroken;
             _session.PeerConnected += OnPeerConnected;
             SecretPanel.BrokenByDamage += OnPanelBroken;
@@ -457,12 +459,22 @@ namespace Deadfall.Game
                     if (_repairReady.TryGetValue(client, out double ready) && now < ready) return;
                     BreachBarricade b = Map.Breaches[index];
                     if (!b.RepairOne()) return;
-                    _repairReady[client] = now + RepairCooldown;
+                    _repairReady[client] = now + RepairCooldown / RepairSpeed(client);
                     if (_waves != null && _waves.IsRunning) _waves.AwardCredits(client, RepairCredits, "Barricade repaired");
                     MarkBreach(index);
                     break;
                 }
             }
+        }
+
+        /// <summary>Barricade repair speed for a player: the Engineer's Handy passive makes it 1 + its magnitude.</summary>
+        public static float RepairSpeed(ulong clientId)
+        {
+            ClassDefinition c = PrototypeClasses.ById(ClassRoster.ClassOf(clientId));
+            if (c == null) return 1f;
+            foreach (PassiveDefinition p in c.Passives)
+                if (p != null && p.BehaviourId == "repair_speed") return 1f + Mathf.Clamp(p.Magnitude, 0f, 2f);
+            return 1f;
         }
 
         private void OnBoardBroken(BreachBarricade b)

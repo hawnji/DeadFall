@@ -587,7 +587,7 @@ namespace Deadfall.Enemies
         public float ApplyDamage(in DamageInfo info)
         {
             if (!IsAlive || _mirrored) return 0f; // clients never apply damage; the host does
-            float applied = Mathf.Min(_health, info.Amount);
+            float applied = Mathf.Min(_health, info.Amount * DamageModifiers.For(info, gameObject));
             if (applied <= 0f) return 0f;
             _health -= applied;
             double now = Time.timeAsDouble;
