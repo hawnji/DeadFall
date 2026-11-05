@@ -21,6 +21,10 @@ namespace Deadfall.Rules.Encounters
         public float MaxHealthScale = 2.5f;
         public int HealthScaleFullAtSurge = 30;
 
+        /// <summary>Enemy move speed multiplier reaches this by <see cref="SpeedScaleFullAtSurge"/> and stays there.</summary>
+        public float MaxSpeedScale = 1.35f;
+        public int SpeedScaleFullAtSurge = 25;
+
         /// <summary>Enemies alive at once from the director's side (the enemy manager's cap still applies).</summary>
         public int BaseConcurrency = 8;
         public float ConcurrencyPerSurge = 1.5f;
@@ -71,6 +75,14 @@ namespace Deadfall.Rules.Encounters
             if (_s.HealthScaleFullAtSurge <= 1) return _s.MaxHealthScale;
             float t = Clamp((surge - 1) / (float)(_s.HealthScaleFullAtSurge - 1), 0f, 1f);
             return 1f + (_s.MaxHealthScale - 1f) * t;
+        }
+
+        /// <summary>How much faster enemies move this surge (1 at surge 1, rising to MaxSpeedScale).</summary>
+        public float SpeedScale(int surge)
+        {
+            if (_s.SpeedScaleFullAtSurge <= 1) return _s.MaxSpeedScale;
+            float t = Clamp((surge - 1) / (float)(_s.SpeedScaleFullAtSurge - 1), 0f, 1f);
+            return 1f + (_s.MaxSpeedScale - 1f) * t;
         }
 
         public int Concurrency(int surge, int players)

@@ -44,6 +44,16 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void SpeedScaleRisesThenCaps()
+        {
+            var curve = new DifficultyCurve(new DifficultySettings());
+            Assert.AreEqual(1f, curve.SpeedScale(1), 0.0001f);
+            Assert.Greater(curve.SpeedScale(10), curve.SpeedScale(5));
+            Assert.AreEqual(1.35f, curve.SpeedScale(25), 0.0001f);
+            Assert.AreEqual(1.35f, curve.SpeedScale(60), 0.0001f);
+        }
+
+        [Test]
         public void UnlockSurgesAreRespected()
         {
             WavePlanner planner = Planner();

@@ -60,6 +60,8 @@ namespace Deadfall.Rules.Encounters
         public int Concurrency;
         public int Directions;
         public float HealthScale;
+        /// <summary>Enemy move speed multiplier for this surge (bosses excluded, capped below the player's sprint).</summary>
+        public float SpeedScale = 1f;
         /// <summary>Enemy ids in spawn order.</summary>
         public readonly List<string> Spawns = new List<string>();
         /// <summary>Mutation traits for each entry of <see cref="Spawns"/> (same index).</summary>
@@ -155,6 +157,7 @@ namespace Deadfall.Rules.Encounters
                 Concurrency = _curve.Concurrency(surge, players),
                 Directions = _curve.Directions(surge),
                 HealthScale = _curve.HealthScale(surge),
+                SpeedScale = _curve.SpeedScale(surge),
             };
             int unlockSurge = surge;
             float maxCost = float.MaxValue;

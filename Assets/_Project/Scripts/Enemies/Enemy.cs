@@ -73,6 +73,10 @@ namespace Deadfall.Enemies
         public static event System.Action<Enemy, int> SummonRequested;
         /// <summary>Host: global move speed and damage multipliers for events (Frenzy, M12). 1 = normal.</summary>
         public static float EventSpeedMultiplier = 1f;
+        /// <summary>Host: the current surge's speed-up (rises with surges in every mode; bosses ignore it).</summary>
+        public static float RoundSpeedScale = 1f;
+        /// <summary>Round scaling never pushes an enemy past this (just under the player's 7 m/s sprint).</summary>
+        public const float RoundSpeedCap = 6.6f;
         public static float EventDamageMultiplier = 1f;
         /// <summary>Any machine: a Specimen changed phase (boss, new phase).</summary>
         public static event System.Action<Enemy, SpecimenPhase> PhaseChanged;
@@ -157,8 +161,9 @@ namespace Deadfall.Enemies
         private static void ResetStatics()
         {
             SharedMaterials.Clear();
+            GlowMaterials.Clear();
             SummonRequested = null;
-            EventSpeedMultiplier = EventDamageMultiplier = 1f;
+            EventSpeedMultiplier = EventDamageMultiplier = RoundSpeedScale = 1f;
             PhaseChanged = null;
         }
 
@@ -423,30 +428,68 @@ namespace Deadfall.Enemies
                 if (p.Go != null) p.Go.SetActive(_phase >= p.From && _phase <= p.To);
         }
 
-        /// <summary>Small coloured bands that tell players which mutations this enemy has (GAME_DESIGN §7: read the tell).</summary>
+        /// <summary>
+        /// Tells players which mutations this enemy has (GAME_DESIGN §7: read the tell): a glowing ring on the floor
+        /// around its feet per trait (concentric when it has several) and a soft light of the first trait's colour on
+        /// the body. (The old floating bands poked through the real models.)
+        /// </summary>
         private void ShowTraitMarkers()
         {
             if (_traitMarkers != null) Destroy(_traitMarkers.gameObject);
             _traitMarkers = null;
             if (_traits == EnemyTraits.None) return;
             _traitMarkers = new GameObject("Traits").transform;
-            _traitMarkers.SetParent(_visual, false);
+            _traitMarkers.SetParent(transform, false);
             float h = _definition.Height, r = _definition.Radius;
             int i = 0;
-            void Band(Color c)
+            Color first = Color.white;
+            void Ring(Color c)
             {
-                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                Destroy(go.GetComponent<Collider>());
-                go.transform.SetParent(_traitMarkers, false);
-                go.transform.localPosition = new Vector3(0f, h * (0.62f - 0.12f * i), 0f);
-                go.transform.localScale = new Vector3(r * 2.3f, 0.07f, r * 2.1f);
-                go.GetComponent<Renderer>().sharedMaterial = MaterialFor(c);
+                if (i == 0) first = c;
+                const int Segments = 18;
+                float radius = r * 1.5f + 0.18f + i * 0.16f;
+                float seg = 2f * Mathf.PI * radius / Segments * 0.8f;
+                Material m = GlowFor(c);
+                for (int k = 0; k < Segments; k++)
+                {
+                    float ang = k * Mathf.PI * 2f / Segments;
+                    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Destroy(go.GetComponent<Collider>());
+                    go.transform.SetParent(_traitMarkers, false);
+                    go.transform.localPosition = new Vector3(Mathf.Sin(ang) * radius, 0.03f, Mathf.Cos(ang) * radius);
+                    go.transform.localRotation = Quaternion.Euler(0f, ang * Mathf.Rad2Deg + 90f, 0f);
+                    go.transform.localScale = new Vector3(seg, 0.02f, 0.06f);
+                    Renderer rend = go.GetComponent<Renderer>();
+                    rend.sharedMaterial = m;
+                    rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
                 i++;
             }
-            if ((_traits & EnemyTraits.Regenerating) != 0) Band(new Color(0.2f, 0.95f, 0.35f));
-            if ((_traits & EnemyTraits.Splitting) != 0) Band(new Color(0.85f, 0.35f, 0.8f));
-            if ((_traits & EnemyTraits.Hardened) != 0) Band(new Color(0.6f, 0.6f, 0.62f));
-            if ((_traits & EnemyTraits.Swift) != 0) Band(new Color(0.95f, 0.15f, 0.1f));
+            if ((_traits & EnemyTraits.Regenerating) != 0) Ring(new Color(0.2f, 0.95f, 0.35f));
+            if ((_traits & EnemyTraits.Splitting) != 0) Ring(new Color(0.85f, 0.35f, 0.8f));
+            if ((_traits & EnemyTraits.Hardened) != 0) Ring(new Color(0.75f, 0.78f, 0.85f));
+            if ((_traits & EnemyTraits.Swift) != 0) Ring(new Color(0.95f, 0.15f, 0.1f));
+            var lightGo = new GameObject("TraitGlow");
+            lightGo.transform.SetParent(_traitMarkers, false);
+            lightGo.transform.localPosition = new Vector3(0f, h * 0.55f, r + 0.35f);
+            Light light = lightGo.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = first;
+            light.range = Mathf.Max(2f, h * 1.3f);
+            light.intensity = 1.6f;
+            light.shadows = LightShadows.None;
+        }
+
+        private static readonly Dictionary<Color, Material> GlowMaterials = new Dictionary<Color, Material>();
+
+        private static Material GlowFor(Color c)
+        {
+            if (!GlowMaterials.TryGetValue(c, out Material m) || m == null)
+            {
+                m = RuntimeMaterials.CreateEmissive(c, 2.2f);
+                GlowMaterials[c] = m;
+            }
+            return m;
         }
 
         private void SetPhase(SpecimenPhase phase, double now, bool announce)
@@ -571,6 +614,7 @@ namespace Deadfall.Enemies
                     _diedAt = now;
                     _brain.Kill(now);
                     foreach (Collider c in _hurtColliders) c.enabled = false;
+                    if (_traitMarkers != null) _traitMarkers.gameObject.SetActive(false);
                 }
                 return;
             }
@@ -660,6 +704,7 @@ namespace Deadfall.Enemies
             _diedAt = now;
             _brain.Kill(now);
             foreach (Collider c in _hurtColliders) c.enabled = false; // corpses don't soak bullets
+            if (_traitMarkers != null) _traitMarkers.gameObject.SetActive(false); // corpses lose their mutation glow
             if (_agent.enabled)
             {
                 if (_agent.isOnNavMesh) _agent.isStopped = true;
@@ -928,6 +973,8 @@ namespace Deadfall.Enemies
 
         private void Move(float speed, float acceleration)
         {
+            if (RoundSpeedScale > 1f && !_definition.IsBoss)
+                speed = Mathf.Min(speed * RoundSpeedScale, Mathf.Max(speed, RoundSpeedCap));
             _agent.speed = speed * EventSpeedMultiplier;
             _agent.acceleration = acceleration * EventSpeedMultiplier;
             if (!_moving)
