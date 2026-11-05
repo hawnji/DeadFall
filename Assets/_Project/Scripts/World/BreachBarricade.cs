@@ -1,5 +1,6 @@
 using Deadfall.Rules.Common;
 using System;
+using System.Collections;
 using Deadfall.Combat;
 using Deadfall.Core;
 using UnityEngine;
@@ -182,7 +183,28 @@ namespace Deadfall.World
             if (Boards >= MaxBoards) return false;
             _health = (Boards + 1) * HealthPerBoard;
             SetBoards(Boards + 1);
+            PlayNailing();
             return true;
+        }
+
+        /// <summary>Hits played for each board put back.</summary>
+        public const int NailHits = 3;
+        private const float NailGapSeconds = 0.21f;
+
+        /// <summary>Hammers the board in: the nail sound three times. Every peer calls this on a repair.</summary>
+        public void PlayNailing()
+        {
+            if (isActiveAndEnabled) StartCoroutine(Nailing());
+        }
+
+        private IEnumerator Nailing()
+        {
+            var wait = new WaitForSeconds(NailGapSeconds);
+            for (int i = 0; i < NailHits; i++)
+            {
+                GameAudio.Play(SfxId.NailBoard, transform.position);
+                if (i < NailHits - 1) yield return wait;
+            }
         }
 
         public string InteractPrompt(GameObject player) => PromptFor != null ? PromptFor(this, player) : (Boards < MaxBoards ? "Repair barricade" : string.Empty);

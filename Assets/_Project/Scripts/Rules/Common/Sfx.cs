@@ -19,6 +19,7 @@ namespace Deadfall.Rules.Common
         Explosion, BarricadeBreak, Pickup, Credits,
         SurgeStart, SurgeClear, ObjectiveDone, EventAlarm,
         Footstep,
+        NailBoard,
     }
 
     public enum SfxBus : byte { Effects, Interface, Ambience }
@@ -211,6 +212,7 @@ namespace Deadfall.Rules.Common
                 case SfxId.SurgeStart: case SfxId.SurgeClear: case SfxId.ObjectiveDone: case SfxId.EventAlarm:
                     i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.7f; i.PitchJitter = 0f; break;
                 case SfxId.Footstep: i.Spatial = false; i.MaxVoices = 2; i.Volume = 0.35f; i.PitchJitter = 0.08f; i.Variants = 3; break;
+                case SfxId.NailBoard: i.MaxVoices = 6; i.MaxDistance = 30f; i.Volume = 0.8f; i.PitchJitter = 0.06f; break;
             }
             return i;
         }
@@ -299,6 +301,7 @@ namespace Deadfall.Rules.Common
                 };
                 case SfxId.BarricadeBreak: return new[] { SfxLayer.Noise(0.35f, 0.07f, 0.9f, 2500f, 700f), SfxLayer.Tone(SfxWave.Triangle, 0.2f, 180f, 90f, 0.05f, 0.6f, 0.02f) };
                 case SfxId.Footstep: return new[] { SfxLayer.Noise(0.09f, 0.025f, 0.9f, 900f, 300f), SfxLayer.Tone(SfxWave.Sine, 0.07f, 110f, 70f, 0.02f, 0.5f) };
+                case SfxId.NailBoard: return new[] { SfxLayer.Noise(0.06f, 0.02f, 0.9f, 3200f, 1200f), SfxLayer.Tone(SfxWave.Triangle, 0.12f, 420f, 260f, 0.03f, 0.6f, 0.01f) };
                 case SfxId.Pickup: return new[] { SfxLayer.Tone(SfxWave.Triangle, 0.08f, 880f, 1320f, 0.04f, 0.6f), SfxLayer.Noise(0.05f, 0.01f, 0.3f, 6000f, 3000f) };
                 case SfxId.Credits: return new[] { SfxLayer.Tone(SfxWave.Sine, 0.12f, 1568f, 1568f, 0.05f, 0.5f), SfxLayer.Tone(SfxWave.Sine, 0.16f, 2093f, 2093f, 0.06f, 0.5f, 0.05f) };
 
