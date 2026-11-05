@@ -183,6 +183,8 @@ namespace Deadfall.DebugTools
                 if (headModel != null) Object.Destroy(headModel);
             }
             proxy._renderers = root.GetComponentsInChildren<Renderer>();
+            // Outlined only while downed (hold F to revive).
+            InteractGlow.Add(root, InteractGlow.Objectives, () => proxy.CanInteract(null));
             return proxy;
         }
 

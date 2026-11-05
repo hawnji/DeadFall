@@ -91,6 +91,7 @@ namespace Deadfall.Game
             if (model != null) ModelLibrary.HideExcept(booth, model.transform);
             var t = desk.AddComponent<FobTerminal>();
             t.Facility = facility;
+            InteractGlow.Add(model != null ? model : desk, InteractGlow.Objectives);
             return t;
         }
 
