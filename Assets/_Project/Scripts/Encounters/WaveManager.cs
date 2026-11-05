@@ -105,6 +105,8 @@ namespace Deadfall.Encounters
 
         /// <summary>Phase changes, raised on every machine (clients derive them from host messages).</summary>
         public event Action<RunPhase, RunPhase> PhaseChanged;
+        /// <summary>Host/offline: a player spent Field Credits (run stats).</summary>
+        public event Action<ulong, int> CreditsSpent;
         public event Action<WaveAnnouncement> Announced;
         /// <summary>The local player earned credits (amount, reason).</summary>
         public event Action<int, string> LocalCreditsEarned;
@@ -187,6 +189,7 @@ namespace Deadfall.Encounters
             if (amount <= 0) return true;
             if (!_credits.TrySpend(clientId, amount)) return false;
             _stateDirty = true;
+            CreditsSpent?.Invoke(clientId, amount);
             return true;
         }
 

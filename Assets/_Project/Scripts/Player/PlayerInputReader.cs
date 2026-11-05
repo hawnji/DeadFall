@@ -23,6 +23,10 @@ namespace Deadfall.Player
         public bool AbilityPressed;
         /// <summary>Throw a frag grenade (E).</summary>
         public bool GrenadePressed;
+        /// <summary>Mark what you're looking at for the squad (middle mouse).</summary>
+        public bool PingPressed;
+        /// <summary>Live squad stats while held (Tab).</summary>
+        public bool ScoreboardHeld;
         /// <summary>-1, 0, or +1 from the scroll wheel.</summary>
         public int WeaponScroll;
         /// <summary>0-based slot from number keys, or -1.</summary>
@@ -39,7 +43,7 @@ namespace Deadfall.Player
     public sealed class PlayerInputReader : MonoBehaviour
     {
         private InputActionMap _map;
-        private InputAction _move, _look, _sprint, _jump, _crouch, _fire, _aim, _reload, _melee, _interact, _ability, _grenade, _scroll, _next, _prev, _pause;
+        private InputAction _move, _look, _sprint, _jump, _crouch, _fire, _aim, _reload, _melee, _interact, _ability, _grenade, _ping, _scoreboard, _scroll, _next, _prev, _pause;
         private InputAction[] _slots;
 
         public PlayerInputFrame Current { get; private set; }
@@ -107,13 +111,16 @@ namespace Deadfall.Player
             _reload = _map.AddAction("Reload", InputActionType.Button, Key("Reload"));
             _reload.AddBinding("<Gamepad>/buttonWest");
             _melee = _map.AddAction("Melee", InputActionType.Button, Key("Melee"));
-            if (KeyBindings.IsDefault(gs, "Melee") && Free("<Mouse>/middleButton")) _melee.AddBinding("<Mouse>/middleButton");
             _melee.AddBinding("<Gamepad>/rightStickPress");
             _interact = _map.AddAction("Interact", InputActionType.Button, Key("Interact"));
             _ability = _map.AddAction("Ability", InputActionType.Button, Key("Ability"));
             _ability.AddBinding("<Gamepad>/rightShoulder");
             _grenade = _map.AddAction("Grenade", InputActionType.Button, Key("Grenade"));
             _grenade.AddBinding("<Gamepad>/leftShoulder");
+            _ping = _map.AddAction("Ping", InputActionType.Button, Key("Ping"));
+            _ping.AddBinding("<Gamepad>/dpad/up");
+            _scoreboard = _map.AddAction("Scoreboard", InputActionType.Button, Key("Scoreboard"));
+            _scoreboard.AddBinding("<Gamepad>/select");
             _scroll = _map.AddAction("Scroll", InputActionType.Value, "<Mouse>/scroll/y");
             _next = _map.AddAction("NextWeapon", InputActionType.Button, "<Gamepad>/buttonNorth");
             _prev = _map.AddAction("PrevWeapon", InputActionType.Button);
@@ -162,6 +169,8 @@ namespace Deadfall.Player
                 f.InteractHeld = _interact.IsPressed();
                 f.AbilityPressed = _ability.WasPressedThisFrame();
                 f.GrenadePressed = _grenade.WasPressedThisFrame();
+                f.PingPressed = _ping.WasPressedThisFrame();
+                f.ScoreboardHeld = _scoreboard.IsPressed();
 
                 float scroll = _scroll.ReadValue<float>();
                 f.WeaponScroll = scroll > 0.01f ? -1 : scroll < -0.01f ? 1 : 0;
@@ -179,7 +188,7 @@ namespace Deadfall.Player
             }
             if (WeaponsBlocked)
             {
-                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.InteractHeld = f.AbilityPressed = f.GrenadePressed = false;
+                f.FirePressed = f.FireHeld = f.AimHeld = f.ReloadPressed = f.MeleePressed = f.InteractPressed = f.InteractHeld = f.AbilityPressed = f.GrenadePressed = f.PingPressed = false;
                 f.WeaponScroll = 0;
                 f.WeaponSlotPressed = -1;
             }

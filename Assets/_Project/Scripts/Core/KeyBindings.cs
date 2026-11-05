@@ -36,6 +36,8 @@ namespace Deadfall.Core
             new Entry("Interact", "Interact / use", "<Keyboard>/f"),
             new Entry("Ability", "Class ability", "<Keyboard>/q"),
             new Entry("Grenade", "Throw grenade", "<Keyboard>/e"),
+            new Entry("Ping", "Ping / mark", "<Mouse>/middleButton"),
+            new Entry("Scoreboard", "Squad stats (hold)", "<Keyboard>/tab"),
         };
 
         /// <summary>The path bound to <paramref name="id"/> in these settings (the default when unset).</summary>

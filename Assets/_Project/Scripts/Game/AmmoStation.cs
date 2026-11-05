@@ -51,10 +51,11 @@ namespace Deadfall.Game
             light.color = new Color(1f, 0.8f, 0.45f);
             light.shadows = LightShadows.None;
             InteractGlow.Add(root, InteractGlow.PowerUps, () => Running);
+            SyringeDispenser.Create(root.transform, index);
             return s;
         }
 
-        private static Renderer Part(Transform parent, Vector3 local, Vector3 size, Color color, bool solid)
+        internal static Renderer Part(Transform parent, Vector3 local, Vector3 size, Color color, bool solid)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.transform.SetParent(parent, false);
@@ -65,7 +66,7 @@ namespace Deadfall.Game
             return go.GetComponent<Renderer>();
         }
 
-        private static bool Running => WaveManager.Current != null && WaveManager.Current.IsRunning;
+        internal static bool Running => WaveManager.Current != null && WaveManager.Current.IsRunning;
 
         public string InteractPrompt(GameObject player) =>
             Running ? $"Refill ammo ({AmmoStationDirector.Price} credits)" : "Ammo station (start a run to use)";

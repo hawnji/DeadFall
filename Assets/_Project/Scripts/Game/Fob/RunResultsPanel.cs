@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Deadfall.Game
 {
     /// <summary>
-    /// End-of-run screen (M10): result, what the run counted, permanent rewards banked (with the D-03 retention note
+    /// End-of-run screen (M10): result, what the run counted, each player's stats and the MVP, permanent rewards banked (with the D-03 retention note
     /// on a failure), level and rank changes, challenges completed. The host returns the squad to the FOB from here.
     /// </summary>
     public sealed class RunResultsPanel : MonoBehaviour
@@ -64,7 +64,10 @@ namespace Deadfall.Game
             GUI.depth = -30;
             string head = _result.Won ? (_result.Operation ? "OPERATION COMPLETE" : "DEPLOYMENT COMPLETE") : _aborted ? "DEPLOYMENT ABORTED" : "SQUAD WIPED";
             Color hc = _result.Won ? HudKit.Good : HudKit.Bad;
-            Rect c = HudKit.Window(620f, 560f, head, null, hc);
+            RunStatsDirector stats = RunStatsDirector.Current;
+            int statRows = stats != null ? stats.RowCount : 0;
+            float squadH = statRows > 0 ? 54f + statRows * 30f : 0f;
+            Rect c = HudKit.Window(660f, 560f + squadH, head, null, hc);
 
             // Stat tiles.
             string[] labels = { "SURGES", "KILLS", "OBJECTIVES", "SPECIMENS" };
@@ -78,6 +81,15 @@ namespace Deadfall.Game
                 HudKit.Label(new Rect(t.x, t.y + 44f, t.width, 18f), labels[i], 11, HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
             }
             float y = c.y + 86f;
+
+            // Per-player stats with the MVP.
+            if (statRows > 0)
+            {
+                string mvp = stats.MvpName();
+                HudKit.Section(new Rect(c.x, y, c.width, 22f), mvp != null ? $"Squad  ·  MVP: {mvp}" : "Squad");
+                y += 28f;
+                y += stats.DrawTable(new Rect(c.x + 6f, y, c.width - 12f, squadH), showCredits: false) + 4f;
+            }
 
             RunReward r = _summary.Reward;
             HudKit.Section(new Rect(c.x, y, c.width, 22f), "Banked");

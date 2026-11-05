@@ -119,6 +119,9 @@ namespace Deadfall.DebugTools
             net.AddComponent<AmmoStationDirector>();
             // Perk machines (one of each perk) and the Weapon Forge on the walls.
             net.AddComponent<PerkMachineDirector>();
+            // Squad pings (middle mouse) and per-player run stats (Tab, end-of-run screen).
+            net.AddComponent<PingDirector>().Bind(player);
+            net.AddComponent<RunStatsDirector>().Bind(player);
             // Power-ups from kills: Max Ammo, Double Credits, Insta-Kill, Nuke.
             net.AddComponent<PowerUpDirector>();
             // M9: Engineering structures and the squad's Scrap (host-run).
