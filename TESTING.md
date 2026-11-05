@@ -640,6 +640,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Mutated infected show a glowing ring on the floor around their feet (green regenerating, purple splitting, pale grey hardened, red swift; several traits give concentric rings) and a soft light of the first trait's colour. No floating squares through the body. The glow goes out when they die.
 - [ ] Infected get faster as surges go by in Survival, Endless and Operations: about 7% faster by surge 5, 15% by 12, 35% by surge 25 (on top of health growing to ×2.5 by surge 30). Nothing outruns a sprinting player from the speed-up alone; bosses keep their own pace.
 
+### 3.52 Wall fixtures actually appear, glow on everything usable
+
+- [ ] Every generated map now has an ammo station (with the syringe box) in each sector, four perk machines and the Weapon Forge, all flush against walls. The Gun Dispenser shows up in Survival and Endless. (Before this fix the wall-spot finder aimed inside the wall itself, so none of these could be placed.)
+- [ ] Player.log on map load: "Ammo: N ammo stations placed." with N = the sector count, and "Perks: 4 perk machines placed, forge placed."
+- [ ] Supply caches sit just off the wall, not clipping into it.
+- [ ] Glow outline on every interactable: FOB facility consoles and the range's return console, Engineering structures (when there's something to do), downed teammates (blue while down), plus everything that already had it.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

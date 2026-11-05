@@ -59,6 +59,7 @@ namespace Deadfall.Game
             Mirror = mirror;
             Build();
             SetTier(1, true);
+            InteractGlow.Add(gameObject, InteractGlow.Objectives, () => CanInteract(null));
         }
 
         /// <summary>Creates the placeholder visuals and colliders.</summary>

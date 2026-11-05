@@ -76,7 +76,8 @@ namespace Deadfall.Game
                     var dir = (Dir)d;
                     if (r.Contains(c.Step(dir))) continue; // not an outer wall of the room
                     var outward = new Vector3(dir.Dx(), 0f, dir.Dz());
-                    Vector3 guess = Edge(c, dir, cs) - outward * (shape.HalfDepth + WallGap);
+                    // The wall is built inward from the cell edge, so its room-side face is WallThickness in from the edge line.
+                    Vector3 guess = Edge(c, dir, cs) - outward * (MapBuilder.WallThickness + shape.HalfDepth + WallGap);
                     if (Near(guess, AvoidDoors, DoorClearance) || Near(guess, AvoidProps, PropClearance)) continue;
                     if (!Fits(guess, outward, floorY, shape, out Vector3 floor)) continue;
                     Spots.Add(floor);

@@ -254,6 +254,7 @@ namespace Deadfall.DebugTools
             var tp = back.AddComponent<FobTeleporter>();
             tp.Prompt = "Return to FOB Halcyon";
             tp.Action = GoToFob;
+            InteractGlow.Add(back, InteractGlow.Objectives);
         }
 
         private void ClearSandbox()

@@ -653,7 +653,7 @@ namespace Deadfall.World
                 if (pts.Count > 0 && NearestWall(room, p, toCenter, out Vector3 outward))
                 {
                     yaw = Mathf.Round(Quaternion.LookRotation(-outward).eulerAngles.y / 90f) * 90f;
-                    if (l.Kind == LootKind.SupplyCache) p += outward * (0.9f - 0.5f);
+                    if (l.Kind == LootKind.SupplyCache) p += outward * (0.9f - (WallThickness + 0.42f)); // back 2 cm off the wall face
                 }
                 map.Loot.Add(new MapLootPoint
                 {
