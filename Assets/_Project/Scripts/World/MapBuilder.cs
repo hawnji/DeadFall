@@ -322,6 +322,9 @@ namespace Deadfall.World
                 for (int z = 0; z < room.Depth2; z++)
                 {
                     var c = new Cell(room.Origin.X + x, room.Origin.Z + z);
+                    // Shaped rooms: notch cells are not part of the room (other rooms and breach closets can sit
+                    // there), so they get no walls of their own. The room's cells beside the notch wall it off.
+                    if (!room.Contains(c)) continue;
                     for (int d = 0; d < 4; d++)
                     {
                         var dir = (Dir)d;

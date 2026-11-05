@@ -563,6 +563,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Going back to the FOB fades the level music out. Quit to title: the title theme plays instead, and the level music resumes after you close the title while still on a map.
 - [ ] Fresh install (or a settings file still on the old 70% default): the Music slider starts at 25%. A Music value you set yourself is kept.
 
+### 3.42 Stats readout, dispenser placement, closets
+
+- [ ] The green dev stats text (FPS, speed, enemies, waves, network) is hidden by default; ` (backquote) shows and hides it, and H toggles the controls help only while it is shown. The Settings FPS counter still works.
+- [ ] Gun Dispenser always stands on the floor of its room (never on the ceiling, a shelf or inside furniture), in Survival and Endless.
+- [ ] L-shaped / notched rooms: no stray walls in the notch; every breach closet behind the boards is an open dark void that enemies come out of.
+- [ ] Entering a map logs `[Music] Level music: Music/EndlessInfestation (195 s)` in the Console.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

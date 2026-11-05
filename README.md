@@ -78,7 +78,7 @@ The repo is a Unity project folder. `ProjectSettings/ProjectVersion.txt` pins **
 
 Controls: WASD, mouse, Shift sprint, Space jump, Ctrl/C crouch, LMB fire, RMB aim, R reload, V melee, 1–4 or wheel to swap, Esc pause.
 Settings (M13): Esc → Settings for volumes, sensitivity, FOV, VSync, frame cap, quality, window mode, FPS counter and damage numbers.
-Debug (editor and development builds only, or a release build started with `-devtools`): F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, H toggle help.
+Debug (editor and development builds only, or a release build started with `-devtools`): F1/F2/F3/F4 cap 30/60/144/unlimited FPS and turn VSync off, F9 respawn, F10 god mode, ` (backquote) shows or hides the stats readout (FPS, speed, enemies, waves, network; hidden by default), H toggles help while it is shown.
 Enemies (M2): F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed horde of 12, F11 kill all, `[` / `]` lower or raise the alive cap.
 Waves (M3): N starts or stops a survival run (host), G toggles ready during a lull (everyone ready ends it early).
 Classes (M4): Esc shows the class list on the left of the pause screen; Q uses the class ability.

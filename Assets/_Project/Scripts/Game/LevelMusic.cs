@@ -60,9 +60,11 @@ namespace Deadfall.Game
                 AudioClip clip = Clip(_track);
                 if (clip == null) continue;
                 GameAudio.PlayMusic(clip, fade);
+                GameLog.Info("Music", $"Level music: {Tracks[_track]} ({clip.length:0} s)");
                 _switchAt = now + Mathf.Max(10f, clip.length - Crossfade);
                 return;
             }
+            GameLog.Warn("Music", "Level music: no tracks found in Resources/Music (EndlessInfestation, EndlessInfestation2).");
             _switchAt = now + 30f; // no tracks found; try again later
         }
 

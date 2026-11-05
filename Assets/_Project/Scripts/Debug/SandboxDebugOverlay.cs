@@ -10,7 +10,8 @@ namespace Deadfall.DebugTools
 {
     /// <summary>
     /// Developer overlay for tuning feel: FPS and frame time, movement state, frame-rate cap hotkeys
-    /// (F1 30, F2 60, F3 144, F4 unlimited), damage numbers, respawn (F9), god mode (F10).
+    /// (F1 30, F2 60, F3 144, F4 unlimited), damage numbers, respawn (F9), god mode (F10). The text readout is hidden
+    /// until ` (backquote) shows it; the FPS counter from Settings still works without it.
     /// </summary>
     public sealed class SandboxDebugOverlay : MonoBehaviour
     {
@@ -28,12 +29,14 @@ namespace Deadfall.DebugTools
         private Vector3 _spawnPos;
         private float _spawnYaw;
         private InputActionMap _map;
-        private InputAction _f1, _f2, _f3, _f4, _f9, _f10, _help;
+        private InputAction _f1, _f2, _f3, _f4, _f9, _f10, _help, _readout;
         private readonly List<DamageNumber> _numbers = new List<DamageNumber>(32);
         private float _smoothedDt = 1f / 60f;
         private float _worstDt;
         private float _worstResetAt;
         private bool _showHelp;
+        /// <summary>The dev stats readout (FPS, speed, enemies, waves, network) is hidden until ` toggles it.</summary>
+        private bool _showReadout;
         private SandboxEnemySpawner _spawner;
 
         public void Bind(GameObject player, Vector3 spawnPos, float spawnYaw)
@@ -55,6 +58,7 @@ namespace Deadfall.DebugTools
             _f9 = _map.AddAction("Respawn", InputActionType.Button, "<Keyboard>/f9");
             _f10 = _map.AddAction("God", InputActionType.Button, "<Keyboard>/f10");
             _help = _map.AddAction("Help", InputActionType.Button, "<Keyboard>/h");
+            _readout = _map.AddAction("Readout", InputActionType.Button, "<Keyboard>/backquote");
             _map.Enable();
         }
 
@@ -116,7 +120,8 @@ namespace Deadfall.DebugTools
             if (_f2.WasPressedThisFrame()) SetCap(60);
             if (_f3.WasPressedThisFrame()) SetCap(144);
             if (_f4.WasPressedThisFrame()) SetCap(0);
-            if (_help.WasPressedThisFrame()) _showHelp = !_showHelp;
+            if (_readout.WasPressedThisFrame()) _showReadout = !_showReadout;
+            if (_help.WasPressedThisFrame() && _showReadout) _showHelp = !_showHelp;
             if (_f9.WasPressedThisFrame() && _player != null)
             {
                 _health.Revive();
@@ -159,7 +164,7 @@ namespace Deadfall.DebugTools
 
         private void DrawGui()
         {
-            if (!BuildInfo.DevTools)
+            if (!BuildInfo.DevTools || !_showReadout)
             {
                 GameSettings gs = Settings;
                 if (gs != null && gs.ShowFps)
