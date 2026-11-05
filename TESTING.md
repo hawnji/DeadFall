@@ -591,6 +591,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] No coloured squares in the middle of room floors.
 - [ ] Server racks (singles and rows of three) and lockers stand with their backs to a wall, facing into the room. None sit in front of a doorway, breach, switch, crawl vent, loot spot, fuse box or extinguisher.
 
+### 3.46 Power-ups
+
+- [ ] During a run, now and then (at most 4 per surge, at least 12 s apart) a kill drops a glowing spinning token with a coloured light and a name over it: MAX AMMO (three rounds), DOUBLE CREDITS (two coins), INSTA-KILL (skull), NUKE (bomb). It blinks for its last 8 s and vanishes after 30 s.
+- [ ] Walking over it shows a big banner for everyone. Max Ammo refills every player's guns. Double Credits: kill credits are doubled for 30 s, with a timer at the bottom centre. Insta-Kill: any hit kills an infected (not a Specimen) for 30 s, with a timer. Nuke: white flash and boom, every infected dies, each player gets 400 credits, and those kills drop nothing.
+- [ ] Co-op: drops, banners and timers match on both screens; a client can pick one up.
+- [ ] Ending the run removes any drops left.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
