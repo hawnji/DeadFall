@@ -47,6 +47,8 @@ namespace Deadfall.Game
         private readonly List<Enemy> _born = new List<Enemy>(2);
         private readonly List<int> _rooms = new List<int>(32);
         private readonly List<ushort> _scratch = new List<ushort>(16);
+        /// <summary>TickChannels' own id list: finishing a channel can clear props, which reuses _scratch.</summary>
+        private readonly List<ushort> _channelIds = new List<ushort>(16);
         private SessionService _session;
         private WaveManager _waves;
         private MapSession _map;
@@ -312,11 +314,12 @@ namespace Deadfall.Game
         private void TickChannels(float dt)
         {
             if (_channels.Count == 0) return;
-            _scratch.Clear();
-            foreach (KeyValuePair<ushort, ChannelProgress> kv in _channels) _scratch.Add(kv.Key);
-            foreach (ushort id in _scratch)
+            _channelIds.Clear();
+            foreach (KeyValuePair<ushort, ChannelProgress> kv in _channels) _channelIds.Add(kv.Key);
+            for (int i = 0; i < _channelIds.Count; i++)
             {
-                ChannelProgress c = _channels[id];
+                ushort id = _channelIds[i];
+                if (!_channels.TryGetValue(id, out ChannelProgress c)) continue;
                 if (!c.Started || c.Complete || !_props.TryGetValue(id, out ObjectiveProp p) || p == null) continue;
                 float before = c.Value01;
                 bool done = c.Tick(dt, PlayerNear(p.transform.position, ObjectiveRules.ChannelRange));
