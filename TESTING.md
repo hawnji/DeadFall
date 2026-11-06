@@ -693,6 +693,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Build a sentry, barricade and arc fence, and deploy the drone: each uses its new model (tripod sentry with twin-barrel head that still turns and fires from the muzzle, armoured barricade wall with back braces, two insulator pylons with the blue arc between them, quad drone with spinning rotors that faces where you look). Damage one: its accent panels darken toward red; upgrade it: they shift to the tier colour. Shots and enemy hits still land on the same shapes as before.
 - [ ] Start a nest objective: the nest is a lumpy flesh mound with glowing pustules and bone spines, pulses, has the rainbow quest glow, takes damage anywhere on it and vanishes when destroyed.
 
+### 3.61 Teammate animations, melee grip and swing
+- [ ] With a second player, watch them walk: legs stride with bending knees, the body bobs, the torso twists a little. Sprinting: longer strides, a forward lean, and the weapon lowered across the chest. Walking backwards plays the cycle in reverse.
+- [ ] Jumping tucks the knees until they land; crouching folds the legs under the hips and leans the torso (no squashed body).
+- [ ] Aiming down sights shoulders the weapon toward their eye line; it goes back to the hip when they stop. The held weapon swaps correctly while in any pose.
+- [ ] First person melee: the Saber-7 and Tether Cleaver are held blade-up in the right hand only (no second hand floating on the handle); the Railspike Maul is held two-handed, angled across the body.
+- [ ] A swing winds up, cuts quickly across to the lower left (one-handed) or chops down through the centre (maul), then eases back to the rest pose. Firearms still sprint, reload and kick as before.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

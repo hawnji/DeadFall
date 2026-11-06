@@ -41,12 +41,37 @@ namespace Deadfall.Player
         {
             public Vector3 Grip, Support;
             public float RollR, RollL;
-            public Hold(Vector3 grip, float rollR, Vector3 support, float rollL) { Grip = grip; RollR = rollR; Support = support; RollL = rollL; }
+            public bool OneHanded;
+            public Hold(Vector3 grip, float rollR, Vector3 support, float rollL, bool oneHanded = false)
+            {
+                Grip = grip; RollR = rollR; Support = support; RollL = rollL; OneHanded = oneHanded;
+            }
         }
+
+        /// <summary>Melee weapons are held blade-up like a real grip, not pointed at the screen like a gun.</summary>
+        private enum MeleeStyle { None, OneHand, TwoHand }
+
+        private static MeleeStyle StyleFor(WeaponDefinition def) =>
+            def == null || def.Kind != WeaponKind.Melee ? MeleeStyle.None
+            : def.ContentId != null && def.ContentId.Contains("maul") ? MeleeStyle.TwoHand : MeleeStyle.OneHand;
+
+        // Rest pose and swing keys, as offsets from the hip position (position, euler). The haft runs along model +Z,
+        // so a negative pitch stands the blade up.
+        private static readonly Vector3 OneRestPos = new Vector3(0.03f, -0.1f, -0.08f), OneRestRot = new Vector3(-58f, -8f, 12f);
+        private static readonly Vector3 OneWindPos = new Vector3(0.1f, 0.06f, -0.12f), OneWindRot = new Vector3(-80f, 25f, 35f);
+        private static readonly Vector3 OneHitPos = new Vector3(-0.32f, -0.12f, 0.16f), OneHitRot = new Vector3(25f, -70f, -40f);
+        private static readonly Vector3 TwoRestPos = new Vector3(-0.02f, -0.16f, -0.06f), TwoRestRot = new Vector3(-48f, -20f, 30f);
+        private static readonly Vector3 TwoWindPos = new Vector3(0.06f, 0.12f, -0.18f), TwoWindRot = new Vector3(-100f, 0f, 15f);
+        private static readonly Vector3 TwoHitPos = new Vector3(-0.12f, -0.2f, 0.2f), TwoHitRot = new Vector3(40f, -15f, -10f);
+        private MeleeStyle _style;
 
         private static Hold HoldFor(WeaponDefinition def)
         {
-            if (def.Kind == WeaponKind.Melee) return new Hold(new Vector3(0f, 0f, 0.03f), -80f, new Vector3(0f, 0f, 0.15f), -80f);
+            // Melee: the haft passes through the fist like a pistol grip (the rest pose stands it up).
+            if (def.Kind == WeaponKind.Melee)
+                return StyleFor(def) == MeleeStyle.TwoHand
+                    ? new Hold(new Vector3(0f, 0f, 0.06f), 0f, new Vector3(0f, 0f, 0.43f), 0f)
+                    : new Hold(new Vector3(0f, 0f, 0.1f), 0f, Vector3.zero, 0f, oneHanded: true);
             return def.Category switch
             {
                 WeaponCategory.Pistol => new Hold(new Vector3(0f, -0.07f, 0.01f), 0f, new Vector3(-0.03f, -0.085f, 0.02f), -20f),
@@ -129,12 +154,21 @@ namespace Deadfall.Player
         {
             _armR = _armL = null;
             Hold h = HoldFor(def);
+            _style = StyleFor(def);
             _armR = SpawnArm("ArmR", h.Grip, false);
-            _armL = SpawnArm("ArmL", h.Support, true);
+            _armL = h.OneHanded ? null : SpawnArm("ArmL", h.Support, true);
             _rollR = h.RollR;
             _rollL = h.RollL;
-            _shoulderR = _hipPosition + h.Grip + BackR * ArmReach;
-            _shoulderL = _hipPosition + h.Support + BackL * ArmReach;
+            // Shoulders sit behind where the hands are in the rest pose (melee stands the weapon up first).
+            Vector3 restPos = _hipPosition;
+            Quaternion restRot = Quaternion.identity;
+            if (_style != MeleeStyle.None)
+            {
+                restPos += _style == MeleeStyle.TwoHand ? TwoRestPos : OneRestPos;
+                restRot = Quaternion.Euler(_style == MeleeStyle.TwoHand ? TwoRestRot : OneRestRot);
+            }
+            _shoulderR = restPos + restRot * h.Grip + BackR * ArmReach;
+            _shoulderL = restPos + restRot * h.Support + BackL * ArmReach;
         }
 
         private Transform SpawnArm(string armName, Vector3 at, bool mirrored)
@@ -155,6 +189,36 @@ namespace Deadfall.Player
         }
 
         /// <summary>Points each forearm from its shoulder at its hand (after the weapon is posed this frame).</summary>
+        /// <summary>Melee pose at swing progress p (1 = at rest): rest, wind-up to 18%, strike to 45%, ease back.</summary>
+        private void MeleePose(float p, out Vector3 pos, out Vector3 euler)
+        {
+            bool two = _style == MeleeStyle.TwoHand;
+            Vector3 restP = two ? TwoRestPos : OneRestPos, restR = two ? TwoRestRot : OneRestRot;
+            Vector3 windP = two ? TwoWindPos : OneWindPos, windR = two ? TwoWindRot : OneWindRot;
+            Vector3 hitP = two ? TwoHitPos : OneHitPos, hitR = two ? TwoHitRot : OneHitRot;
+            const float wind = 0.18f, hit = 0.45f;
+            if (p < wind)
+            {
+                float t = Mathf.SmoothStep(0f, 1f, p / wind);
+                pos = Vector3.Lerp(restP, windP, t);
+                euler = Vector3.Lerp(restR, windR, t);
+            }
+            else if (p < hit)
+            {
+                float t = (p - wind) / (hit - wind);
+                t = t * t * (3f - 2f * t);
+                t = Mathf.Sqrt(t); // fast through the cut, settling at the end
+                pos = Vector3.Lerp(windP, hitP, t);
+                euler = Vector3.Lerp(windR, hitR, t);
+            }
+            else
+            {
+                float t = Mathf.SmoothStep(0f, 1f, (p - hit) / (1f - hit));
+                pos = Vector3.Lerp(hitP, restP, t);
+                euler = Vector3.Lerp(hitR, restR, t);
+            }
+        }
+
         private void AimArms()
         {
             AimArm(_armR, _shoulderR, _rollR);
@@ -368,8 +432,14 @@ namespace Deadfall.Player
                 euler += new Vector3(10f, -25f, 10f);
             }
 
-            // Melee: quick horizontal swipe.
-            if (_meleeing)
+            // Melee: blade-up rest pose; a swing winds up, cuts across (one hand) or chops down (two hands), recovers.
+            if (_style != MeleeStyle.None)
+            {
+                MeleePose(_meleeing ? Mathf.Clamp01(_melee) : 1f, out Vector3 mp, out Vector3 me);
+                pos += mp;
+                euler += me;
+            }
+            else if (_meleeing)
             {
                 float m = Mathf.Sin(Mathf.Clamp01(_melee) * Mathf.PI);
                 pos += new Vector3(-0.15f * m, 0.05f * m, 0.12f * m);
@@ -384,7 +454,7 @@ namespace Deadfall.Player
             float sway = Mathf.Clamp01(_move) * (1f - _aim) * 0.006f;
             pos += new Vector3(Mathf.Sin(Time.time * 7f) * sway, Mathf.Abs(Mathf.Cos(Time.time * 7f)) * sway, 0f);
 
-            float t = MotionMath.ExpBlend(_swaySharpness, dt);
+            float t = MotionMath.ExpBlend(_meleeing && _style != MeleeStyle.None ? 32f : _swaySharpness, dt);
             _currentPos = Vector3.Lerp(_currentPos, pos, t);
             _currentRot = Quaternion.Slerp(_currentRot, Quaternion.Euler(euler), t);
             // Kick and aim should feel immediate, so bypass smoothing for those components.

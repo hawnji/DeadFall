@@ -241,6 +241,10 @@ namespace Deadfall.DebugTools
             if (_motor != null && _motor.IsCrouched) flags |= 1;
             if (_status != null && _status.IsDead) flags |= 2;
             if (_status != null && _status.IsDowned) flags |= 4;
+            // Pose hints for the teammate's animation (RemotePlayerProxy): aiming, sprinting, in the air.
+            if (_playerWeapons != null && _playerWeapons.AimBlend > 0.5f) flags |= 8;
+            if (_motor != null && _motor.IsSprinting) flags |= 16;
+            if (_motor != null && !_motor.IsGrounded) flags |= 32;
             float health01 = _health != null ? _health.Normalized : 1f;
             int weaponIndex = _playerWeapons != null ? WeaponCatalog.IndexOf(_playerWeapons.CurrentDefinition) : -1;
             byte weapon = weaponIndex >= 0 && weaponIndex < byte.MaxValue ? (byte)weaponIndex : byte.MaxValue;
@@ -288,6 +292,7 @@ namespace Deadfall.DebugTools
             RemotePlayerProxy proxy = GetOrCreateProxy(id);
             if (proxy.Disconnected) return; // a held slot; the player comes back under a new id
             proxy.SetTarget(pos, yaw, pitch, (flags & 1) != 0, (flags & 2) != 0, health01, (flags & 4) != 0, bleed / 255f);
+            proxy.SetPose((flags & 8) != 0, (flags & 16) != 0, (flags & 32) != 0);
             proxy.SetWeapon(weapon == byte.MaxValue ? null : WeaponCatalog.At(weapon));
         }
 
