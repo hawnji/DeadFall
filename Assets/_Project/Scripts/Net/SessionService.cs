@@ -138,7 +138,7 @@ namespace Deadfall.Net
             Role = SessionRole.Host;
             AttachHandlers();
             GameLog.Info(LogCategory, $"Hosting on port {port}");
-            Started?.Invoke(Role);
+            RaiseStarted();
             return true;
         }
 
@@ -189,7 +189,7 @@ namespace Deadfall.Net
             Role = SessionRole.Host;
             AttachHandlers();
             GameLog.Info(LogCategory, $"Hosting online, join code {joinCode}");
-            Started?.Invoke(Role);
+            RaiseStarted();
             return true;
         }
 
@@ -298,6 +298,17 @@ namespace Deadfall.Net
             _network.OnTransportFailure += OnTransportFailure;
         }
 
+        /// <summary>Runs every Started handler even if one throws, so one bad listener can't leave the join half done.</summary>
+        private void RaiseStarted()
+        {
+            if (Started == null) return;
+            foreach (Delegate d in Started.GetInvocationList())
+            {
+                try { ((Action<SessionRole>)d)(Role); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+        }
+
         private void OnClientConnected(ulong clientId)
         {
             if (Role == SessionRole.Host)
@@ -310,7 +321,7 @@ namespace Deadfall.Net
             {
                 _clientConnected = true;
                 GameLog.Info(LogCategory, $"Connected as player {clientId}");
-                Started?.Invoke(Role);
+                RaiseStarted();
             }
         }
 
