@@ -675,6 +675,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Objective props and offline generators glow in cycling rainbow colours and can be seen from about 45 m away. Required rows have a rainbow dot.
 - [ ] Gaining scrap shows "+N scrap" just left of centre, credits show "+N" just right of centre, both below the crosshair (never on the aim point).
 
+### 3.58 Scopes, attachments, sights on the aim point, Armory try-out
+- [ ] Aim with any gun: the sights (iron, built-in or fitted optic) line up exactly with the aiming dot in the middle of the screen, and shots land on it.
+- [ ] Vesper DMR (or any gun with a Sniper Scope): aiming switches to a full-screen scope view (black edges, crosshair, red dot in the centre, strong zoom) and the gun model disappears; letting go of aim brings it back.
+- [ ] Armory: under each firearm there are slot buttons (Optic, Barrel, Underbarrel, Magazine, Stock). Clicking cycles through none and each option, right-click goes back; at most 3 fitted. Guns with a built-in optic (Wasp, Vesper, Hailstorm, Mule) have no Optic button.
+- [ ] Fitted attachments show on the gun: red dot / holo / sniper scope on top, compensator or long barrel on the muzzle, foregrip or laser underneath, extended mag. They persist after restarting the game.
+- [ ] Changing a weapon (or its attachments) at the Armory puts that weapon straight into your hands.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

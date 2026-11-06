@@ -57,6 +57,7 @@ namespace Deadfall.Rules.Progression
             Line(sb, "done", List(p.Completed));
             if (p.BankedRuns.Count > 0) Line(sb, "banked", List(p.BankedRuns.ToArray()));
             foreach (KeyValuePair<string, string[]> kv in Sorted(p.Loadouts)) if (IsId(kv.Key)) Line(sb, "loadout." + kv.Key, List(kv.Value));
+            foreach (KeyValuePair<string, string[]> kv in Sorted(p.Attachments)) if (IsId(kv.Key) && kv.Value != null && kv.Value.Length > 0) Line(sb, "attach." + kv.Key, List(kv.Value));
             foreach (KeyValuePair<string, long> kv in Sorted(p.Stats)) if (IsId(kv.Key)) Line(sb, "stat." + kv.Key, kv.Value);
             foreach (KeyValuePair<string, long> kv in Sorted(p.WeaponXp)) if (IsId(kv.Key)) Line(sb, "wxp." + kv.Key, kv.Value);
             string body = sb.ToString();
@@ -109,6 +110,7 @@ namespace Deadfall.Rules.Progression
                 else if (k.StartsWith("cxp.", StringComparison.Ordinal)) p.ClassXp[k.Substring(4)] = Long(v);
                 else if (k.StartsWith("prestige.", StringComparison.Ordinal)) p.Prestige[k.Substring(9)] = (int)Math.Min(int.MaxValue, Long(v));
                 else if (k.StartsWith("loadout.", StringComparison.Ordinal)) p.Loadouts[k.Substring(8)] = Split(v);
+                else if (k.StartsWith("attach.", StringComparison.Ordinal)) p.Attachments[k.Substring(7)] = Split(v);
                 else if (k.StartsWith("stat.", StringComparison.Ordinal)) p.Stats[k.Substring(5)] = Long(v);
                 else if (k.StartsWith("wxp.", StringComparison.Ordinal)) p.WeaponXp[k.Substring(4)] = Long(v);
                 // Unknown keys are ignored so an older build can still read a file it partly understands.
