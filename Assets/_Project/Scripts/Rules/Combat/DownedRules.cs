@@ -23,8 +23,8 @@ namespace Deadfall.Rules.Combat
         public const float SelfReviveSeconds = 2.5f;
         /// <summary>Health a revived player stands up with, as a fraction of max.</summary>
         public const float ReviveHealthFraction = 0.4f;
-        /// <summary>Self-revive kits shared by the whole squad per run.</summary>
-        public const int TeamSelfReviveKits = 3;
+        /// <summary>Self-revive kits the squad starts a run with: none, they're bought (syringes at ammo stations).</summary>
+        public const int TeamSelfReviveKits = 0;
         /// <summary>How close (metres, feet to feet) a teammate must be to revive.</summary>
         public const float ReviveRange = 2.2f;
         /// <summary>Extra slack the host allows on a revive claim (latency).</summary>
@@ -43,7 +43,8 @@ namespace Deadfall.Rules.Combat
 
         /// <summary>
         /// True when nobody can bring the squad back: nobody is up, and either nobody is downed or no
-        /// self-revive kits remain for the downed to use.
+        /// self-revive kits remain for the downed to use (the squad starts with none, so all down ends the run
+        /// unless syringes were bought).
         /// </summary>
         public static bool SquadWiped(int alive, int downed, int kits)
         {

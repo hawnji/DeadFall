@@ -23,7 +23,7 @@ namespace Deadfall.Game
         private const float LifeSeconds = 8f;
         private const float EnemyLifeSeconds = 6f;
         private const float Cooldown = 0.35f;
-        private const int MaxPerPlayer = 3;
+        private const int MaxPerPlayer = 1;
         private const int Mask = ~(1 << 2);
 
         public enum Kind : byte { Spot, Enemy, Item }

@@ -34,8 +34,9 @@ namespace Deadfall.Combat
             go.transform.position = origin;
             go.transform.localScale = Vector3.one * 0.14f;
             var rb = go.AddComponent<Rigidbody>();
-            rb.mass = 0.25f;
+            rb.mass = fuseSeconds > 0f ? 0.6f : 0.25f;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
             rb.AddForce(velocity, ForceMode.VelocityChange);
             var g = go.AddComponent<Grenade>();
             g._damage = damage;
@@ -56,8 +57,33 @@ namespace Deadfall.Combat
             return g;
         }
 
+        private Rigidbody _rb;
+        private Rigidbody Body => _rb != null ? _rb : _rb = GetComponent<Rigidbody>();
+
+        private void FixedUpdate()
+        {
+            if (_fuse <= 0f || Body == null) return;
+            // Thrown frags feel heavy: extra gravity on top of the engine's 1 g, and spin dies off quickly.
+            Body.AddForce(Physics.gravity * (GrenadeRules.GravityScale - 1f), ForceMode.Acceleration);
+            Body.AddTorque(-Body.angularVelocity * 3f * Time.fixedDeltaTime, ForceMode.VelocityChange);
+        }
+
+        private void OnCollisionStay(Collision collision)
+        {
+            // Rolling friction: a heavy grenade skids to a stop instead of rolling away.
+            if (_fuse <= 0f || Body == null) return;
+            Vector3 v = Body.GetPointVelocity(Body.worldCenterOfMass);
+            Body.AddForce(new Vector3(-v.x, 0f, -v.z) * Mathf.Clamp01(6f * Time.fixedDeltaTime), ForceMode.VelocityChange);
+        }
+
         private void OnCollisionEnter(Collision collision)
         {
+            if (_fuse > 0f && Body != null)
+            {
+                // Low bounce: soak up most of the impact speed.
+                Vector3 v = Body.GetPointVelocity(Body.worldCenterOfMass);
+                Body.AddForce(-v * 0.55f, ForceMode.VelocityChange);
+            }
             if (_fuse <= 0f && Time.timeAsDouble - _spawnedAt >= ArmSeconds) Explode();
         }
 

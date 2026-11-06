@@ -109,6 +109,11 @@ namespace Deadfall.Player
             SetHeight(_currentHeight);
         }
 
+        /// <summary>Falling this far below the last ground means you went through the world.</summary>
+        private const float FallRescueDepth = 25f;
+        private Vector3 _lastGround;
+        private bool _haveGround;
+
         private void Update()
         {
             var mi = new MotorInput();
@@ -230,6 +235,13 @@ namespace Deadfall.Player
 
             bool wasGrounded = IsGrounded;
             IsGrounded = _controller.isGrounded;
+            if (IsGrounded) { _lastGround = transform.position; _haveGround = true; }
+            else if (_haveGround && transform.position.y < _lastGround.y - FallRescueDepth)
+            {
+                // Fell through the floor or off the world: back to the last solid ground.
+                Teleport(_lastGround + Vector3.up * 0.3f, transform.eulerAngles.y);
+                return;
+            }
             if (IsGrounded && !wasGrounded)
             {
                 Landed?.Invoke(-_verticalVelocity);
@@ -306,11 +318,27 @@ namespace Deadfall.Player
         private float _dashRemaining, _dashSpeed;
         private bool _dashEndPending;
 
+        /// <summary>
+        /// Where to actually put the feet for a teleport to <paramref name="p"/>: the nearest walkable NavMesh point
+        /// within a couple of metres (so a spot inside a wall, past a ledge or under the floor lands on real floor),
+        /// else the floor straight below. Unchanged when neither is found.
+        /// </summary>
+        public static Vector3 SafeSpot(Vector3 p)
+        {
+            if (UnityEngine.AI.NavMesh.SamplePosition(p, out UnityEngine.AI.NavMeshHit nav, 2.5f, UnityEngine.AI.NavMesh.AllAreas))
+                return nav.position + Vector3.up * 0.08f;
+            int mask = ~((1 << 2) | (1 << PlayerFactory.PlayerLayer));
+            if (Physics.Raycast(p + Vector3.up * 1.2f, Vector3.down, out RaycastHit hit, 8f, mask, QueryTriggerInteraction.Ignore))
+                return hit.point + Vector3.up * 0.08f;
+            return p;
+        }
+
         public void Teleport(Vector3 position, float yaw)
         {
             _dashRemaining = 0f;
             _controller.enabled = false;
-            transform.position = position;
+            transform.position = SafeSpot(position);
+            _haveGround = false;
             _controller.enabled = true;
             _horizontalVelocity = Vector3.zero;
             _verticalVelocity = 0f;

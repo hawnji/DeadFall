@@ -660,6 +660,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Pause (Esc): PAUSED, Resume, Settings and the Quit to title / Quit to HUB row sit in the middle of the screen. Resume closes the pause screen.
 - [ ] In the hub, fire off some ammo and throw grenades, then start a game mode: every magazine, reserve and grenade is full again.
 
+### 3.56 Gameplay fixes batch (wipe, respawn, pings, kits, grenades, barricades, drops, field mods)
+- [ ] A run starts with 0 squad self-revive kits; syringes at ammo stations add them. With no kits, the run ends as soon as every player is downed.
+- [ ] Respawning next to a teammate (end of surge) never drops you under the map, even if they stand against a wall. Falling 25 m below your last footing puts you back on it.
+- [ ] Each player has one ping at a time: a new ping replaces your last.
+- [ ] Grenades throw a little shorter, drop faster, barely bounce and stop rolling quickly.
+- [ ] While a zombie is hitting a barricade (and 1.6 s after), it can't be repaired; the prompt says it's under attack.
+- [ ] A weapon dropped by a zombie killed inside a closet lands in the room in front of the opening.
+- [ ] With a Field Mod waiting, the picker pops up by itself when the lull starts (once; Esc puts it away and T brings it back).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

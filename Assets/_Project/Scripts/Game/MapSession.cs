@@ -404,6 +404,7 @@ namespace Deadfall.Game
         private string BreachPrompt(BreachBarricade b, GameObject player)
         {
             if (b.Boards >= BreachBarricade.MaxBoards) return string.Empty;
+            if (b.UnderAttack) return $"Barricade under attack: can't repair  ·  {b.Boards}/{BreachBarricade.MaxBoards}";
             bool paid = _waves != null && _waves.IsRunning;
             return paid ? $"Repair barricade  +{RepairCredits} each  ·  {b.Boards}/{BreachBarricade.MaxBoards}" : $"Repair barricade  ·  {b.Boards}/{BreachBarricade.MaxBoards}";
         }

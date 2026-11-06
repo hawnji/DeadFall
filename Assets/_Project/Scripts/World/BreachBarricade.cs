@@ -151,6 +151,16 @@ namespace Deadfall.World
         /// <summary>Only from the closet side (+z); enemies already in the room never tear a closet open.</summary>
         public bool BreakableFrom(Vector3 point) => transform.InverseTransformPoint(point).z > -0.3f;
 
+        /// <summary>Seconds after the last hit (or lost board) before the barricade can be repaired again.</summary>
+        public const float RepairBlockSeconds = 1.6f;
+        private float _lastHitAt = -100f;
+
+        /// <summary>
+        /// Something is tearing at it right now: no repairs until it stops (so you can't out-hammer a zombie
+        /// that's already on the boards).
+        /// </summary>
+        public bool UnderAttack => Time.time - _lastHitAt < RepairBlockSeconds;
+
         public float ApplyDamage(in DamageInfo info)
         {
             if (!Authority || Boards <= 0 || info.Amount <= 0f) return 0f;
@@ -158,6 +168,7 @@ namespace Deadfall.World
             if (info.Source != null && Deadfall.Combat.PlayerIdentity.Of(info.Source) != null) return 0f;
             float applied = Mathf.Min(_health, info.Amount);
             _health -= applied;
+            _lastHitAt = Time.time;
             int boards = Mathf.CeilToInt(_health / HealthPerBoard - 0.0001f);
             if (boards != Boards)
             {
@@ -172,6 +183,7 @@ namespace Deadfall.World
         public void SetBoards(int boards)
         {
             boards = Mathf.Clamp(boards, 0, MaxBoards);
+            if (boards < Boards) _lastHitAt = Time.time; // clients learn about attacks from lost boards
             Boards = boards;
             _health = Mathf.Max(Mathf.Min(_health, boards * HealthPerBoard), (boards - 1) * HealthPerBoard + 0.01f);
             if (boards == 0) _health = 0f;
@@ -183,7 +195,7 @@ namespace Deadfall.World
         /// <summary>Puts one board back. Returns false when it is already whole.</summary>
         public bool RepairOne()
         {
-            if (Boards >= MaxBoards) return false;
+            if (Boards >= MaxBoards || UnderAttack) return false;
             _health = (Boards + 1) * HealthPerBoard;
             SetBoards(Boards + 1);
             PlayNailing();
@@ -211,7 +223,7 @@ namespace Deadfall.World
         }
 
         public string InteractPrompt(GameObject player) => PromptFor != null ? PromptFor(this, player) : (Boards < MaxBoards ? "Repair barricade" : string.Empty);
-        public bool CanInteract(GameObject player) => Boards < MaxBoards;
+        public bool CanInteract(GameObject player) => Boards < MaxBoards && !UnderAttack;
         public void Interact(GameObject player) => Use?.Invoke(this, player);
     }
 }
