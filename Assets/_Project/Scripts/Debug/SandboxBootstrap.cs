@@ -67,6 +67,8 @@ namespace Deadfall.DebugTools
             // Level music (user's Endless Infestation tracks) on its own object so hiding the HUD never stops it.
             new GameObject("[LevelMusic]").AddComponent<LevelMusic>();
             LevelMusic.Suppressed = () => TitleScreen.Showing;
+            ui.AddComponent<ClassPickPanel>();
+            ClassPickPanel.Blocked = () => TitleScreen.Showing;
             ui.AddComponent<MapDebugOverlay>();
             // M6: run economy UI (Supply Cache menu, Field Mod picks with T, toasts, weapon XP).
             ui.AddComponent<RunToasts>();

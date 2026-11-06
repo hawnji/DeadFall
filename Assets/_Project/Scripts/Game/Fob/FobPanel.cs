@@ -107,26 +107,14 @@ namespace Deadfall.Game
             GUI.depth = -20;
             Color accent = FobBuilder.ColorOf(_tab);
             string wallet = $"OPERATOR {p.OperatorLevel}  ·  {p.Wallet.Requisition:N0} REQ  ·  {p.Wallet.Intel:N0} INTEL";
-            Rect c = HudKit.Window(1040f, 700f, $"FOB HALCYON  ·  {Facilities.Name(_tab).ToUpperInvariant()}", wallet, accent);
+            Rect c = HudKit.Window(1040f, 700f, Facilities.Name(_tab).ToUpperInvariant(), wallet, accent);
 
             // Operator level progress under the title.
             float lv = OperatorLevels.Progress(p.OperatorXp);
             HudKit.Bar(new Rect(c.xMax - 220f, c.y - 18f, 220f, 6f), lv, HudKit.Accent);
 
-            // Facility tabs.
-            int count = 0;
-            foreach (FacilityId f in Facilities.All) count++;
-            float tabW = (c.width - (count - 1) * 6f) / count;
-            int ti = 0;
-            foreach (FacilityId f in Facilities.All)
-            {
-                bool open = Facilities.IsOpen(f, p.OperatorLevel);
-                string label = open ? Facilities.Name(f) : $"{Facilities.Name(f)}  ·  L{Facilities.UnlockLevel(f)}";
-                var tr = new Rect(c.x + ti * (tabW + 6f), c.y, tabW, 38f);
-                if (HudKit.Button(tr, label, f == _tab, open, 13, FobBuilder.ColorOf(f))) { _tab = f; _scroll = Vector2.zero; }
-                ti++;
-            }
-            float top = c.y + 48f;
+            // Each booth shows only its own facility (no tab bar): walk to another booth for another section.
+            float top = c.y + 4f;
             if (!string.IsNullOrEmpty(svc.StatusNote))
             {
                 HudKit.Label(new Rect(c.x, top, c.width, 20f), svc.StatusNote, 13, HudKit.Warn);
