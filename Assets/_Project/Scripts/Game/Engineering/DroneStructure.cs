@@ -18,6 +18,7 @@ namespace Deadfall.Game
         public const string WeaponId = "structure.drone";
         private const float ShotsPerSecond = 4f;
         private Transform _body;
+        private readonly List<Transform> _rotors = new List<Transform>();
         private LineRenderer _beam;
         private IHostile _target;
         private Structure _repairTarget;
@@ -32,6 +33,13 @@ namespace Deadfall.Game
             Part(PrimitiveType.Sphere, _body, Vector3.zero, new Vector3(0.45f, 0.22f, 0.45f), new Color(0.35f, 0.75f, 0.5f), false, tintWithHealth: true);
             Part(PrimitiveType.Cube, _body, new Vector3(0f, 0.05f, 0f), new Vector3(0.9f, 0.03f, 0.08f), new Color(0.2f, 0.2f, 0.2f), false);
             Part(PrimitiveType.Cube, _body, new Vector3(0f, 0.05f, 0f), new Vector3(0.08f, 0.03f, 0.9f), new Color(0.2f, 0.2f, 0.2f), false);
+            Transform model = Dress("eng_drone", _body, Vector3.zero);
+            if (model != null)
+            {
+                foreach (Transform t in model.GetComponentsInChildren<Transform>(true))
+                    if (t.name.StartsWith("Rotor")) _rotors.Add(t);
+            }
+            HidePlaceholders();
             var beamGo = new GameObject("Beam");
             beamGo.transform.SetParent(transform, false);
             _beam = beamGo.AddComponent<LineRenderer>();
@@ -52,7 +60,16 @@ namespace Deadfall.Game
                 Vector3 want = o.position + o.right * 0.9f + Vector3.up * (2.1f + Mathf.Sin(Time.time * 2f + _bob) * 0.08f) - o.forward * 0.3f;
                 transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-6f * dt));
             }
-            _body.Rotate(0f, 720f * dt, 0f, Space.Self);
+            if (_rotors.Count > 0)
+            {
+                // The model's rotors spin; the body just faces where the owner looks, tilting a little as it flies.
+                for (int i = 0; i < _rotors.Count; i++) _rotors[i].Rotate(0f, (i % 2 == 0 ? 1440f : -1440f) * dt, 0f, Space.Self);
+                Vector3 face = owner != null ? owner.transform.forward : _body.forward;
+                face.y = 0f;
+                if (face.sqrMagnitude > 0.01f)
+                    _body.rotation = Quaternion.Slerp(_body.rotation, Quaternion.LookRotation(face) * Quaternion.Euler(6f, 0f, 0f), 1f - Mathf.Exp(-4f * dt));
+            }
+            else _body.Rotate(0f, 720f * dt, 0f, Space.Self);
 
             double now = Time.timeAsDouble;
             if (now >= _nextRetarget)

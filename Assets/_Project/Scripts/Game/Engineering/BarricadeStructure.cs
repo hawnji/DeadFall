@@ -25,6 +25,8 @@ namespace Deadfall.Game
             _box = wall.GetComponent<BoxCollider>();
             Part(PrimitiveType.Cube, transform, new Vector3(-Width * 0.35f, Height * 0.5f, -0.3f), new Vector3(0.12f, Height * 1.05f, 0.4f), new Color(0.3f, 0.3f, 0.3f), false);
             Part(PrimitiveType.Cube, transform, new Vector3(Width * 0.35f, Height * 0.5f, -0.3f), new Vector3(0.12f, Height * 1.05f, 0.4f), new Color(0.3f, 0.3f, 0.3f), false);
+            Dress("eng_barricade", transform, Vector3.zero);
+            HidePlaceholders();
             var obstacle = gameObject.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Box;
             obstacle.center = new Vector3(0f, Height * 0.5f, 0f);
@@ -44,7 +46,11 @@ namespace Deadfall.Game
 
         public bool BreakableFrom(Vector3 point) => true;
 
-        protected override void OnDestroy() => Blockers.Unregister(this);
+        protected override void OnDestroy()
+        {
+            Blockers.Unregister(this);
+            base.OnDestroy();
+        }
         private void OnDisable() => Blockers.Unregister(this);
     }
 }

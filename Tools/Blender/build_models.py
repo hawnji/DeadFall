@@ -749,19 +749,49 @@ def prop_switch():
 
 
 def supply_cache():
-    """Supply Cache at real size (origin on the floor, front +Z): footlocker with gold trim and a green status light."""
+    """
+    Supply Cache at real size (origin on the floor, front +Z, ~1.6 x 1.1 x 0.8): an open-topped supply crate with what
+    it sells on show: olive ammo cans on the left, a white med kit with a red cross in the middle, a grenade tray right.
+    """
     m = Model("supply_cache")
-    m.box((0, 0.42, 0), (1.6, 0.84, 0.8), "C_385C42", bevel=0.04)
-    m.box((0, 0.88, 0), (1.66, 0.1, 0.86), "C_BF9E33", bevel=0.02)  # lid trim
-    m.box((0, 0.8, 0), (1.62, 0.04, 0.82), DARK, bevel=0.0)
-    for s in (-1, 1):
-        m.box((s * 0.82, 0.5, 0), (0.06, 0.12, 0.3), METAL_LIGHT, bevel=0.01)  # handles
-        m.box((s * 0.55, 0.42, 0.41), (0.12, 0.8, 0.03), "C_BF9E33", bevel=0.0)
-    m.box((0, 0.55, -0.41), (0.5, 0.18, 0.03), "G_66E680", bevel=0.0)  # status light (the placeholder's)
-    m.box((0, 0.55, 0.41), (0.5, 0.18, 0.03), "G_66E680", bevel=0.0)
+    crate = "C_385C42"
+    trim = "C_BF9E33"
     m.box((0, 0.04, 0), (1.64, 0.08, 0.84), RUBBER, bevel=0.0)
+    m.box((0, 0.34, 0), (1.6, 0.56, 0.8), crate, bevel=0.03)
+    m.box((0, 0.63, 0), (1.66, 0.06, 0.86), trim, bevel=0.01)          # rim
+    m.box((0, 0.6, 0), (1.5, 0.02, 0.7), DARK, bevel=0.0)              # inside floor seen from above
+    for s_ in (-1, 1):
+        m.box((s_ * 0.82, 0.42, 0), (0.06, 0.1, 0.3), METAL_LIGHT, bevel=0.01)  # handles
+        m.box((s_ * 0.55, 0.34, 0.41), (0.1, 0.52, 0.03), trim, bevel=0.0)
+        m.box((s_ * 0.55, 0.34, -0.41), (0.1, 0.52, 0.03), trim, bevel=0.0)
+    m.box((0, 0.42, 0.41), (0.5, 0.14, 0.03), "G_66E680", bevel=0.0)  # status strip, both faces
+    m.box((0, 0.42, -0.41), (0.5, 0.14, 0.03), "G_66E680", bevel=0.0)
+    m.box((0, 0.22, 0.415), (0.9, 0.05, 0.02), HAZARD, bevel=0.0)
+    # Ammo cans (left), two side by side and one on top.
+    can = "C_4B5A36"
+    for i, (x, y, z) in enumerate([(-0.56, 0.8, 0.13), (-0.56, 0.8, -0.15), (-0.56, 1.0, -0.01)]):
+        m.box((x, y, z), (0.36, 0.2, 0.24), can, bevel=0.015)
+        m.box((x, y + 0.105, z), (0.2, 0.02, 0.05), DARK, bevel=0.0)       # lid handle
+        m.box((x, y, z + 0.125), (0.14, 0.05, 0.01), "C_D9C27A", bevel=0.0)  # stencil plate
+    # Med kit (middle): white case, red cross on top and front.
+    m.box((0.02, 0.8, 0.02), (0.42, 0.2, 0.34), "C_E6E6E2", bevel=0.02)
+    m.box((0.02, 0.91, 0.02), (0.22, 0.012, 0.07), "G_E0403A", bevel=0.0)
+    m.box((0.02, 0.91, 0.02), (0.07, 0.012, 0.22), "G_E0403A", bevel=0.0)
+    m.box((0.02, 0.8, 0.195), (0.12, 0.04, 0.01), "C_E0403A", bevel=0.0)
+    m.box((0.02, 0.8, 0.195), (0.04, 0.12, 0.01), "C_E0403A", bevel=0.0)
+    m.box((0.02, 0.92, 0.02), (0.12, 0.03, 0.03), DARK, bevel=0.0)      # handle
+    # Grenade tray (right): a low open box with six frag grenades.
+    m.box((0.54, 0.7, 0), (0.44, 0.06, 0.5), "C_5E4A30", bevel=0.01)
+    for s_ in (-1, 1):
+        m.box((0.54 + s_ * 0.21, 0.76, 0), (0.02, 0.1, 0.5), "C_5E4A30", bevel=0.0)
+        m.box((0.54, 0.76, s_ * 0.24), (0.44, 0.1, 0.02), "C_5E4A30", bevel=0.0)
+    for ix in (-1, 0, 1):
+        for iz in (-1, 1):
+            x, z = 0.54 + ix * 0.13, iz * 0.11
+            m.sph((x, 0.8, z), (0.1, 0.12, 0.1), "C_37442C", segments=8)
+            m.box((x, 0.875, z), (0.03, 0.04, 0.03), METAL_LIGHT, bevel=0.0)  # fuse head
+            m.box((x + 0.025, 0.86, z), (0.012, 0.06, 0.02), METAL_LIGHT, bevel=0.0)  # spoon
     return m
-
 
 
 # ----------------------------------------------------------------------------------------------- environment dressing
@@ -2514,6 +2544,143 @@ def obj_locker():
     m.box((0, 1.82, 0.3), (0.7, 0.1, 0.01), HAZARD, bevel=0.0)
     return m
 
+
+# ----------------------------------------------------------------------------------------------- engineer structures
+# Real size, origin on the floor (the drone and the sentry head: origin at their centre). "Accent" parts take the
+# structure's health/tier tint in game (Structure.Dress gives each structure its own copy of that material).
+
+ENG_DARK = "C_23262A"
+ENG_STEEL = "C_4A4F57"
+ENG_LIGHT = "C_7D838C"
+ENG_GLOW = "G_59E68C"
+ARC_GLOW = "G_80D9FF"
+
+
+def eng_sentry_base():
+    """Sentry tripod (0.75 wide, top flange at 0.88 m): three splayed legs, a column and the turret ring."""
+    m = Model("eng_sentry_base")
+    for i in range(3):
+        a = math.radians(i * 120 + 30)
+        foot = (math.sin(a) * 0.42, 0.02, math.cos(a) * 0.42)
+        m.limb((0, 0.42, 0), foot, (0.07, 0.06), ENG_STEEL)
+        m.box((foot[0], 0.025, foot[2]), (0.14, 0.05, 0.14), RUBBER, bevel=0.01)
+    m.cyl((0, 0.34, 0), (0.26, 0.24, 0.26), ENG_DARK, segments=12)        # battery drum
+    m.cyl((0, 0.34, 0), (0.28, 0.04, 0.28), HAZARD, segments=12)
+    m.box((0, 0.36, 0.14), (0.1, 0.06, 0.02), ENG_GLOW, bevel=0.0)        # charge light
+    m.cyl((0, 0.66, 0), (0.12, 0.42, 0.12), ENG_LIGHT, segments=10)       # column
+    m.cyl((0, 0.86, 0), (0.36, 0.06, 0.36), ENG_DARK, segments=14)        # turret ring
+    m.cyl((0, 0.82, 0), (0.3, 0.04, 0.3), "Accent", segments=14)
+    return m
+
+
+def eng_sentry_head():
+    """Sentry gun head, origin at its pivot, aiming +Z: armoured housing, twin barrels to z 0.8, ammo box, sensor."""
+    m = Model("eng_sentry_head")
+    m.box((0, -0.16, 0), (0.14, 0.08, 0.14), ENG_DARK, bevel=0.01)       # yoke down to the ring
+    m.box((0, 0, -0.02), (0.5, 0.3, 0.56), "Accent", bevel=0.04)          # housing
+    m.box((0, 0.17, -0.04), (0.42, 0.05, 0.46), ENG_STEEL, bevel=0.015)   # top plate
+    m.box((0, 0, 0.27), (0.44, 0.24, 0.04), ENG_DARK, bevel=0.01)         # mantlet
+    for s_ in (-1, 1):
+        m.cyl((s_ * 0.1, 0, 0.5), (0.065, 0.46, 0.065), ENG_DARK, rot=(90, 0, 0), segments=8)
+        m.cyl((s_ * 0.1, 0, 0.42), (0.09, 0.14, 0.09), ENG_STEEL, rot=(90, 0, 0), segments=8)  # shroud
+        m.cyl((s_ * 0.1, 0, 0.75), (0.085, 0.06, 0.085), ENG_LIGHT, rot=(90, 0, 0), segments=8)  # muzzle brake
+        m.box((s_ * 0.27, -0.02, -0.08), (0.06, 0.2, 0.3), ENG_STEEL, bevel=0.01)  # side armour
+    m.box((0.33, -0.04, -0.08), (0.1, 0.18, 0.24), "C_4B5A36", bevel=0.01)  # ammo box
+    m.box((0, 0.23, 0.08), (0.16, 0.08, 0.12), ENG_DARK, bevel=0.01)     # sensor block
+    m.box((0, 0.23, 0.145), (0.1, 0.035, 0.01), ENG_GLOW, bevel=0.0)
+    m.box((0, 0.08, -0.31), (0.3, 0.08, 0.02), HAZARD, bevel=0.0)
+    return m
+
+
+def eng_drone():
+    """Engineer drone (0.9 x 0.25 x 0.9), origin at its centre: body, four arms, rotors as children Rotor0..3."""
+    m = Model("eng_drone")
+    m.sph((0, 0, 0), (0.34, 0.16, 0.4), "Accent", segments=12)
+    m.box((0, 0.07, -0.02), (0.22, 0.05, 0.26), ENG_DARK, bevel=0.01)     # top shell
+    m.box((0, 0.1, 0.02), (0.08, 0.02, 0.06), ENG_GLOW, bevel=0.0)        # status LED
+    m.sph((0, -0.08, 0.12), (0.1, 0.1, 0.1), ENG_DARK, segments=8)        # camera ball
+    m.box((0, -0.08, 0.17), (0.04, 0.04, 0.02), "G_F05A4A", bevel=0.0)
+    m.box((0, -0.1, -0.04), (0.06, 0.06, 0.16), ENG_STEEL, bevel=0.01)    # gun pod
+    m.cyl((0, -0.1, 0.09), (0.03, 0.12, 0.03), ENG_DARK, rot=(90, 0, 0), segments=6)
+    for i in range(4):
+        a = math.radians(45 + i * 90)
+        tip = (math.sin(a) * 0.34, 0.02, math.cos(a) * 0.34)
+        m.limb((0, 0.0, 0), tip, (0.04, 0.03), ENG_STEEL)
+        m.cyl((tip[0], 0.0, tip[2]), (0.07, 0.07, 0.07), ENG_DARK, segments=8)    # motor
+        m.cyl((tip[0], 0.03, tip[2]), (0.28, 0.012, 0.28), "C_3A4048", segments=14)  # guard ring disk (thin)
+        with m.rig(f"Rotor{i}", (tip[0], 0.06, tip[2])):
+            m.box((tip[0], 0.06, tip[2]), (0.26, 0.008, 0.035), "C_15161A", bevel=0.0)
+            m.box((tip[0], 0.06, tip[2]), (0.035, 0.008, 0.26), "C_15161A", bevel=0.0)
+    return m
+
+
+def eng_barricade():
+    """Deployable barricade wall (3 x 1.4 x 0.45, back braces at -Z): steel frame, armour plates, hazard band."""
+    m = Model("eng_barricade")
+    w, h = 3.0, 1.4
+    m.box((0, 0.05, 0), (w, 0.1, 0.5), ENG_DARK, bevel=0.01)              # foot rail
+    m.box((0, h - 0.04, 0), (w, 0.08, 0.36), ENG_DARK, bevel=0.01)        # top rail
+    for x in (-1.46, -0.5, 0.5, 1.46):
+        m.box((x, h / 2, 0), (0.1, h, 0.4), ENG_STEEL, bevel=0.01)        # uprights
+    for i, x in enumerate((-0.98, 0.0, 0.98)):
+        m.box((x, 0.72, 0.12), (0.84, 1.1, 0.12), "Accent", bevel=0.03)   # armour plates (front)
+        m.box((x, 0.72, 0.185), (0.6, 0.06, 0.02), ENG_DARK, bevel=0.0)   # weld seam
+        m.box((x, 1.08, 0.185), (0.84, 0.1, 0.02), HAZARD, bevel=0.0)
+        for sx in (-1, 1):
+            for y in (0.28, 1.18):
+                m.cyl((x + sx * 0.36, y, 0.19), (0.04, 0.02, 0.04), ENG_LIGHT, rot=(90, 0, 0), segments=6)  # bolts
+        m.box((x, 0.72, -0.08), (0.84, 1.1, 0.06), ENG_STEEL, bevel=0.01)  # back skin
+    m.box((-0.3, 1.2, 0.11), (0.3, 0.05, 0.14), ENG_DARK, bevel=0.0)      # firing slot
+    for x in (-1.05, 1.05):
+        m.limb((x, 1.25, -0.12), (x, 0.04, -0.65), (0.1, 0.08), ENG_STEEL)  # kickstand braces
+        m.box((x, 0.03, -0.62), (0.22, 0.06, 0.2), RUBBER, bevel=0.01)
+    m.box((1.25, 0.25, 0.19), (0.12, 0.06, 0.02), ENG_GLOW, bevel=0.0)    # power light
+    return m
+
+
+def eng_arc_post():
+    """Arc fence pylon (0.3 x 1.6, emitter at 0.9 m facing +/-X): base plate, insulator stack, glowing coil."""
+    m = Model("eng_arc_post")
+    m.box((0, 0.04, 0), (0.42, 0.08, 0.42), ENG_DARK, bevel=0.01)
+    m.box((0, 0.13, 0), (0.24, 0.1, 0.24), HAZARD, bevel=0.01)
+    m.box((0, 0.75, 0), (0.12, 1.3, 0.12), ENG_STEEL, bevel=0.01)
+    m.box((0, 0.3, 0.07), (0.1, 0.18, 0.03), "Accent", bevel=0.0)         # capacitor badge
+    m.box((0, 0.36, 0.085), (0.05, 0.03, 0.01), ARC_GLOW, bevel=0.0)
+    for y in (0.62, 0.7, 0.78, 1.02, 1.1, 1.18):
+        m.cyl((0, y, 0), (0.2, 0.04, 0.2), "C_C9B48A", segments=10)        # ceramic insulators
+    m.cyl((0, 0.9, 0), (0.22, 0.14, 0.22), "Accent", segments=12)          # emitter collar
+    m.cyl((0, 0.9, 0), (0.14, 0.4, 0.14), ARC_GLOW, rot=(0, 0, 90), segments=8)  # coil across X
+    m.sph((0, 1.48, 0), (0.14, 0.14, 0.14), ENG_LIGHT, segments=8)        # top ball
+    m.box((0, 1.4, 0), (0.06, 0.1, 0.06), ENG_DARK, bevel=0.0)
+    return m
+
+
+def obj_nest():
+    """Infected nest, fit model (the game scales it to 2.2 x 1.5 x 2.2): lumpy flesh mound, glowing pustules, spines."""
+    m = Model("obj_nest", fit=True)
+    flesh, dark, vein = "C_6E2A44", "C_3E1626", "C_8E3A54"
+    pus = "G_D8F060"
+    m.sph((0, 0.55, 0), (1.9, 1.1, 1.9), flesh, segments=14)
+    lumps = [(0.55, 0.45, 0.45, 0.9), (-0.6, 0.4, 0.3, 0.85), (0.1, 0.4, -0.65, 0.9), (-0.3, 0.35, 0.65, 0.7),
+             (0.7, 0.3, -0.35, 0.65), (-0.6, 0.3, -0.5, 0.7), (0.0, 0.95, 0.05, 0.9)]
+    for x, y, z, d in lumps:
+        m.sph((x, y, z), (d, d * 0.8, d), flesh if d > 0.75 else vein, segments=10)
+    m.sph((0, 0.06, 0), (2.2, 0.16, 2.2), dark, segments=14)              # creeping base
+    for i in range(9):
+        a = math.radians(i * 40 + 10)
+        r = 0.55 + (i % 3) * 0.12
+        y = 0.55 + ((i * 37) % 5) * 0.1
+        x, z = math.sin(a) * r, math.cos(a) * r
+        m.sph((x * 1.15, y, z * 1.15), (0.2, 0.2, 0.2), pus, segments=8)  # pustules
+    for i in range(7):
+        a = math.radians(i * 51)
+        base = (math.sin(a) * 0.6, 0.8, math.cos(a) * 0.6)
+        tip = (math.sin(a) * 1.0, 1.45 - (i % 2) * 0.2, math.cos(a) * 1.0)
+        m.limb(base, tip, (0.09, 0.09), "C_CFC4A8")                       # bone spines
+    m.sph((0, 1.25, 0), (0.42, 0.3, 0.42), pus, segments=10)              # glowing crown
+    return m
+
+
 BUILDERS = [
     enemy_standard, enemy_lean, enemy_plated, enemy_crawler, enemy_bloated, enemy_spitter, enemy_alpha, enemy_specimen,
     player_body, player_head,
@@ -2526,6 +2693,7 @@ BUILDERS = [
     enemy_brood, weapon_vesper_dmr, weapon_bulldog_44, weapon_hailstorm, weapon_kestrel_pdw, weapon_railspike_maul,
     fp_arm,
     obj_generator, obj_terminal, obj_console, obj_cryo, obj_valve, obj_sample_case, obj_keycard, obj_locker,
+    eng_sentry_base, eng_sentry_head, eng_drone, eng_barricade, eng_arc_post, obj_nest,
 ]
 
 
@@ -2551,6 +2719,7 @@ SHEETS = {
     "objectives": ["obj_generator", "obj_terminal", "obj_console", "obj_cryo", "obj_valve", "obj_sample_case", "obj_keycard",
                    "obj_locker"],
     "clutter": ["prop_barrel", "prop_light_fixture", "prop_fusebox", "prop_wall_vent", "prop_extinguisher", "prop_rubble"],
+    "engineer": ["eng_sentry_base", "eng_sentry_head", "eng_drone", "eng_barricade", "eng_arc_post", "obj_nest", "supply_cache"],
 }
 
 

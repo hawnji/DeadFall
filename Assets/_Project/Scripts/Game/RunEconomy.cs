@@ -35,6 +35,9 @@ namespace Deadfall.Game
 
         private const byte GrantWeapon = 0;
         private const byte GrantAmmo = 1;
+        private const byte GrantCacheAmmo = 2;
+        private const byte GrantHeal = 3;
+        private const byte GrantGrenades = 4;
 
         private readonly Dictionary<int, SupplyCache> _caches = new Dictionary<int, SupplyCache>();
         private readonly Dictionary<ushort, WeaponDrop> _drops = new Dictionary<ushort, WeaponDrop>();
@@ -77,7 +80,7 @@ namespace Deadfall.Game
         public void Register(SupplyCache cache) { if (cache != null) _caches[cache.Id] = cache; }
         public void Unregister(SupplyCache cache) { if (cache != null && _caches.TryGetValue(cache.Id, out SupplyCache c) && c == cache) _caches.Remove(cache.Id); }
 
-        /// <summary>Local player buys an item (0..stock-1 weapons, stock = ammo refill).</summary>
+        /// <summary>Local player buys one of the cache's supplies (index into <see cref="SupplyCache.Stock"/>).</summary>
         public void Buy(SupplyCache cache, int item)
         {
             if (cache == null) return;
@@ -109,16 +112,11 @@ namespace Deadfall.Game
             if (who != null && (who.transform.position - cache.transform.position).sqrMagnitude > 6f * 6f) { Deny(buyer, "Too far from the cache"); return; }
             WaveManager waves = Waves;
             if (waves == null || !waves.IsRunning) { Deny(buyer, "Start a run to earn Field Credits"); return; }
-            if (item == cache.Stock.Count)
-            {
-                if (!waves.TrySpendCredits(buyer, LootRules.AmmoRefillPrice)) { Deny(buyer, "Not enough Field Credits"); return; }
-                Grant(buyer, GrantAmmo, null, null);
-                return;
-            }
             if (item < 0 || item >= cache.Stock.Count) return;
             SupplyCache.Offer offer = cache.Stock[item];
             if (!waves.TrySpendCredits(buyer, offer.Price)) { Deny(buyer, "Not enough Field Credits"); return; }
-            Grant(buyer, GrantWeapon, offer.Weapon, offer.Mods);
+            byte kind = offer.Kind == SupplyCache.Supply.Heal ? GrantHeal : offer.Kind == SupplyCache.Supply.Grenades ? GrantGrenades : GrantCacheAmmo;
+            Grant(buyer, kind, null, null);
         }
 
         /// <summary>Host/offline: gives a player a weapon (Gun Dispenser).</summary>
@@ -186,16 +184,30 @@ namespace Deadfall.Game
             return WeaponMods.Decode(bytes);
         }
 
-        /// <summary>Gives the local player a weapon (or an ammo refill).</summary>
+        /// <summary>Gives the local player a weapon or a supply (ammo, heal, grenades).</summary>
         public static void ApplyGrant(byte kind, WeaponDefinition def, WeaponMods mods)
         {
             PlayerIdentity me = PlayerIdentity.Local;
             var weapons = me != null ? me.GetComponent<PlayerWeapons>() : null;
             if (weapons == null) return;
-            if (kind == GrantAmmo)
+            if (kind == GrantAmmo || kind == GrantCacheAmmo)
             {
-                weapons.RefillAllAmmo();
+                weapons.RefillAllAmmo(kind == GrantAmmo);
                 RunToasts.Show("Ammo refilled", new Color(0.6f, 0.85f, 1f));
+                return;
+            }
+            if (kind == GrantHeal)
+            {
+                var health = me.GetComponent<PlayerHealth>();
+                if (health != null) health.Heal(health.Max);
+                RunToasts.Show("Patched up", new Color(0.55f, 1f, 0.6f));
+                return;
+            }
+            if (kind == GrantGrenades)
+            {
+                var thrower = me.GetComponent<GrenadeThrower>();
+                if (thrower != null) thrower.Refill();
+                RunToasts.Show("Grenades restocked", new Color(0.8f, 0.9f, 0.55f));
                 return;
             }
             if (def == null) return;

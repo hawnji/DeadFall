@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Rules.Combat;
@@ -19,6 +20,9 @@ namespace Deadfall.Game
 
         private Material _healthMat;
         private Color _baseColor;
+        private Material _accentMat;
+        private readonly List<Renderer> _placeholders = new List<Renderer>();
+        private bool _dressed;
 
         public ushort Id { get; private set; }
         public StructureKind Kind { get; private set; }
@@ -185,6 +189,7 @@ namespace Deadfall.Game
             go.transform.localScale = scale;
             Material m = RuntimeMaterials.CreateLit(color);
             go.GetComponent<Renderer>().sharedMaterial = m;
+            _placeholders.Add(go.GetComponent<Renderer>());
             if (!solid) Destroy(go.GetComponent<Collider>());
             if (tintWithHealth)
             {
@@ -192,6 +197,54 @@ namespace Deadfall.Game
                 _baseColor = color;
             }
             return go;
+        }
+
+        /// <summary>
+        /// Puts Blender model <paramref name="id"/> under <paramref name="parent"/> at <paramref name="localPos"/>. Its
+        /// "Accent" parts share this structure's own material, which takes the health/tier tint (call after the
+        /// tintWithHealth <see cref="Part"/>). Returns null when the model isn't available (placeholders stay).
+        /// </summary>
+        protected Transform Dress(string id, Transform parent, Vector3 localPos)
+        {
+            GameObject model = ModelLibrary.Spawn(id, parent);
+            if (model == null) return null;
+            model.transform.localPosition = localPos;
+            foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    if (mats[i] == null || mats[i].name != "Model Accent") continue;
+                    if (_accentMat == null)
+                    {
+                        _accentMat = RuntimeMaterials.CreateLit(_baseColor);
+                        _healthMat = _accentMat;
+                    }
+                    mats[i] = _accentMat;
+                    changed = true;
+                }
+                if (changed) r.sharedMaterials = mats;
+                r.gameObject.layer = IgnoreRaycastLayer;
+            }
+            _dressed = true;
+            return model.transform;
+        }
+
+        /// <summary>Once a model is dressed on, hides the placeholder primitives (their colliders stay), except <paramref name="keep"/>.</summary>
+        protected void HidePlaceholders(params GameObject[] keep)
+        {
+            if (!_dressed) return;
+            foreach (Renderer r in _placeholders)
+            {
+                if (r == null || System.Array.IndexOf(keep, r.gameObject) >= 0) continue;
+                r.enabled = false;
+            }
+        }
+
+        private void OnDestroyMaterials()
+        {
+            if (_accentMat != null) Destroy(_accentMat);
         }
 
         private void RefreshTint()
@@ -202,6 +255,6 @@ namespace Deadfall.Game
             RuntimeMaterials.SetColor(_healthMat, Color.Lerp(new Color(0.55f, 0.15f, 0.12f), tierColor, Health01));
         }
 
-        protected virtual void OnDestroy() { }
+        protected virtual void OnDestroy() => OnDestroyMaterials();
     }
 }
