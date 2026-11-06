@@ -154,7 +154,8 @@ namespace Deadfall.Game
         private void OnStarted(SessionRole role)
         {
             if (role != SessionRole.Client) { _tokens.Clear(); _ledger.Clear(); return; }
-            using (var w = new FastBufferWriter(64, Allocator.Temp))
+            // A 32-char token is 68 bytes as a UTF-16 string: 64 overflowed and broke joining.
+            using (var w = new FastBufferWriter(8 + Token.Length * 2, Allocator.Temp))
             {
                 w.WriteValueSafe(Token);
                 _session.SendToServer(MsgHello, w, NetworkDelivery.ReliableSequenced);
