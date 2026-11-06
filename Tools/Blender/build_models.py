@@ -553,31 +553,39 @@ def enemy_brood():
 # ----------------------------------------------------------------------------------------------- players
 
 def player_body():
-    """Feet origin. Legs, torso, vest and pack; the head, arms and rifle are player_head (they pitch with aim)."""
+    """
+    Feet origin. Legs, torso, vest and pack; the head, arms and rifle are player_head (they pitch with aim).
+    Rig children for the walk/run/jump/crouch animation (RemotePlayerProxy): ThighL/R pivot at the hips, ShinL/R at
+    the knees (the game parents each shin under its thigh) and Torso at the waist. The pelvis and belt stay on the root.
+    """
     m = Model("player_body")
-    for s in (-1, 1):
-        m.limb((s * 0.12, 0.95, 0.0), (s * 0.13, 0.5, 0.03), (0.16, 0.18), PANTS)
-        m.limb((s * 0.13, 0.52, 0.03), (s * 0.13, 0.1, 0.0), (0.15, 0.16), PANTS)
-        m.box((s * 0.13, 0.52, 0.12), (0.15, 0.14, 0.06), ARMOR, bevel=0.02)  # knee pads
-        m.box((s * 0.13, 0.06, 0.04), (0.16, 0.12, 0.3), RUBBER, bevel=0.02)  # boots
+    for s, side in ((1, "R"), (-1, "L")):  # facing +Z, the character's right is +X
+        with m.rig("Thigh" + side, (s * 0.12, 0.95, 0.0)):
+            m.limb((s * 0.12, 0.95, 0.0), (s * 0.13, 0.5, 0.03), (0.16, 0.18), PANTS)
+            m.box((s * 0.13, 0.52, 0.12), (0.15, 0.14, 0.06), ARMOR, bevel=0.02)  # knee pads
+        with m.rig("Shin" + side, (s * 0.13, 0.52, 0.03)):
+            m.limb((s * 0.13, 0.52, 0.03), (s * 0.13, 0.1, 0.0), (0.15, 0.16), PANTS)
+            m.box((s * 0.13, 0.06, 0.04), (0.16, 0.12, 0.3), RUBBER, bevel=0.02)  # boots
     m.box((0, 0.98, 0), (0.42, 0.18, 0.26), PANTS, bevel=0.04)
     m.box((0, 1.02, 0.0), (0.46, 0.07, 0.29), DARK, bevel=0.01)  # belt
     for x in (-0.12, 0.0, 0.12):
         m.box((x, 1.04, 0.16), (0.09, 0.11, 0.05), OLIVE, bevel=0.01)  # pouches
-    m.box((0, 1.27, 0.0), (0.46, 0.46, 0.27), OLIVE, bevel=0.06)  # torso
-    m.box((0, 1.27, 0.02), (0.5, 0.4, 0.31), ARMOR, bevel=0.04)  # plate carrier
-    m.box((0, 1.33, 0.18), (0.3, 0.16, 0.03), "Accent", bevel=0.01)  # class colour chest plate
-    for s in (-1, 1):
-        m.box((s * 0.3, 1.46, 0.0), (0.16, 0.1, 0.22), "Accent", bevel=0.03)  # shoulder pads
-    m.box((0, 1.25, -0.22), (0.38, 0.44, 0.18), CLOTH_DARK, bevel=0.04)  # pack
-    m.box((0, 1.48, -0.22), (0.3, 0.06, 0.16), RUBBER, bevel=0.01)
-    m.cyl((0, 1.53, 0.0), (0.13, 0.12, 0.13), OLIVE)  # neck
+    with m.rig("Torso", (0, 1.06, 0)):
+        m.box((0, 1.27, 0.0), (0.46, 0.46, 0.27), OLIVE, bevel=0.06)  # torso
+        m.box((0, 1.27, 0.02), (0.5, 0.4, 0.31), ARMOR, bevel=0.04)  # plate carrier
+        m.box((0, 1.33, 0.18), (0.3, 0.16, 0.03), "Accent", bevel=0.01)  # class colour chest plate
+        for s in (-1, 1):
+            m.box((s * 0.3, 1.46, 0.0), (0.16, 0.1, 0.22), "Accent", bevel=0.03)  # shoulder pads
+        m.box((0, 1.25, -0.22), (0.38, 0.44, 0.18), CLOTH_DARK, bevel=0.04)  # pack
+        m.box((0, 1.48, -0.22), (0.3, 0.06, 0.16), RUBBER, bevel=0.01)
+        m.cyl((0, 1.53, 0.0), (0.13, 0.12, 0.13), OLIVE)  # neck
     return m
 
 
 def player_head():
-    """Eye-height origin, pitches with the aim: helmet, visor and forearms. The game adds the weapon model the
-    teammate is holding at (0.25, -0.27, 0.18) (RemotePlayerProxy.WeaponAnchor)."""
+    """Eye-height origin, pitches with the aim: helmet, visor, and the Arms child (pivot between the shoulders) with
+    the forearms and gloves. The game puts the held weapon model under Arms at (0.25, -0.27, 0.18)
+    (RemotePlayerProxy.WeaponAnchor) and moves Arms to shoulder the weapon when aiming or lower it when sprinting."""
     m = Model("player_head")
     m.sph((0, 0.02, -0.03), (0.3, 0.28, 0.32), "C_C9A88A")  # face/head under the helmet
     m.sph((0, 0.08, -0.04), (0.34, 0.24, 0.36), ARMOR, smooth=True)  # helmet dome
@@ -586,10 +594,11 @@ def player_head():
     m.box((0, 0.0, 0.14), (0.26, 0.08, 0.06), GLASS, bevel=0.015)  # visor
     m.box((0.17, 0.06, 0.0), (0.04, 0.08, 0.08), DARK, bevel=0.01)  # headset
     # Forearms and gloves holding the weapon.
-    m.limb((0.24, -0.38, -0.05), (0.25, -0.3, 0.22), (0.09, 0.09), OLIVE)
-    m.box((0.25, -0.31, 0.24), (0.08, 0.08, 0.1), RUBBER, bevel=0.01)
-    m.limb((-0.12, -0.36, 0.1), (0.2, -0.32, 0.46), (0.085, 0.085), OLIVE)
-    m.box((0.22, -0.32, 0.5), (0.08, 0.07, 0.1), RUBBER, bevel=0.01)
+    with m.rig("Arms", (0.0, -0.28, 0.0)):
+        m.limb((0.24, -0.38, -0.05), (0.25, -0.3, 0.22), (0.09, 0.09), OLIVE)
+        m.box((0.25, -0.31, 0.24), (0.08, 0.08, 0.1), RUBBER, bevel=0.01)
+        m.limb((-0.12, -0.36, 0.1), (0.2, -0.32, 0.46), (0.085, 0.085), OLIVE)
+        m.box((0.22, -0.32, 0.5), (0.08, 0.07, 0.1), RUBBER, bevel=0.01)
     return m
 
 

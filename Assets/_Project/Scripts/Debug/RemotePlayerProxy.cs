@@ -30,6 +30,16 @@ namespace Deadfall.DebugTools
         /// <summary>Where the held weapon's model origin sits under the aim (matches player_head's hands).</summary>
         private static readonly Vector3 WeaponAnchor = new Vector3(0.25f, -0.27f, 0.18f);
         private Transform _aim;
+        // Animation rig (player_body / player_head children): legs, torso and the arms holding the weapon.
+        private Transform _thighL, _thighR, _shinL, _shinR, _torso, _arms;
+        private Vector3 _armsRest;
+        // Per part: rest local rotation and the turn from character axes into the part's parent axes (FBX import can
+        // give rig children their own axes), so poses below are written as plain pitch/yaw/roll on the character.
+        private Quaternion _restThighL, _restThighR, _restShinL, _restShinR, _restTorso, _restArms;
+        private Quaternion _cThighL, _cThighR, _cShinL, _cShinR, _cTorso, _cArms;
+        private bool _aiming, _sprinting, _airborne;
+        private Vector3 _lastPos, _velocity;
+        private float _gait, _aimPose, _sprintPose, _airPose, _crouchPose;
         private Renderer[] _renderers;
         private Vector3 _targetPos;
         private float _targetYaw, _targetPitch;
@@ -171,6 +181,7 @@ namespace Deadfall.DebugTools
             {
                 proxy._bodyModel = bodyModel.transform;
                 proxy._hasModels = true;
+                proxy.BindRig(bodyModel.transform, headModel.transform);
                 proxy.SetWeapon(WeaponCatalog.HalberdAR); // until their first state message says otherwise
                 body.GetComponent<Renderer>().enabled = false;
                 head.GetComponent<Renderer>().enabled = false;
@@ -204,9 +215,63 @@ namespace Deadfall.DebugTools
             if (!_hasModels || def == null || def == _weaponShown) return;
             if (_weaponModel != null) Destroy(_weaponModel);
             _weaponShown = def;
-            _weaponModel = ModelLibrary.Spawn(def.ContentId.Replace('.', '_'), _aim, slot => ModelLibrary.SlotFromAccent(slot, def.PlaceholderColor));
-            if (_weaponModel != null) _weaponModel.transform.localPosition = WeaponAnchor;
+            _weaponModel = ModelLibrary.Spawn(def.ContentId.Replace('.', '_'), _arms != null ? _arms : _aim, slot => ModelLibrary.SlotFromAccent(slot, def.PlaceholderColor));
+            if (_weaponModel != null && _arms != null)
+            {
+                // Under the arms so it moves with them; placed as if the arms were at rest.
+                Quaternion restWorld = _arms.parent.rotation * _restArms;
+                Vector3 restPos = _arms.parent.TransformPoint(_armsRest);
+                _weaponModel.transform.localRotation = Quaternion.Inverse(restWorld) * _aim.rotation;
+                _weaponModel.transform.localPosition = Quaternion.Inverse(restWorld) * (_aim.TransformPoint(WeaponAnchor) - restPos);
+            }
+            else if (_weaponModel != null) _weaponModel.transform.localPosition = WeaponAnchor;
             _renderers = GetComponentsInChildren<Renderer>();
+        }
+
+        private static Transform FindChild(Transform root, string childName)
+        {
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true)) if (t.name == childName) return t;
+            return null;
+        }
+
+        /// <summary>Finds the rig children; each shin goes under its thigh so the knee follows the hip.</summary>
+        private void BindRig(Transform body, Transform head)
+        {
+            _thighL = FindChild(body, "ThighL");
+            _thighR = FindChild(body, "ThighR");
+            _shinL = FindChild(body, "ShinL");
+            _shinR = FindChild(body, "ShinR");
+            _torso = FindChild(body, "Torso");
+            _arms = FindChild(head, "Arms");
+            if (_thighL != null && _shinL != null) _shinL.SetParent(_thighL, true);
+            if (_thighR != null && _shinR != null) _shinR.SetParent(_thighR, true);
+            Bind(_thighL, transform, out _restThighL, out _cThighL);
+            Bind(_thighR, transform, out _restThighR, out _cThighR);
+            Bind(_shinL, transform, out _restShinL, out _cShinL);
+            Bind(_shinR, transform, out _restShinR, out _cShinR);
+            Bind(_torso, transform, out _restTorso, out _cTorso);
+            Bind(_arms, _aim, out _restArms, out _cArms);
+            if (_arms != null) _armsRest = _arms.localPosition;
+        }
+
+        private static void Bind(Transform part, Transform frame, out Quaternion rest, out Quaternion c)
+        {
+            rest = part != null ? part.localRotation : Quaternion.identity;
+            c = part != null ? Quaternion.Inverse(part.parent.rotation) * frame.rotation : Quaternion.identity;
+        }
+
+        private static void Pose(Transform part, Quaternion rest, Quaternion c, float pitch, float yaw, float roll)
+        {
+            if (part == null) return;
+            part.localRotation = c * Quaternion.Euler(pitch, yaw, roll) * Quaternion.Inverse(c) * rest;
+        }
+
+        /// <summary>Pose hints from the owner's state: aiming down sights, sprinting, off the ground.</summary>
+        public void SetPose(bool aiming, bool sprinting, bool airborne)
+        {
+            _aiming = aiming;
+            _sprinting = sprinting;
+            _airborne = airborne;
         }
 
         public void SetTarget(Vector3 position, float yaw, float pitch, bool crouched, bool dead, float health01, bool downed = false, float bleed01 = 0f)
@@ -244,11 +309,78 @@ namespace Deadfall.DebugTools
             float bodyScale = _eyeHeight / StandEye;
             _body.localScale = new Vector3(0.7f, 0.9f * bodyScale, 0.7f);
             _body.localPosition = new Vector3(0f, 0.9f * bodyScale, 0f);
-            if (_bodyModel != null) _bodyModel.localScale = new Vector3(1f, bodyScale, 1f);
+            if (_bodyModel != null)
+            {
+                if (_thighL != null && _thighR != null) Animate(dt, bodyScale);
+                else _bodyModel.localScale = new Vector3(1f, bodyScale, 1f);
+            }
 
             // Downed players sit low; eliminated (and dropped) players lie down until they come back.
             if (_dead) transform.rotation = Quaternion.Euler(-80f, _yaw, 0f);
             else if (_downed) transform.rotation = Quaternion.Euler(-35f, _yaw, 0f);
+        }
+
+        /// <summary>
+        /// Procedural animation from the replicated movement: a walk or run cycle from the speed (backwards when
+        /// moving backwards), knees tucked in the air, legs folded when crouched, the weapon shouldered when aiming
+        /// and lowered across the chest when sprinting.
+        /// </summary>
+        private void Animate(float dt, float bodyScale)
+        {
+            Vector3 v = dt > 0f ? (transform.position - _lastPos) / dt : Vector3.zero;
+            _lastPos = transform.position;
+            if (v.sqrMagnitude > 20f * 20f) v = Vector3.zero; // a snap, not movement
+            _velocity = Vector3.Lerp(_velocity, v, 1f - Mathf.Exp(-10f * dt));
+            Vector3 flat = new Vector3(_velocity.x, 0f, _velocity.z);
+            float speed = _downed || _dead ? 0f : flat.magnitude;
+            float forward = Vector3.Dot(flat, transform.forward);
+            float k = 1f - Mathf.Exp(-10f * dt);
+            _aimPose = Mathf.Lerp(_aimPose, _aiming && !_sprinting ? 1f : 0f, k);
+            _sprintPose = Mathf.Lerp(_sprintPose, _sprinting && speed > 3f ? 1f : 0f, k);
+            _airPose = Mathf.Lerp(_airPose, _airborne && !_downed && !_dead ? 1f : 0f, k);
+            _crouchPose = Mathf.Clamp01((StandEye - _eyeHeight) / (StandEye - CrouchEye));
+
+            // Gait: one full stride per ~1.5 m walking, longer strides running.
+            float stride = Mathf.Lerp(1.4f, 2.1f, _sprintPose);
+            _gait += (forward < -0.2f ? -1f : 1f) * speed / stride * Mathf.PI * 2f * dt * (1f - _airPose);
+            float move = Mathf.Clamp01(speed / 2f) * (1f - _airPose);
+            float swing = Mathf.Lerp(26f, 46f, _sprintPose) * move * Mathf.Lerp(1f, 0.6f, _crouchPose);
+            float knee = Mathf.Lerp(30f, 70f, _sprintPose) * move;
+            float sl = Mathf.Sin(_gait), sr = Mathf.Sin(_gait + Mathf.PI);
+            // Negative pitch swings a leg forward; the knee bends while that leg comes through.
+            float thighL = -swing * sl, thighR = -swing * sr;
+            float shinL = knee * Mathf.Max(0f, Mathf.Cos(_gait)) + 4f * move;
+            float shinR = knee * Mathf.Max(0f, Mathf.Cos(_gait + Mathf.PI)) + 4f * move;
+            // Jump: knees up. Crouch: legs folded under the hips.
+            thighL = Mathf.Lerp(thighL, -40f, _airPose) - 70f * _crouchPose;
+            thighR = Mathf.Lerp(thighR, -20f, _airPose) - 70f * _crouchPose;
+            shinL = Mathf.Lerp(shinL, 75f, _airPose) + 105f * _crouchPose;
+            shinR = Mathf.Lerp(shinR, 45f, _airPose) + 105f * _crouchPose;
+            Pose(_thighL, _restThighL, _cThighL, thighL, 0f, 0f);
+            Pose(_thighR, _restThighR, _cThighR, thighR, 0f, 0f);
+            Pose(_shinL, _restShinL, _cShinL, shinL, 0f, 0f);
+            Pose(_shinR, _restShinR, _cShinR, shinR, 0f, 0f);
+
+            // Body: bob with each step, lean into a run, drop into the crouch.
+            float bob = Mathf.Abs(Mathf.Cos(_gait)) * 0.035f * move;
+            _bodyModel.localScale = Vector3.one;
+            _bodyModel.localPosition = new Vector3(0f, bob - 0.4f * _crouchPose, 0f);
+            if (_torso != null)
+            {
+                float twist = Mathf.Sin(_gait) * 6f * move * (1f - _aimPose);
+                Pose(_torso, _restTorso, _cTorso, 10f * _sprintPose + 4f * move + 35f * _crouchPose - 6f * _airPose, twist, 0f);
+            }
+
+            // Arms (with the weapon): shouldered toward the eye line when aiming, lowered and angled across the chest
+            // when sprinting, with a little sway from the stride.
+            if (_arms != null)
+            {
+                Vector3 aimShift = new Vector3(-0.13f, 0.1f, 0.05f) * _aimPose;
+                Vector3 sprintShift = new Vector3(-0.05f, -0.06f, -0.04f) * _sprintPose;
+                Vector3 sway = new Vector3(Mathf.Sin(_gait) * 0.015f, Mathf.Abs(Mathf.Sin(_gait)) * 0.012f, 0f) * move * (1f - _aimPose);
+                _arms.localPosition = _armsRest + _cArms * (aimShift + sprintShift + sway);
+                Pose(_arms, _restArms, _cArms, 30f * _sprintPose, -40f * _sprintPose, 15f * _sprintPose);
+            }
         }
 
         private void OnGUI()
