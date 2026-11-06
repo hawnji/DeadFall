@@ -66,6 +66,38 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void ArmoryAttachmentsCycleOnePerSlotAndCap()
+        {
+            string[] ids = ArmoryAttachments.Cycle(null, AttachmentSlot.Optic, 1);
+            Assert.AreEqual(new[] { "att.red_dot" }, ids, "none -> first optic");
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Optic, 1);
+            Assert.AreEqual(new[] { "att.holo_scope" }, ids, "one optic at a time");
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Optic, -1);
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Optic, -1);
+            Assert.AreEqual(0, ids.Length, "back past the first option is none");
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Optic, -1);
+            Assert.AreEqual(new[] { "att.sniper_scope" }, ids, "backwards from none wraps to the last optic");
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Barrel, 1);
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Underbarrel, 1);
+            Assert.AreEqual(3, ids.Length);
+            Assert.AreEqual(3, ArmoryAttachments.Cycle(ids, AttachmentSlot.Magazine, 1).Length, "a fourth is refused");
+            WeaponMods m = ArmoryAttachments.Build(new[] { "att.red_dot", "att.holo_scope", "nope", "att.compensator" });
+            Assert.AreEqual(2, m.Attachments.Count, "repeat slot and unknown ids dropped");
+            Assert.IsNull(ArmoryAttachments.Build(new string[0]));
+            Assert.AreEqual("att.sniper_scope", AttachmentCatalog.At(AttachmentCatalog.All.Length - 1).Id, "appended: older indices keep their meaning");
+            Assert.AreEqual("att.red_dot", AttachmentCatalog.At(0).Id);
+        }
+
+        [Test]
+        public void ArmoryAttachmentsSurviveASave()
+        {
+            var p = new PlayerProfile();
+            p.Attachments["weapon.halberd_ar"] = new[] { "att.red_dot", "att.foregrip" };
+            PlayerProfile back = SaveFormat.Read(SaveFormat.Write(p)).Profile;
+            Assert.AreEqual(new[] { "att.red_dot", "att.foregrip" }, back.Attachments["weapon.halberd_ar"]);
+        }
+
+        [Test]
         public void ForgeRaisesTierAndKeepsAttachments()
         {
             var rng = new DeterministicRandom(21);

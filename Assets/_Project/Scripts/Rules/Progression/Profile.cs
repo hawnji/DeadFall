@@ -15,6 +15,8 @@ namespace Deadfall.Rules.Progression
         public readonly HashSet<string> Research = new HashSet<string>();
         public readonly HashSet<string> Completed = new HashSet<string>();
         public readonly Dictionary<string, string[]> Loadouts = new Dictionary<string, string[]>();
+        /// <summary>Attachments fitted at the Armory, per weapon id (attachment ids).</summary>
+        public readonly Dictionary<string, string[]> Attachments = new Dictionary<string, string[]>();
         public readonly Dictionary<string, long> Stats = new Dictionary<string, long>();
         public readonly Dictionary<string, long> WeaponXp = new Dictionary<string, long>();
         /// <summary>Ids of the most recent banked runs (oldest first), so a run can never pay out twice (M11).</summary>

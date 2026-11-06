@@ -318,14 +318,14 @@ namespace Deadfall.Player
                 slot.Firearm.Equip(now);
                 _equipEnd = now + slot.Stats.EquipSeconds / _handling.EquipSpeed;
                 slot.Spread.Reset();
-                if (_look != null) _look.AimFovMultiplier = slot.Stats.AimFovMultiplier;
+                if (_look != null) _look.AimFovMultiplier = WeaponSights.AimFov(slot.Definition, slot.Mods, slot.Stats.AimFovMultiplier);
             }
             else
             {
                 _equipEnd = now + _meleeEquipSeconds / _handling.EquipSpeed;
                 if (_look != null) _look.AimFovMultiplier = 1f;
             }
-            if (_viewmodel != null) _viewmodel.Show(slot.Definition);
+            if (_viewmodel != null) _viewmodel.Show(slot.Definition, slot.Mods);
             WeaponEquipped?.Invoke(_current);
         }
 
@@ -598,6 +598,9 @@ namespace Deadfall.Player
         }
 
         /// <summary>Full magazines, full reserves and full grenades (a game mode starting).</summary>
+        /// <summary>Aimed in through a magnified scope (the HUD draws the scope view instead of the crosshair).</summary>
+        public bool ScopeView => _viewmodel != null && _viewmodel.ScopeActive;
+
         public void RestockAll()
         {
             foreach (Slot s in _slots) s.Firearm?.FillMagazine();

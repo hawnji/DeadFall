@@ -22,9 +22,16 @@ namespace Deadfall.Game
             {
                 WeaponDefinition w = WeaponCatalog.ById(id);
                 if (w == null) return def;
-                list.Add(new PlayerWeapons.LoadoutEntry(w));
+                list.Add(new PlayerWeapons.LoadoutEntry(w, ArmoryMods(profile, w)));
             }
             return list;
+        }
+
+        /// <summary>The attachments fitted to this weapon at the Armory (firearms only), or null.</summary>
+        public static Deadfall.Rules.Combat.WeaponMods ArmoryMods(ProfileService profile, WeaponDefinition w)
+        {
+            if (profile == null || w == null || w.Kind != WeaponKind.Firearm) return null;
+            return profile.Data.Attachments.TryGetValue(w.ContentId, out string[] ids) ? Deadfall.Rules.Combat.ArmoryAttachments.Build(ids) : null;
         }
 
         /// <summary>Content ids of the class default, in slot order.</summary>

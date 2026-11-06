@@ -84,6 +84,7 @@ namespace Deadfall.UI
             HudKit.Begin();
             float w = HudKit.W, h = HudKit.H;
             float now = Time.unscaledTime;
+            if (_weapons != null && _weapons.ScopeView) DrawScope(w, h);
 
             // Damage: red vignette plus a marker towards the source. Low health pulses the vignette.
             float flash = now < _damageFlashUntil ? (_damageFlashUntil - now) / _damageFlashSeconds : 0f;
@@ -222,8 +223,57 @@ namespace Deadfall.UI
             return m != null ? m.Describe() ?? string.Empty : string.Empty;
         }
 
+        private static Texture2D _scopeMask;
+
+        /// <summary>A white disc with soft black outside it (the scope's eyepiece), made once.</summary>
+        private static Texture2D ScopeMask()
+        {
+            if (_scopeMask != null) return _scopeMask;
+            const int n = 256;
+            _scopeMask = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "ScopeMask" };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    // Clear inside, a soft dark edge, solid black outside.
+                    float a = Mathf.Clamp01((r - 0.9f) / 0.08f);
+                    px[y * n + x] = new Color32(0, 0, 0, (byte)(a * 255f));
+                }
+            _scopeMask.SetPixels32(px);
+            _scopeMask.Apply(false);
+            return _scopeMask;
+        }
+
+        /// <summary>The scope view while aimed in: black round the eyepiece, fine crosshairs meeting on the aim point.</summary>
+        private void DrawScope(float w, float h)
+        {
+            float d = h * 0.92f;
+            var circle = new Rect((w - d) * 0.5f, (h - d) * 0.5f, d, d);
+            var black = new Color(0f, 0f, 0f, 1f);
+            DrawRect(new Rect(0f, 0f, circle.x + 1f, h), black);
+            DrawRect(new Rect(circle.xMax - 1f, 0f, w - circle.xMax + 1f, h), black);
+            DrawRect(new Rect(circle.x, 0f, d, circle.y + 1f), black);
+            DrawRect(new Rect(circle.x, circle.yMax - 1f, d, h - circle.yMax + 1f), black);
+            GUI.DrawTexture(circle, ScopeMask(), ScaleMode.StretchToFill, true);
+            float cx = w * 0.5f, cy = h * 0.5f;
+            var line = new Color(0f, 0f, 0f, 0.9f);
+            // Thick outer posts, thin centre lines, a small gap and a red dot exactly on the aim point.
+            DrawRect(new Rect(circle.x, cy - 2f, d * 0.5f - 60f, 4f), line);
+            DrawRect(new Rect(cx + 60f, cy - 2f, d * 0.5f - 60f, 4f), line);
+            DrawRect(new Rect(cx - 2f, cy + 60f, 4f, d * 0.5f - 60f), line);
+            DrawRect(new Rect(cx - 0.5f, circle.y, 1f, d * 0.5f - 6f), line);
+            DrawRect(new Rect(cx - 60f, cy - 0.5f, 54f, 1f), line);
+            DrawRect(new Rect(cx + 6f, cy - 0.5f, 54f, 1f), line);
+            DrawRect(new Rect(cx - 0.5f, cy + 6f, 1f, 54f), line);
+            for (int i = 1; i <= 3; i++) DrawRect(new Rect(cx - 5f, cy + 14f * i, 10f, 1f), line); // drop marks
+            DrawRect(new Rect(cx - 1.5f, cy - 1.5f, 3f, 3f), new Color(1f, 0.15f, 0.1f, 0.95f));
+        }
+
         private void DrawCrosshair(float cx, float cy, WeaponDefinition def)
         {
+            if (_weapons.ScopeView) return; // the scope has its own reticle
             if (_weapons.AimBlend > 0.9f && def.Kind == WeaponKind.Firearm)
             {
                 DrawRect(new Rect(cx - 2f, cy - 2f, 4, 4), new Color(0f, 0f, 0f, 0.5f));

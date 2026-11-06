@@ -153,6 +153,8 @@ namespace Deadfall.Rules.Combat
             new AttachmentDef("att.heavy_stock", "Heavy Stock", AttachmentSlot.Stock, new StatMod(WeaponStat.Recoil, 0.85f), new StatMod(WeaponStat.AimSpeed, 0.9f)),
             new AttachmentDef("att.hot_loads", "Hot Loads", AttachmentSlot.Special, new StatMod(WeaponStat.Damage, 1.1f), new StatMod(WeaponStat.Recoil, 1.1f)),
             new AttachmentDef("att.feeder", "Feeder", AttachmentSlot.Special, new StatMod(WeaponStat.FireRate, 1.1f), new StatMod(WeaponStat.Reserve, 1.2f)),
+            // Appended (the wire form uses catalog indices).
+            new AttachmentDef("att.sniper_scope", "Sniper Scope", AttachmentSlot.Optic, new StatMod(WeaponStat.AimSpread, 0.5f), new StatMod(WeaponStat.Range, 1.3f), new StatMod(WeaponStat.AimSpeed, 0.8f)),
         };
 
         public static int IndexOf(AttachmentDef a) => Array.IndexOf(All, a);
@@ -167,6 +169,65 @@ namespace Deadfall.Rules.Combat
     /// <summary>
     /// Run economy numbers (T-36; first balance pass T-77, see BALANCE.md): weapon drops, tier odds, attachment rolls and Supply Cache prices.
     /// </summary>
+    /// <summary>Attachments the player fits at the Armory (one per slot, up to <see cref="MaxFitted"/>).</summary>
+    public static class ArmoryAttachments
+    {
+        public const int MaxFitted = 3;
+
+        /// <summary>Slots the Armory offers (Special is loot-only).</summary>
+        public static readonly AttachmentSlot[] Slots = { AttachmentSlot.Optic, AttachmentSlot.Barrel, AttachmentSlot.Underbarrel, AttachmentSlot.Magazine, AttachmentSlot.Stock };
+
+        /// <summary>The catalog's attachments for a slot, in catalog order.</summary>
+        public static List<AttachmentDef> For(AttachmentSlot slot)
+        {
+            var list = new List<AttachmentDef>();
+            foreach (AttachmentDef a in AttachmentCatalog.All) if (a.Slot == slot) list.Add(a);
+            return list;
+        }
+
+        /// <summary>
+        /// Mods for a set of saved attachment ids: unknown ids, repeats of a slot, and anything past
+        /// <see cref="MaxFitted"/> are dropped. Null when nothing valid is left.
+        /// </summary>
+        public static WeaponMods Build(IEnumerable<string> ids)
+        {
+            if (ids == null) return null;
+            var m = new WeaponMods();
+            foreach (string id in ids)
+            {
+                AttachmentDef a = AttachmentCatalog.ById(id);
+                if (a == null || m.Has(a.Slot) || m.Attachments.Count >= MaxFitted) continue;
+                m.Attachments.Add(a);
+            }
+            return m.Attachments.Count > 0 ? m : null;
+        }
+
+        /// <summary>
+        /// The ids after cycling <paramref name="slot"/> by <paramref name="dir"/> through none and each option.
+        /// A pick that would go past <see cref="MaxFitted"/> is skipped back to none.
+        /// </summary>
+        public static string[] Cycle(string[] ids, AttachmentSlot slot, int dir)
+        {
+            var list = new List<string>();
+            string current = null;
+            if (ids != null)
+                foreach (string id in ids)
+                {
+                    AttachmentDef a = AttachmentCatalog.ById(id);
+                    if (a == null) continue;
+                    if (a.Slot == slot) current = id; else list.Add(id);
+                }
+            List<AttachmentDef> options = For(slot);
+            int at = -1; // -1 = none
+            for (int i = 0; i < options.Count; i++) if (options[i].Id == current) at = i;
+            int count = options.Count + 1;
+            int next = ((at + 1 + dir) % count + count) % count - 1;
+            if (next >= 0 && list.Count >= MaxFitted) next = -1;
+            if (next >= 0) list.Add(options[next].Id);
+            return list.ToArray();
+        }
+    }
+
     public static class LootRules
     {
         /// <summary>Chance an enemy of this threat cost drops a weapon.</summary>
