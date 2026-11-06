@@ -32,6 +32,9 @@ namespace Deadfall.Game
             Part(PrimitiveType.Cube, _head, Vector3.zero, new Vector3(0.55f, 0.35f, 0.6f), new Color(0.35f, 0.75f, 0.5f), true, tintWithHealth: true);
             Part(PrimitiveType.Cube, _head, new Vector3(0.12f, 0f, 0.5f), new Vector3(0.08f, 0.08f, 0.55f), new Color(0.15f, 0.15f, 0.15f), false);
             Part(PrimitiveType.Cube, _head, new Vector3(-0.12f, 0f, 0.5f), new Vector3(0.08f, 0.08f, 0.55f), new Color(0.15f, 0.15f, 0.15f), false);
+            Dress("eng_sentry_base", transform, Vector3.zero);
+            Dress("eng_sentry_head", _head, Vector3.zero);
+            HidePlaceholders();
             if (!Mirror) CombatTargets.Register(this);
         }
 
@@ -72,7 +75,11 @@ namespace Deadfall.Game
 
         private IHostile FindTarget() => EngineeringTargeting.Nearest(_head.position, Stats.Range, transform);
 
-        protected override void OnDestroy() => CombatTargets.Unregister(this);
+        protected override void OnDestroy()
+        {
+            CombatTargets.Unregister(this);
+            base.OnDestroy();
+        }
         private void OnDisable() => CombatTargets.Unregister(this);
     }
 }

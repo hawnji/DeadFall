@@ -28,6 +28,10 @@ namespace Deadfall.Game
             Part(PrimitiveType.Cube, transform, new Vector3(half, 0.75f, 0f), new Vector3(0.18f, 1.5f, 0.18f), new Color(0.3f, 0.32f, 0.35f), true);
             GameObject arc = Part(PrimitiveType.Cube, transform, new Vector3(0f, 0.9f, 0f), new Vector3(StructureWidth, 0.06f, 0.06f), new Color(0.5f, 0.85f, 1f), false);
             _arc = arc.transform;
+            Dress("eng_arc_post", transform, new Vector3(-half, 0f, 0f));
+            Transform right = Dress("eng_arc_post", transform, new Vector3(half, 0f, 0f));
+            if (right != null) right.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            HidePlaceholders(arc);
             _arcMat = arc.GetComponent<Renderer>().sharedMaterial;
         }
 

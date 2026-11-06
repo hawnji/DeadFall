@@ -8,16 +8,19 @@ using UnityEngine;
 namespace Deadfall.Game
 {
     /// <summary>
-    /// A Supply Cache on a map loot slot (D-05). Its stock (three weapons, better tiers in later sectors, plus an
-    /// ammo refill) is rolled from the map seed, so every peer sees the same offers. F opens the buy menu; the host
-    /// takes the Field Credits (<see cref="RunEconomy"/>).
+    /// A Supply Cache on a map loot slot (D-05). It sells supplies, not guns: an ammo refill, a full heal and a full
+    /// set of grenades, the same on every peer. F opens the buy menu; the host takes the Field Credits
+    /// (<see cref="RunEconomy"/>). Weapons come from the mystery box, wall buys and drops.
     /// </summary>
     public sealed class SupplyCache : MonoBehaviour, IInteractable
     {
+        public enum Supply : byte { Ammo, Heal, Grenades }
+
         public struct Offer
         {
-            public WeaponDefinition Weapon;
-            public WeaponMods Mods;
+            public Supply Kind;
+            public string Name;
+            public string Detail;
             public int Price;
         }
 
@@ -61,18 +64,9 @@ namespace Deadfall.Game
 
         private void RollStock(ulong mapSeed)
         {
-            var rng = new DeterministicRandom(mapSeed * 31UL + (ulong)Id * 0x9E37UL + 7UL);
-            var pool = new List<WeaponDefinition>(WeaponCatalog.All);
-            int tierSurge = Sector * 4;
-            for (int i = 0; i < LootRules.CacheStock && pool.Count > 0; i++)
-            {
-                int k = rng.Range(0, pool.Count);
-                WeaponDefinition def = pool[k];
-                pool.RemoveAt(k);
-                WeaponTier tier = LootRules.RollTier(rng, tierSurge);
-                WeaponMods mods = LootRules.RollMods(rng, tier, def.Category);
-                _stock.Add(new Offer { Weapon = def, Mods = mods, Price = LootRules.Price(def.Category, tier) });
-            }
+            _stock.Add(new Offer { Kind = Supply.Ammo, Name = "Ammo refill", Detail = "Fills the reserve of every gun you carry.", Price = LootRules.AmmoRefillPrice });
+            _stock.Add(new Offer { Kind = Supply.Heal, Name = "Med kit", Detail = "Restores you to full health.", Price = LootRules.CacheHealPrice });
+            _stock.Add(new Offer { Kind = Supply.Grenades, Name = "Grenade bundle", Detail = "Refills your grenades to capacity.", Price = LootRules.CacheGrenadePrice });
         }
 
         public string InteractPrompt(GameObject player) => "Open Supply Cache";

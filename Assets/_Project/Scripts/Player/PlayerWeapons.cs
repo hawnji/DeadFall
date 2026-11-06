@@ -591,10 +591,13 @@ namespace Deadfall.Player
         }
 
         /// <summary>Refills reserve ammo on all firearms (ammo crates, debug).</summary>
-        public void RefillAllAmmo()
+        public void RefillAllAmmo() => RefillAllAmmo(true);
+
+        /// <summary>Fills every reserve; <paramref name="grenades"/> false leaves grenades alone (Supply Cache sells them apart).</summary>
+        public void RefillAllAmmo(bool grenades)
         {
             foreach (Slot s in _slots) s.Firearm?.AddReserve(int.MaxValue / 2);
-            AmmoRefilled?.Invoke();
+            if (grenades) AmmoRefilled?.Invoke();
         }
 
         /// <summary>Full magazines, full reserves and full grenades (a game mode starting).</summary>

@@ -687,6 +687,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Each booth opens only its own section (Armory shows only the Armory, Command Center only deployment, and so on); there is no tab bar.
 - [ ] The hangar is smaller (32 x 24 m) with tiled floor, steel wall panels, concrete skirting, a drop ceiling with girders, metal booths and a coloured floor mat in front of each booth. Nothing overlaps; the spawn is clear.
 
+### 3.60 Supply Cache supplies, engineer structure and nest models
+- [ ] Open a Supply Cache during a run: three rows, Ammo refill, Med kit and Grenade bundle, each with a price. The med kit row shows your HP and greys out at full health; the grenade row shows carried/capacity and greys out when full.
+- [ ] Buy each one (as host and as a client): ammo fills gun reserves but not grenades, the med kit heals to full, the bundle refills grenades. A toast confirms each; not enough credits shows the red refusal.
+- [ ] Build a sentry, barricade and arc fence, and deploy the drone: each uses its new model (tripod sentry with twin-barrel head that still turns and fires from the muzzle, armoured barricade wall with back braces, two insulator pylons with the blue arc between them, quad drone with spinning rotors that faces where you look). Damage one: its accent panels darken toward red; upgrade it: they shift to the tier colour. Shots and enemy hits still land on the same shapes as before.
+- [ ] Start a nest objective: the nest is a lumpy flesh mound with glowing pustules and bone spines, pulses, has the rainbow quest glow, takes damage anywhere on it and vanishes when destroyed.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

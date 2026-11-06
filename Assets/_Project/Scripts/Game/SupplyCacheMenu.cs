@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Deadfall.Game
 {
-    /// <summary>The Supply Cache buy menu: three weapons with tier, attachments and price, an ammo refill, your credits.</summary>
+    /// <summary>The Supply Cache buy menu: ammo refill, med kit and grenade bundle with prices, plus your credits.</summary>
     public sealed class SupplyCacheMenu : MonoBehaviour
     {
         private const string ModalId = "supply_cache";
@@ -60,8 +60,8 @@ namespace Deadfall.Game
             GUI.depth = -20;
             WaveManager waves = WaveManager.Current;
             int credits = waves != null ? waves.LocalCredits : 0;
-            int rows = cache.Stock.Count + 1;
-            Rect c = HudKit.Window(560f, 140f + rows * 78f + 40f, "SUPPLY CACHE", $"{credits:N0} CREDITS");
+            int rows = cache.Stock.Count;
+            Rect c = HudKit.Window(520f, 140f + rows * 78f + 40f, "SUPPLY CACHE", $"{credits:N0} CREDITS");
             float y = c.y;
             if (waves == null || !waves.IsRunning)
             {
@@ -69,34 +69,47 @@ namespace Deadfall.Game
                 y += 26f;
             }
 
-            var weapons = PlayerIdentity.Local != null ? PlayerIdentity.Local.GetComponent<PlayerWeapons>() : null;
+            PlayerIdentity me = PlayerIdentity.Local;
+            var health = me != null ? me.GetComponent<PlayerHealth>() : null;
+            var thrower = me != null ? me.GetComponent<GrenadeThrower>() : null;
             for (int i = 0; i < cache.Stock.Count; i++)
             {
                 SupplyCache.Offer o = cache.Stock[i];
-                Color tc = TierColor(o.Mods.Tier);
+                Color tc = KindColor(o.Kind);
+                string state = string.Empty;
+                bool useful = true;
+                if (o.Kind == SupplyCache.Supply.Heal && health != null)
+                {
+                    useful = health.Current < health.Max - 0.5f;
+                    state = useful ? $"{Mathf.CeilToInt(health.Current)}/{Mathf.CeilToInt(health.Max)} HP" : "Full health";
+                }
+                else if (o.Kind == SupplyCache.Supply.Grenades && thrower != null)
+                {
+                    useful = thrower.Count < thrower.Capacity;
+                    state = $"{thrower.Count}/{thrower.Capacity} carried";
+                }
                 var row = new Rect(c.x, y, c.width, 70f);
                 HudKit.Round(row, HudKit.GlassLight);
                 HudKit.Round(new Rect(row.x, row.y + 8f, 3f, row.height - 16f), tc, true);
-                HudKit.Label(new Rect(row.x + 16f, row.y + 8f, row.width - 150f, 24f), o.Weapon.DisplayName, 18, Color.white, TextAnchor.MiddleLeft, head: true);
-                float nw = HudKit.TextWidth(o.Weapon.DisplayName, 18, head: true);
-                HudKit.Label(new Rect(row.x + 24f + nw, row.y + 8f, 120f, 24f), o.Mods.Tier.ToString().ToUpperInvariant(), 12, tc, TextAnchor.MiddleLeft, head: true);
-                string replaces = weapons != null && weapons.DefinitionAt(weapons.SlotFor(o.Weapon)) is WeaponDefinition old ? $"Replaces {old.DisplayName}. " : string.Empty;
-                string att = o.Mods.Attachments.Count > 0 ? string.Join(", ", o.Mods.Attachments.ConvertAll(a => a.DisplayName)) + ". " : string.Empty;
-                HudKit.Label(new Rect(row.x + 16f, row.y + 34f, row.width - 150f, 30f), $"{o.Weapon.Category}. {att}{replaces}", 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
-                if (HudKit.Button(new Rect(row.xMax - 118f, row.y + 15f, 104f, 40f), o.Price.ToString("N0"), false, credits >= o.Price, 17)) RunEconomy.Current?.Buy(cache, i);
+                HudKit.Label(new Rect(row.x + 16f, row.y + 8f, row.width - 150f, 24f), o.Name, 18, Color.white, TextAnchor.MiddleLeft, head: true);
+                if (state.Length > 0)
+                {
+                    float nw = HudKit.TextWidth(o.Name, 18, head: true);
+                    HudKit.Label(new Rect(row.x + 26f + nw, row.y + 8f, 160f, 24f), state.ToUpperInvariant(), 12, tc, TextAnchor.MiddleLeft, head: true);
+                }
+                HudKit.Label(new Rect(row.x + 16f, row.y + 34f, row.width - 150f, 30f), o.Detail, 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
+                if (HudKit.Button(new Rect(row.xMax - 118f, row.y + 15f, 104f, 40f), o.Price.ToString("N0"), false, useful && credits >= o.Price, 17)) RunEconomy.Current?.Buy(cache, i);
                 y += 78f;
             }
-            var ammo = new Rect(c.x, y, c.width, 56f);
-            HudKit.Round(ammo, HudKit.GlassLight);
-            HudKit.Label(new Rect(ammo.x + 16f, ammo.y, 300f, ammo.height), "Refill all ammo", 17, Color.white, TextAnchor.MiddleLeft, head: true);
-            if (HudKit.Button(new Rect(ammo.xMax - 118f, ammo.y + 8f, 104f, 40f), LootRules.AmmoRefillPrice.ToString("N0"), false, credits >= LootRules.AmmoRefillPrice, 17))
-                RunEconomy.Current?.Buy(cache, cache.Stock.Count);
 
             HudKit.KeyChip(c.x, c.yMax - 26f, "Esc", 24f);
             HudKit.Label(new Rect(c.x + 44f, c.yMax - 26f, 200f, 24f), "Close", 13, HudKit.TextDim);
             if (HudKit.Button(new Rect(c.xMax - 120f, c.yMax - 34f, 120f, 34f), "CLOSE")) Close();
             HudKit.End();
         }
+
+        private static Color KindColor(SupplyCache.Supply k) =>
+            k == SupplyCache.Supply.Heal ? new Color(0.45f, 1f, 0.55f) : k == SupplyCache.Supply.Grenades ? new Color(0.85f, 0.9f, 0.45f) : new Color(0.55f, 0.8f, 1f);
 
         public static Color TierColor(WeaponTier t) =>
             t == WeaponTier.Prototype ? new Color(0.85f, 0.55f, 1f) : t == WeaponTier.Refined ? new Color(0.45f, 0.75f, 1f) : new Color(0.85f, 0.87f, 0.9f);

@@ -41,6 +41,10 @@ namespace Deadfall.Game
             body.GetComponent<Renderer>().sharedMaterial = RuntimeMaterials.CreateLit(new Color(0.45f, 0.18f, 0.3f));
             body.AddComponent<Hurtbox>().Configure(HitZone.Body, 1f);
             n._body = body.transform;
+            // Blender model (fit to the body sphere, so it pulses with it); the sphere keeps its collider and hurtbox.
+            GameObject model = ModelLibrary.Spawn("obj_nest", body.transform);
+            if (model != null) body.GetComponent<Renderer>().enabled = false;
+            InteractGlow.AddRainbow(root, () => n.IsAlive);
             NetTargets.Register(n);
             return n;
         }

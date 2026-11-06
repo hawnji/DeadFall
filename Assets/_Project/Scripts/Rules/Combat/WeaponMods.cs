@@ -308,5 +308,8 @@ namespace Deadfall.Rules.Combat
 
         public const int AmmoRefillPrice = 200;
         public const int CacheStock = 3;
+        /// <summary>Supply Cache: full heal and a full set of grenades (the cache sells supplies, not guns).</summary>
+        public const int CacheHealPrice = 250;
+        public const int CacheGrenadePrice = 300;
     }
 }
