@@ -210,7 +210,8 @@ namespace Deadfall.Game
 
         public void Place(Camera camera, float dt)
         {
-            if (camera == null || _lure == null) return;
+            // Joining a session clears the attract map while the title is still up: nothing to film then.
+            if (camera == null || _lure == null || !_running || _map == null || !_map.HasMap || _map.Map == null) return;
             Vector3 focus = _lure.transform.position + Vector3.up * 1.1f;
             bool resting = Time.time < _pauseUntil;
             // While the lure waits, swing slowly around it to show the horde arriving.
@@ -246,7 +247,7 @@ namespace Deadfall.Game
                 _camVel = Vector3.zero;
             }
             BuiltMap m = _map.Map;
-            for (int i = 0; i < 8 && m.RoomAt(pos) < 0; i++)
+            for (int i = 0; m != null && i < 8 && m.RoomAt(pos) < 0; i++)
             {
                 pos = Vector3.Lerp(pos, eye, 0.35f);
                 _camVel = Vector3.zero;
