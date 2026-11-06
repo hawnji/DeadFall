@@ -1073,15 +1073,13 @@ def curved_mag(m, top_rear, top_front, drop, sweep, flare, half, mat, steps=7):
 
 
 def weapon_halberd_ar():
-    """Assault rifle: stamped receiver, wood furniture, curved magazine, gas tube, slant brake."""
+    """Assault rifle: stamped receiver, wood furniture, curved magazine, gas tube, bare barrel."""
     m = Model("weapon_halberd_ar", triangulate=True)
-    # Receiver with a rounded dust cover and a rear sight block.
+    # Receiver with a rounded dust cover (sights, optics and muzzle devices are attachments).
     m.sym([(0.0, -0.045), (0.30, -0.045), (0.31, -0.03), (0.31, 0.022), (0.29, 0.035), (0.02, 0.035), (0.0, 0.026)], 0.024, STEEL_D)
     m.sym([(0.01, 0.034), (0.27, 0.034), (0.275, 0.046), (0.25, 0.052), (0.03, 0.052), (0.01, 0.044)], 0.021, STEEL_M)  # dust cover
     for z in (0.05, 0.09, 0.13, 0.17, 0.21):
         m.box((0, 0.053, z), (0.034, 0.003, 0.006), STEEL_D, bevel=0.0)  # cover ribs
-    m.sym([(0.285, 0.035), (0.325, 0.035), (0.325, 0.058), (0.31, 0.064), (0.29, 0.058)], 0.016, STEEL_M)  # rear sight block
-    m.box((0, 0.066, 0.31), (0.02, 0.004, 0.03), STEEL_L, bevel=0.0)  # sight leaf
     for s in (-1, 1):
         m.box((s * 0.0245, -0.012, 0.15), (0.002, 0.03, 0.2), STEEL_M, bevel=0.0)  # side panel stamping
         rivet(m, s * 0.025, -0.032, 0.04)
@@ -1117,13 +1115,9 @@ def weapon_halberd_ar():
     m.sym([(0.33, 0.036), (0.44, 0.036), (0.445, 0.05), (0.43, 0.064), (0.345, 0.064), (0.33, 0.05)], 0.019, WOOD_W, chamfer=0.006)
     tube(m, 0.44, 0.53, 0.017, STEEL_M, y=0.05)  # gas tube
     m.sym([(0.505, 0.008), (0.535, 0.008), (0.535, 0.062), (0.505, 0.062)], 0.012, STEEL_D, chamfer=0.002)  # gas block
-    # Barrel, front sight, cleaning rod, slant brake.
-    tube(m, 0.49, 0.62, 0.019, STEEL_D)
-    m.sym([(0.55, 0.026), (0.578, 0.026), (0.574, 0.05), (0.57, 0.08), (0.558, 0.08), (0.554, 0.05)], 0.011, STEEL_D, chamfer=0.0)
-    m.box((0, 0.068, 0.564), (0.003, 0.02, 0.003), STEEL_L, bevel=0.0)  # sight post
+    # Bare barrel and cleaning rod.
+    tube(m, 0.49, 0.65, 0.019, STEEL_D)
     tube(m, 0.49, 0.6, 0.006, STEEL_L, y=-0.004)
-    tube(m, 0.615, 0.65, 0.025, STEEL_M)
-    m.sym([(0.628, 0.032), (0.65, 0.026), (0.65, 0.033), (0.628, 0.034)], 0.0126, STEEL_D, chamfer=0.0)  # brake slant
     m.box((0, 0.02, 0.651), (0.012, 0.012, 0.002), POLY, bevel=0.0)  # bore
     return m
 
@@ -1137,12 +1131,11 @@ def weapon_breacher_12():
     for s in (-1, 1):
         rivet(m, s * 0.027, -0.03, 0.05)
         rivet(m, s * 0.027, -0.03, 0.22)
-    # Barrel with a vent rib and bead; magazine tube with cap.
+    # Barrel with a vent rib; magazine tube with cap.
     tube(m, 0.26, 0.8, 0.03, STEEL_D, y=0.02)
     m.box((0, 0.039, 0.53), (0.012, 0.004, 0.53), STEEL_M, bevel=0.0)
     for z in [0.3 + i * 0.06 for i in range(8)]:
         m.box((0, 0.035, z), (0.006, 0.008, 0.006), STEEL_M, bevel=0.0)
-    m.sph((0, 0.044, 0.79), (0.007, 0.007, 0.007), BRASS, smooth=False, segments=6)
     tube(m, 0.26, 0.69, 0.027, STEEL_M, y=-0.018)
     tube(m, 0.69, 0.71, 0.03, STEEL_L, y=-0.018)
     m.sym([(0.66, -0.035), (0.68, -0.035), (0.68, 0.035), (0.66, 0.035)], 0.018, STEEL_M, chamfer=0.002)  # barrel clamp
@@ -1189,8 +1182,6 @@ def weapon_ranger_9():
            (0.03, -0.12), (0.044, -0.11), (0.05, -0.05)], 0.0145, POLY_L, chamfer=0.003)  # grip with beavertail
     m.sym([(-0.004, -0.04), (0.034, -0.04), (0.03, -0.1), (-0.008, -0.1)], 0.0152, POLY, chamfer=0.0)  # texture panel
     m.sym([(-0.014, -0.112), (0.032, -0.12), (0.034, -0.128), (-0.014, -0.122)], 0.015, STEEL_M, chamfer=0.0)  # base plate
-    m.box((0, 0.049, 0.225), (0.005, 0.009, 0.008), STEEL_L, bevel=0.0)  # front sight
-    m.sym([(-0.012, 0.044), (0.008, 0.044), (0.008, 0.054), (-0.008, 0.054)], 0.011, STEEL_M, chamfer=0.0)  # rear sight
     m.sym([(-0.024, 0.02), (-0.016, 0.02), (-0.018, 0.034), (-0.03, 0.036)], 0.005, STEEL_L, chamfer=0.0)  # hammer
     tube(m, 0.237, 0.2415, 0.011, POLY)  # bore
     return m
@@ -1220,7 +1211,7 @@ def weapon_saber_7():
 
 
 def weapon_wasp_smg():
-    """Compact SMG: angular polymer body, ribbed stick mag, folding wire stock, suppressor, holo sight."""
+    """Compact SMG: angular polymer body, ribbed stick mag, folding wire stock, bare barrel."""
     m = Model("weapon_wasp_smg", triangulate=True)
     m.sym([(0.0, -0.04), (0.2, -0.04), (0.24, -0.028), (0.3, -0.028), (0.3, 0.03), (0.28, 0.04), (0.015, 0.04), (0.0, 0.03)], 0.023, POLY_L)
     m.sym([(0.02, 0.04), (0.27, 0.04), (0.27, 0.048), (0.02, 0.048)], 0.012, STEEL_M, chamfer=0.0)  # rail
@@ -1243,29 +1234,19 @@ def weapon_wasp_smg():
         m.box((0, y, 0.163), (0.03, 0.006, 0.046), STEEL_D, bevel=0.0)
     m.sym([(0.138, -0.218), (0.188, -0.218), (0.19, -0.23), (0.136, -0.23)], 0.016, POLY, chamfer=0.002)
     m.sym([(0.13, -0.036), (0.195, -0.036), (0.195, -0.05), (0.13, -0.05)], 0.0235, POLY, chamfer=0.0)  # mag well
-    # Angled foregrip.
-    m.sym([(0.235, -0.018), (0.272, -0.018), (0.262, -0.1), (0.24, -0.104), (0.232, -0.09)], 0.013, POLY, chamfer=0.003)
-    # Suppressor.
-    tube(m, 0.29, 0.42, 0.044, POLY_L, segments=10)
-    for z in (0.31, 0.4):
-        tube(m, z, z + 0.008, 0.047, STEEL_M, segments=10)
-    tube(m, 0.418, 0.4205, 0.014, POLY)
+    # Barrel.
+    tube(m, 0.29, 0.42, 0.022, STEEL_D, segments=10)
+    tube(m, 0.418, 0.4205, 0.012, POLY)
     # Folding wire stock.
     for s in (-1, 1):
         m.sym([(0.0, 0.016), (-0.2, 0.004), (-0.2, -0.004), (0.0, 0.008)], 0.004, STEEL_M, chamfer=0.0, x=s * 0.016)
         m.sym([(0.0, -0.022), (-0.2, -0.05), (-0.2, -0.058), (0.0, -0.03)], 0.004, STEEL_M, chamfer=0.0, x=s * 0.016)
     m.sym([(-0.2, 0.01), (-0.212, 0.01), (-0.212, -0.075), (-0.2, -0.075)], 0.024, POLY, chamfer=0.003)
-    # Holo sight with a glowing reticle window.
-    m.sym([(0.08, 0.048), (0.15, 0.048), (0.15, 0.06), (0.14, 0.062), (0.09, 0.062), (0.08, 0.06)], 0.016, POLY, chamfer=0.002)
-    for z in (0.085, 0.145):
-        m.sym([(z - 0.006, 0.06), (z + 0.006, 0.06), (z + 0.004, 0.098), (z - 0.004, 0.098)], 0.017, POLY, chamfer=0.0)
-    m.sym([(0.088, 0.096), (0.142, 0.096), (0.142, 0.102), (0.088, 0.102)], 0.017, POLY, chamfer=0.0)
-    m.box((0, 0.079, 0.14), (0.026, 0.03, 0.002), GLASS_G, bevel=0.0)
     return m
 
 
 def weapon_anvil_lmg():
-    """Light machine gun: big steel receiver, hinged feed cover, ammo box with belt, perforated shroud, bipod."""
+    """Light machine gun: big steel receiver, hinged feed cover, ammo box with belt, perforated shroud, bare barrel."""
     m = Model("weapon_anvil_lmg", triangulate=True)
     m.sym([(0.0, -0.06), (0.48, -0.06), (0.5, -0.04), (0.5, 0.045), (0.47, 0.058), (0.02, 0.058), (0.0, 0.045)], 0.044, STEEL_D, chamfer=0.004)
     m.sym([(0.08, 0.058), (0.36, 0.058), (0.37, 0.07), (0.35, 0.084), (0.1, 0.084), (0.08, 0.072)], 0.04, STEEL_M, chamfer=0.003)  # feed cover
@@ -1285,24 +1266,14 @@ def weapon_anvil_lmg():
     m.box((-0.03, -0.205, 0.28), (0.08, 0.01, 0.12), "C_3A4129", bevel=0.0)
     for i in range(6):
         m.cyl((-0.072 + i * 0.008, 0.02, 0.27), (0.009, 0.05, 0.009), BRASS, rot=(90, 0, 0), segments=6)
-    # Carry handle.
-    m.sym([(0.24, 0.058), (0.26, 0.058), (0.27, 0.11), (0.39, 0.11), (0.4, 0.058), (0.42, 0.058), (0.41, 0.125), (0.25, 0.125)], 0.012, POLY, chamfer=0.003)
-    # Perforated barrel shroud, barrel, flash hider.
+    # Perforated barrel shroud and bare barrel.
     m.sym([(0.5, -0.03), (0.74, -0.03), (0.75, -0.015), (0.75, 0.055), (0.74, 0.07), (0.5, 0.07)], 0.034, STEEL_M, chamfer=0.004)
     for z in [0.53 + i * 0.04 for i in range(5)]:
         for y in (0.0, 0.04):
             for s in (-1, 1):
                 m.cyl((s * 0.0345, y, z), (0.016, 0.003, 0.016), POLY, rot=(0, 0, 90), segments=6)
     tube(m, 0.74, 0.9, 0.034, STEEL_D)
-    tube(m, 0.84, 0.9, 0.044, STEEL_M)
-    for s in (-1, 1):
-        m.box((s * 0.016, 0.02, 0.88), (0.006, 0.046, 0.03), POLY, bevel=0.0)  # flash hider slots
-    m.sym([(0.83, 0.02), (0.85, 0.02), (0.848, 0.09), (0.832, 0.09)], 0.008, STEEL_D, chamfer=0.0)  # front sight
-    # Folded bipod.
-    m.box((0, -0.04, 0.755), (0.05, 0.02, 0.03), STEEL_M, bevel=0.003)
-    for s in (-1, 1):
-        m.box((s * 0.02, -0.045, 0.62), (0.012, 0.012, 0.26), STEEL_L, bevel=0.002)
-        m.box((s * 0.02, -0.045, 0.49), (0.02, 0.016, 0.02), RUBBER, bevel=0.003)
+    tube(m, 0.898, 0.9005, 0.014, POLY)  # bore
     # Grip, guard and skeleton stock.
     m.sym([(0.085, -0.05), (0.04, -0.05), (0.012, -0.155), (0.018, -0.17), (0.05, -0.172), (0.062, -0.162), (0.088, -0.075)], 0.018, POLY, chamfer=0.003)
     m.sym([(0.08, -0.06), (0.08, -0.085), (0.092, -0.094), (0.14, -0.094), (0.148, -0.082), (0.148, -0.06),
@@ -1339,7 +1310,7 @@ def weapon_tether_cleaver():
 
 
 def weapon_mule_launcher():
-    """Revolving grenade launcher: fluted drum, ribbed barrel, polymer stock, foregrip, leaf sight."""
+    """Revolving grenade launcher: fluted drum, ribbed barrel, polymer stock (no sights or foregrip)."""
     m = Model("weapon_mule_launcher", triangulate=True)
     tube(m, 0.21, 0.65, 0.07, "C_4A5236", segments=12)
     for z in (0.3, 0.38, 0.46, 0.54):
@@ -1358,16 +1329,12 @@ def weapon_mule_launcher():
         tube(m, 0.05, 0.19, 0.012, STEEL_M, y=0.015 + math.sin(ang + math.radians(30)) * 0.082,
              x=math.cos(ang + math.radians(30)) * 0.082, segments=4)
     m.sym([(0.0, 0.09), (0.24, 0.09), (0.24, 0.105), (0.0, 0.105)], 0.03, STEEL_M, chamfer=0.002)  # top strap
-    # Leaf sight with hazard marks.
-    m.sym([(0.3, 0.035), (0.33, 0.035), (0.33, 0.1), (0.3, 0.1)], 0.022, HAZARD, chamfer=0.002)
-    m.box((0, 0.09, 0.315), (0.03, 0.004, 0.032), DARK, bevel=0.0)
-    m.box((0, 0.07, 0.315), (0.03, 0.004, 0.032), DARK, bevel=0.0)
+    # Hazard marking on the barrel.
     m.box((0.036, 0.02, 0.45), (0.004, 0.03, 0.12), HAZARD, bevel=0.0)
-    # Grip, guard, foregrip, stock.
+    # Grip, guard, stock.
     m.sym([(0.075, -0.06), (0.03, -0.06), (0.004, -0.15), (0.01, -0.165), (0.042, -0.168), (0.054, -0.156), (0.078, -0.065)], 0.018, POLY, chamfer=0.003)
     m.sym([(0.07, -0.05), (0.07, -0.076), (0.082, -0.084), (0.13, -0.084), (0.138, -0.072), (0.138, -0.05),
            (0.13, -0.05), (0.13, -0.07), (0.125, -0.076), (0.086, -0.076), (0.078, -0.07), (0.078, -0.05)], 0.005, STEEL_M, chamfer=0.0)
-    m.sym([(0.38, -0.008), (0.43, -0.008), (0.425, -0.13), (0.39, -0.135), (0.382, -0.12)], 0.017, POLY, chamfer=0.003)
     m.sym([(0.0, 0.05), (-0.06, 0.04), (-0.27, 0.02), (-0.28, 0.006), (-0.28, -0.1), (-0.265, -0.11),
            (-0.12, -0.075), (-0.03, -0.06), (0.0, -0.05)], 0.026, POLY_L, chamfer=0.005)
     m.sym([(-0.28, 0.01), (-0.296, 0.01), (-0.296, -0.104), (-0.28, -0.11)], 0.028, RUBBER, chamfer=0.003)
@@ -1375,7 +1342,7 @@ def weapon_mule_launcher():
 
 
 def weapon_vesper_dmr():
-    """Marksman rifle: long tan polymer chassis, free-float handguard, 8x scope, box magazine, adjustable stock."""
+    """Marksman rifle: long tan polymer chassis, free-float handguard, top rail, box magazine, adjustable stock."""
     m = Model("weapon_vesper_dmr", triangulate=True)
     m.sym([(0.0, -0.042), (0.30, -0.042), (0.31, -0.03), (0.31, 0.03), (0.0, 0.03)], 0.023, TAN)  # lower receiver
     m.sym([(0.0, 0.03), (0.33, 0.03), (0.33, 0.046), (0.0, 0.046)], 0.02, STEEL_D, chamfer=0.002)  # upper
@@ -1388,10 +1355,7 @@ def weapon_vesper_dmr():
     for z in (0.35, 0.39, 0.43, 0.47, 0.51):
         for s in (-1, 1):
             m.box((s * 0.022, 0.008, z), (0.002, 0.03, 0.018), POLY, bevel=0.0)
-    tube(m, 0.56, 0.63, 0.017, STEEL_D)
-    tube(m, 0.625, 0.65, 0.026, STEEL_M, segments=10)  # muzzle brake
-    for z in (0.632, 0.642):
-        m.box((0, 0.02, z), (0.03, 0.006, 0.004), POLY, bevel=0.0)
+    tube(m, 0.56, 0.65, 0.017, STEEL_D)
     m.box((0, 0.02, 0.651), (0.012, 0.012, 0.002), POLY, bevel=0.0)
     # Grip, trigger guard, magazine.
     m.sym([(0.08, -0.03), (0.035, -0.03), (0.01, -0.14), (0.016, -0.156), (0.046, -0.158), (0.058, -0.146), (0.083, -0.05)], 0.016, POLY, chamfer=0.004)
@@ -1405,15 +1369,6 @@ def weapon_vesper_dmr():
     m.sym([(-0.08, 0.05), (-0.27, 0.05), (-0.29, 0.03), (-0.29, -0.11), (-0.27, -0.12), (-0.2, -0.09), (-0.08, -0.03)], 0.02, TAN, chamfer=0.006)
     m.sym([(-0.12, 0.05), (-0.25, 0.05), (-0.25, 0.066), (-0.12, 0.066)], 0.018, POLY, chamfer=0.003)  # cheek riser
     m.sym([(-0.29, 0.034), (-0.302, 0.034), (-0.302, -0.114), (-0.29, -0.114)], 0.022, POLY, chamfer=0.002)  # butt pad
-    # Scope: rings, body, bells, glowing lens.
-    for z in (0.08, 0.22):
-        m.sym([(z - 0.012, 0.05), (z + 0.012, 0.05), (z + 0.012, 0.086), (z - 0.012, 0.086)], 0.02, STEEL_D, chamfer=0.002)
-    tube(m, 0.03, 0.27, 0.032, POLY, y=0.1, segments=12)
-    tube(m, -0.02, 0.04, 0.042, POLY_L, y=0.1, segments=12)  # eyepiece
-    tube(m, 0.26, 0.33, 0.05, POLY_L, y=0.1, segments=12)  # objective bell
-    m.cyl((0, 0.135, 0.15), (0.03, 0.03, 0.03), STEEL_M, segments=8)  # turret
-    m.cyl((0.03, 0.1, 0.15), (0.026, 0.03, 0.026), STEEL_M, rot=(0, 0, 90), segments=8)
-    tube(m, 0.33, 0.332, 0.046, GLASS_G, y=0.1, segments=12)
     return m
 
 
@@ -1423,7 +1378,6 @@ def weapon_bulldog_44():
     m.sym([(-0.02, -0.02), (0.07, -0.02), (0.07, 0.042), (0.0, 0.05), (-0.02, 0.04)], 0.016, STEEL_D, chamfer=0.003)  # frame
     m.sym([(0.07, -0.008), (0.24, -0.008), (0.24, 0.042), (0.07, 0.042)], 0.0115, STEEL_D, chamfer=0.003)  # barrel lug
     m.box((0, 0.045, 0.155), (0.008, 0.004, 0.17), STEEL_M, bevel=0.0)  # top rib
-    m.box((0, 0.053, 0.23), (0.005, 0.012, 0.016), DOT_R, bevel=0.0)  # front sight insert
     tube(m, 0.2, 0.2415, 0.014, POLY, y=0.022)  # bore
     m.cyl((0, 0.016, 0.035), (0.05, 0.07, 0.05), STEEL_M, rot=(90, 0, 0), segments=6)  # cylinder (hex = fluted)
     for a in range(6):
@@ -1438,7 +1392,7 @@ def weapon_bulldog_44():
 
 
 def weapon_hailstorm():
-    """Automatic shotgun: boxy receiver, 20-round drum, heat-shrouded barrel, carry handle, polymer stock."""
+    """Automatic shotgun: boxy receiver, 20-round drum, heat-shrouded barrel, polymer stock."""
     m = Model("weapon_hailstorm", triangulate=True)
     m.sym([(0.0, -0.05), (0.36, -0.05), (0.37, -0.035), (0.37, 0.05), (0.02, 0.05), (0.0, 0.04)], 0.03, POLY_L)
     m.box((0.031, 0.015, 0.2), (0.003, 0.03, 0.1), POLY, bevel=0.0)  # ejection port
@@ -1447,11 +1401,6 @@ def weapon_hailstorm():
         rivet(m, s * 0.03, -0.035, 0.03)
         rivet(m, s * 0.03, -0.035, 0.34)
         rivet(m, s * 0.03, 0.035, 0.34)
-    # Carry handle with a glowing sight dot.
-    for z in (0.06, 0.3):
-        m.sym([(z - 0.015, 0.05), (z + 0.015, 0.05), (z + 0.01, 0.09), (z - 0.01, 0.09)], 0.012, POLY, chamfer=0.0)
-    m.sym([(0.045, 0.088), (0.315, 0.088), (0.315, 0.1), (0.045, 0.1)], 0.012, POLY, chamfer=0.002)
-    m.box((0, 0.106, 0.3), (0.006, 0.01, 0.006), DOT_R, bevel=0.0)
     # Grip and guard.
     m.sym([(0.09, -0.04), (0.045, -0.04), (0.02, -0.15), (0.026, -0.166), (0.056, -0.168), (0.068, -0.156), (0.094, -0.06)], 0.018, POLY, chamfer=0.004)
     m.sym([(0.09, -0.05), (0.09, -0.076), (0.1, -0.084), (0.15, -0.084), (0.158, -0.074), (0.158, -0.05),
@@ -1489,15 +1438,12 @@ def weapon_kestrel_pdw():
     m.box((0, 0.058, 0.07), (0.03, 0.01, 0.34), GLASS_G, bevel=0.002)  # translucent magazine on top
     for z in [-0.08 + i * 0.03 for i in range(11)]:
         m.box((0, 0.064, z), (0.028, 0.002, 0.004), BRASS, bevel=0.0)  # rounds seen through the mag
-    m.sym([(0.01, 0.054), (0.05, 0.054), (0.05, 0.09), (0.01, 0.09)], 0.004, POLY, chamfer=0.0)  # rear sight ears
-    m.sym([(0.26, 0.054), (0.29, 0.054), (0.29, 0.086), (0.26, 0.086)], 0.004, POLY, chamfer=0.0)
     m.sym([(0.08, -0.03), (0.088, -0.03), (0.084, -0.046), (0.076, -0.05)], 0.003, STEEL_L, chamfer=0.0)  # trigger
     for s in (-1, 1):
         m.box((s * 0.025, 0.0, 0.24), (0.003, 0.03, 0.08), POLY, bevel=0.0)  # side grip panels
         rivet(m, s * 0.024, 0.02, -0.12)
     m.sym([(0.2, -0.05), (0.24, -0.05), (0.232, -0.11), (0.21, -0.112)], 0.012, POLY, chamfer=0.003)  # finger stop
     tube(m, 0.36, 0.42, 0.018, STEEL_D)
-    tube(m, 0.395, 0.42, 0.026, STEEL_M, segments=8)  # flash hider
     tube(m, 0.418, 0.4205, 0.012, POLY)
     m.box((-0.025, 0.024, 0.0), (0.006, 0.01, 0.03), STEEL_L, bevel=0.002)  # ambi charging handle
     m.box((0.025, 0.024, 0.0), (0.006, 0.01, 0.03), STEEL_L, bevel=0.002)

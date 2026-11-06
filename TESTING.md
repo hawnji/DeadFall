@@ -700,6 +700,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] First person melee: the Saber-7 and Tether Cleaver are held blade-up in the right hand only (no second hand floating on the handle); the Railspike Maul is held two-handed, angled across the body.
 - [ ] A swing winds up, cuts quickly across to the lower left (one-handed) or chops down through the centre (maul), then eases back to the rest pose. Firearms still sprint, reload and kick as before.
 
+### 3.62 Bare weapon models (no built-in sights or attachments)
+- [ ] Every firearm model is bare: no iron sights, scope (Vesper), holo (Wasp), carry handles (Anvil, Hailstorm), leaf sight (Mule), suppressor, flash hiders or brakes, bipod or foregrips. Barrels end where the muzzle flash appears.
+- [ ] Aiming down sights with no optic fitted: the screen centre sits just over the top of the gun and nothing on the model covers the aiming dot. The Vesper no longer opens a scope view on its own.
+- [ ] Fitting a Red Dot, Holo or Sniper Scope in the Armory still puts its sight on the aiming dot for every gun, including the Wasp, Mule, Vesper and Hailstorm, which couldn't take optics before.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
