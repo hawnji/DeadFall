@@ -11,11 +11,17 @@ namespace Deadfall.Game
         private BuildTool _tool;
         private EngineeringDirector _bound;
 
+        // "+N scrap" pops just left of the crosshair (and below it, out of the aim line), mirroring the credit pops.
+        private const float PopSeconds = 1.6f;
+        private readonly System.Collections.Generic.List<(int amount, float at)> _pops = new System.Collections.Generic.List<(int, float)>();
+        private int _lastScrap = -1;
+
         public void Bind(BuildTool tool) => _tool = tool;
 
         private void Update()
         {
             EngineeringDirector d = EngineeringDirector.Current;
+            TrackScrap(d);
             if (d == _bound) return;
             if (_bound != null) _bound.LocalMessage -= OnMessage;
             _bound = d;
@@ -27,6 +33,33 @@ namespace Deadfall.Game
             if (_bound != null) _bound.LocalMessage -= OnMessage;
         }
 
+        private void TrackScrap(EngineeringDirector d)
+        {
+            bool running = WaveManager.Current != null && WaveManager.Current.IsRunning;
+            if (d == null || !running) { _lastScrap = -1; return; }
+            int now = d.Scrap;
+            if (_lastScrap >= 0 && now > _lastScrap)
+            {
+                _pops.Add((now - _lastScrap, Time.unscaledTime));
+                if (_pops.Count > 5) _pops.RemoveAt(0);
+            }
+            _lastScrap = now;
+        }
+
+        private void DrawScrapPops()
+        {
+            float now = Time.unscaledTime, w = HudKit.W, h = HudKit.H;
+            for (int i = _pops.Count - 1; i >= 0; i--)
+            {
+                float t = (now - _pops[i].at) / PopSeconds;
+                if (t >= 1f) { _pops.RemoveAt(i); continue; }
+                int slot = _pops.Count - 1 - i;
+                float a = 1f - t * t;
+                var r = new Rect(w * 0.5f - 60f - 240f, h * 0.5f + 78f + slot * 22f - t * 16f, 240f, 22f);
+                HudKit.Label(r, $"+{_pops[i].amount} scrap", 18, new Color(HudKit.Warn.r, HudKit.Warn.g, HudKit.Warn.b, a), TextAnchor.MiddleRight, head: true);
+            }
+        }
+
         private static void OnMessage(string text) => RunToasts.Show(text, new Color(1f, 0.8f, 0.5f), 2f);
 
         private void OnGUI()
@@ -34,6 +67,7 @@ namespace Deadfall.Game
             EngineeringDirector d = _bound;
             if (d == null) return;
             HudKit.Begin();
+            DrawScrapPops();
             bool running = WaveManager.Current != null && WaveManager.Current.IsRunning;
             // Scrap pill above the class card (bottom left stack: health 66, class 86, gaps 10).
             float h = HudKit.H;

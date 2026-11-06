@@ -669,6 +669,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] A weapon dropped by a zombie killed inside a closet lands in the room in front of the opening.
 - [ ] With a Field Mod waiting, the picker pops up by itself when the lull starts (once; Esc puts it away and T brings it back).
 
+### 3.57 Objective pop-ups, rainbow quest glow, scrap and credit pops
+- [ ] When a new objective appears, a "NEW OBJECTIVE" card shows its name in the middle of the screen for about 2.5 s, then the name glides into its row in the objectives card (top right).
+- [ ] Timed objectives have a bar under their row that drains with the timer (green, then yellow, then red); counted objectives show a progress bar.
+- [ ] Objective props and offline generators glow in cycling rainbow colours and can be seen from about 45 m away. Required rows have a rainbow dot.
+- [ ] Gaining scrap shows "+N scrap" just left of centre, credits show "+N" just right of centre, both below the crosshair (never on the aim point).
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

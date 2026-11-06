@@ -111,7 +111,7 @@ namespace Deadfall.Game
             // stays visible because its colour shows progress.
             GameObject model = ModelLibrary.Spawn(ModelId(kind), root.transform);
             if (model != null) ModelLibrary.HideExcept(root.transform, model.transform, r => r == p._light);
-            InteractGlow.Add(root, InteractGlow.Objectives, () => !p.Done);
+            InteractGlow.AddRainbow(root, () => !p.Done);
             return p;
         }
 
