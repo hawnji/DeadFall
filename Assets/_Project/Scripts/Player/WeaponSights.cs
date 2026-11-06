@@ -7,7 +7,7 @@ namespace Deadfall.Player
     /// <summary>
     /// Where each weapon model's sights are (model space, from Tools/Blender/build_models.py), so aiming down sights
     /// puts the sight line exactly on the screen centre: the aim point the shots go to, and the HUD's aiming dot.
-    /// Fitted optics (Red Dot, Holo Scope, Sniper Scope) sit on the receiver and raise the sight line to their own.
+    /// The models have no sights of their own; fitted optics (Red Dot, Holo Scope, Sniper Scope) sit on the receiver and raise the sight line to their own.
     /// </summary>
     public static class WeaponSights
     {
@@ -28,16 +28,18 @@ namespace Deadfall.Player
             string id = def != null ? def.ContentId : null;
             switch (id)
             {
-                case "weapon.halberd_ar": return new Sight { LineY = 0.072f, RailY = 0.052f, RailZ = 0.15f };
+                // The models carry no sights, optics or muzzle devices (they're attachments now): the unaided line
+                // runs just over the top of each gun, so nothing on the model rises into the view when aiming.
+                case "weapon.halberd_ar": return new Sight { LineY = 0.07f, RailY = 0.052f, RailZ = 0.15f };
                 case "weapon.breacher_12": return new Sight { LineY = 0.051f, RailY = 0.046f, RailZ = 0.14f };
-                case "weapon.ranger_9": return new Sight { LineY = 0.054f, RailY = 0.046f, RailZ = 0.09f };
-                case "weapon.wasp_smg": return new Sight { LineY = 0.079f, RailY = 0.048f, RailZ = 0.115f, BuiltInOptic = true };
-                case "weapon.anvil_lmg": return new Sight { LineY = 0.088f, RailY = 0.062f, RailZ = 0.2f };
-                case "weapon.mule_launcher": return new Sight { LineY = 0.09f, RailY = 0.105f, RailZ = 0.12f, BuiltInOptic = true };
-                case "weapon.vesper_dmr": return new Sight { LineY = 0.1f, RailY = 0.05f, RailZ = 0.15f, BuiltInOptic = true, BuiltInScope = true };
-                case "weapon.bulldog_44": return new Sight { LineY = 0.059f, RailY = 0.05f, RailZ = 0.11f };
-                case "weapon.hailstorm": return new Sight { LineY = 0.106f, RailY = 0.1f, RailZ = 0.18f, BuiltInOptic = true };
-                case "weapon.kestrel_pdw": return new Sight { LineY = 0.072f, RailY = 0.054f, RailZ = 0.12f };
+                case "weapon.ranger_9": return new Sight { LineY = 0.05f, RailY = 0.044f, RailZ = 0.09f };
+                case "weapon.wasp_smg": return new Sight { LineY = 0.058f, RailY = 0.052f, RailZ = 0.115f };
+                case "weapon.anvil_lmg": return new Sight { LineY = 0.095f, RailY = 0.087f, RailZ = 0.2f };
+                case "weapon.mule_launcher": return new Sight { LineY = 0.115f, RailY = 0.105f, RailZ = 0.12f };
+                case "weapon.vesper_dmr": return new Sight { LineY = 0.06f, RailY = 0.052f, RailZ = 0.15f };
+                case "weapon.bulldog_44": return new Sight { LineY = 0.054f, RailY = 0.047f, RailZ = 0.11f };
+                case "weapon.hailstorm": return new Sight { LineY = 0.058f, RailY = 0.05f, RailZ = 0.18f };
+                case "weapon.kestrel_pdw": return new Sight { LineY = 0.072f, RailY = 0.065f, RailZ = 0.12f };
                 default: return new Sight { LineY = 0.06f, RailY = 0.05f, RailZ = 0.12f };
             }
         }
