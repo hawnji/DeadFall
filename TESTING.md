@@ -682,6 +682,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Fitted attachments show on the gun: red dot / holo / sniper scope on top, compensator or long barrel on the muzzle, foregrip or laser underneath, extended mag. They persist after restarting the game.
 - [ ] Changing a weapon (or its attachments) at the Armory puts that weapon straight into your hands.
 
+### 3.59 Hub: class pick, one section per booth, textures, smaller hangar
+- [ ] After the title screen, a "CHOOSE YOUR CLASS" picker comes up in the hub (once per session) with a card per class (role, ability, passives). Locked classes show their unlock level. Picking sets the class and its saved loadout; Esc keeps the current one.
+- [ ] Each booth opens only its own section (Armory shows only the Armory, Command Center only deployment, and so on); there is no tab bar.
+- [ ] The hangar is smaller (32 x 24 m) with tiled floor, steel wall panels, concrete skirting, a drop ceiling with girders, metal booths and a coloured floor mat in front of each booth. Nothing overlaps; the spawn is clear.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
