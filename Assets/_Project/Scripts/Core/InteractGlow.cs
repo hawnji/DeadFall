@@ -30,6 +30,11 @@ namespace Deadfall.Core
         private float _check;
         private bool _shown = true;
         private float _phase;
+        private bool _rainbow;
+        private float _range = Range;
+
+        /// <summary>How far away a quest-objective (rainbow) glow still shows.</summary>
+        public const float RainbowRange = 45f;
 
         /// <summary>
         /// Adds a glow to <paramref name="target"/> around every mesh renderer under it that is visible now (hidden
@@ -41,6 +46,17 @@ namespace Deadfall.Core
             var g = target.GetComponent<InteractGlow>();
             if (g == null) g = target.AddComponent<InteractGlow>();
             g.Build(color, active);
+            return g;
+        }
+
+        /// <summary>
+        /// A quest objective's glow: cycles through the rainbow and shows from much further away
+        /// (<see cref="RainbowRange"/>), so the thing the squad has to do stands out from everything else.
+        /// </summary>
+        public static InteractGlow AddRainbow(GameObject target, Func<bool> active = null)
+        {
+            InteractGlow g = Add(target, Objectives, active);
+            if (g != null) { g._rainbow = true; g._range = RainbowRange; }
             return g;
         }
 
@@ -99,7 +115,7 @@ namespace Deadfall.Core
             {
                 _check = CheckInterval;
                 Camera cam = Camera.main;
-                bool show = Enabled && cam != null && (cam.transform.position - transform.position).sqrMagnitude <= Range * Range
+                bool show = Enabled && cam != null && (cam.transform.position - transform.position).sqrMagnitude <= _range * _range
                             && (_active == null || _active());
                 if (show != _shown)
                 {
@@ -109,7 +125,9 @@ namespace Deadfall.Core
             }
             if (!_shown || _material == null) return;
             float pulse = 0.75f + 0.25f * Mathf.Sin(Time.time * 3f + _phase);
-            if (_material.HasProperty("_EmissionColor")) _material.SetColor("_EmissionColor", _color * (2.2f * pulse));
+            Color c = _rainbow ? Color.HSVToRGB(Mathf.Repeat(Time.time * 0.22f + _phase * 0.1f, 1f), 0.85f, 1f) : _color;
+            if (_rainbow && _material.HasProperty("_BaseColor")) _material.SetColor("_BaseColor", c);
+            if (_material.HasProperty("_EmissionColor")) _material.SetColor("_EmissionColor", c * (2.2f * pulse));
         }
 
         private void OnDestroy()

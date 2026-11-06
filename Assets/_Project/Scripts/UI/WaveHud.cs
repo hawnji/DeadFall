@@ -93,7 +93,8 @@ namespace Deadfall.UI
                     HudKit.Label(new Rect(0f, y + 54f, w, 28f), _announcement.Subtitle, 18, new Color(0.9f, 0.92f, 0.94f, alpha), TextAnchor.MiddleCenter);
             }
 
-            // Credit pops rise and fade to the right of the crosshair.
+            // Credit pops: just right of centre and below the crosshair, so they never sit on the aim point (scrap pops
+            // mirror them on the left).
             for (int i = _pops.Count - 1; i >= 0; i--)
             {
                 float t = (now - _pops[i].at) / CreditPopSeconds;
@@ -104,7 +105,7 @@ namespace Deadfall.UI
                 }
                 int slot = _pops.Count - 1 - i;
                 float a = 1f - t * t;
-                var r = new Rect(w * 0.5f + 46f, h * 0.5f - 6f + slot * 22f - t * 26f, 320f, 22f);
+                var r = new Rect(w * 0.5f + 60f, h * 0.5f + 78f + slot * 22f - t * 16f, 320f, 22f);
                 HudKit.Label(r, $"+{_pops[i].amount}", 18, new Color(HudKit.Accent.r, HudKit.Accent.g, HudKit.Accent.b, a), TextAnchor.MiddleLeft, head: true);
                 if (!string.IsNullOrEmpty(_pops[i].reason))
                     HudKit.Label(new Rect(r.x + HudKit.TextWidth($"+{_pops[i].amount}", 18, head: true) + 8f, r.y, 280f, 22f), _pops[i].reason, 13,
