@@ -26,7 +26,7 @@ namespace Deadfall.DebugTools
 
         private Transform _player;
         private InputActionMap _map;
-        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _run, _ready, _advanced, _ctrl;
+        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _run, _advanced, _ctrl;
         private int _advancedIndex;
         private static readonly EnemyTraits[] DebugTraits =
             { EnemyTraits.Regenerating, EnemyTraits.Splitting, EnemyTraits.Hardened, EnemyTraits.Swift };
@@ -49,7 +49,6 @@ namespace Deadfall.DebugTools
             _capDown = _map.AddAction("CapDown", InputActionType.Button, "<Keyboard>/leftBracket");
             _capUp = _map.AddAction("CapUp", InputActionType.Button, "<Keyboard>/rightBracket");
             _run = _map.AddAction("SurvivalRun", InputActionType.Button, "<Keyboard>/n");
-            _ready = _map.AddAction("Ready", InputActionType.Button, "<Keyboard>/g");
             _map.Enable();
         }
 
@@ -92,7 +91,6 @@ namespace Deadfall.DebugTools
         {
             WaveManager waves = WaveManager.Current;
             if (waves == null) return;
-            if (_ready.WasPressedThisFrame()) waves.ToggleReady();
             if (!BuildInfo.DevTools || !_run.WasPressedThisFrame()) return;
             if (!waves.IsAuthority)
             {

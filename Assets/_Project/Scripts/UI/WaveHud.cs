@@ -132,7 +132,8 @@ namespace Deadfall.UI
             string final = _waves.IsEndless ? "  ·  ENDLESS" : _waves.FinalSurge > 0 ? $" / {_waves.FinalSurge}" : string.Empty;
             switch (_waves.Phase)
             {
-                case RunPhase.Lull: return $"LULL  {Clock(_waves.TimeLeft)}";
+                // Operations show the objective clock; Survival/Endless just warn of the next surge (random 10-25 s lull).
+                case RunPhase.Lull: return _waves.IsOperation ? $"LULL  {Clock(_waves.TimeLeft)}" : $"SURGE {_waves.Surge} INCOMING";
                 case RunPhase.Surge:
                     string type = _waves.SurgeType == SurgeType.Standard ? string.Empty : $"  ·  {_waves.SurgeType.ToString().ToUpperInvariant()}";
                     return $"SURGE {_waves.Surge}{final}{type}";
@@ -148,8 +149,7 @@ namespace Deadfall.UI
             switch (_waves.Phase)
             {
                 case RunPhase.Lull:
-                    string ready = _waves.PlayerCount > 1 ? $"  ({_waves.ReadyCount}/{_waves.PlayerCount} ready)" : string.Empty;
-                    return _waves.LocalReady ? $"Ready, waiting for squad{ready}" : $"Surge {_waves.Surge} next  ·  press G when ready{ready}";
+                    return _waves.IsOperation ? $"Surge {_waves.Surge} next  ·  work the objectives" : "Restock and get in position";
                 case RunPhase.Surge: return $"{_waves.EnemiesRemaining} infected left";
                 case RunPhase.Reward: return "Next lull starting";
                 case RunPhase.Complete:

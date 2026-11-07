@@ -46,6 +46,11 @@ namespace Deadfall.Encounters
         private readonly HashSet<ulong> _ready = new HashSet<ulong>();
         private SurgePlan _plan;
         private ulong _seed;
+        /// <summary>Survival/Endless lulls between surges last a random 10-25 s (no ready-up); Operations keep their own.</summary>
+        public const float RandomLullMin = 10f, RandomLullMax = 25f;
+        /// <summary>The "SURGE N INCOMING" call comes this long before the lull ends.</summary>
+        public const float IncomingCallSeconds = 3f;
+        private int _incomingCalled;
         private SessionService _session;
         private float _nextStateSend;
         private bool _stateDirty;
@@ -323,6 +328,7 @@ namespace Deadfall.Encounters
 
         private void Update()
         {
+            TickIncomingCall();
             if (!IsAuthority || !_run.IsRunning) return;
             double now = Time.timeAsDouble;
             RefreshPlayers();
@@ -357,7 +363,14 @@ namespace Deadfall.Encounters
                 _ready.Clear();
                 _plan = _planner.Plan(_run.Surge, Mathf.Max(1, _players.Count), _seed);
                 // Endless "Relentless": shorter lulls after this surge.
-                if (_endless) _runSettings.LullSeconds = _defaultLullSeconds * EndlessRules.LullMultiplier(_run.Surge);
+                if (!_operation)
+                {
+                    // Next lull: a random 10-25 s from the run seed (Endless "Relentless" still trims it).
+                    var rng = new System.Random(unchecked((int)(_seed ^ ((ulong)_run.Surge * 0x9E3779B97F4A7C15UL))));
+                    float lull = RandomLullMin + (float)rng.NextDouble() * (RandomLullMax - RandomLullMin);
+                    if (_endless) lull *= EndlessRules.LullMultiplier(_run.Surge);
+                    _runSettings.LullSeconds = Mathf.Max(5f, lull);
+                }
                 _director.Begin(_plan, _seed, now);
                 Enemy.RoundSpeedScale = _plan.SpeedScale;
                 SurgePlanned?.Invoke(_plan);
@@ -519,18 +532,32 @@ namespace Deadfall.Encounters
             }
         }
 
+        /// <summary>Every machine: calls "SURGE N INCOMING" (with the surge's type) just before the lull ends.</summary>
+        private void TickIncomingCall()
+        {
+            if (_phase != RunPhase.Lull || _incomingCalled == _surge || TimeLeft > IncomingCallSeconds) return;
+            _incomingCalled = _surge;
+            Announce(RunPhase.Surge);
+        }
+
         private void Announce(RunPhase phase)
         {
             string title = null, subtitle = null;
             switch (phase)
             {
                 case RunPhase.Lull:
-                    title = _surge == 1 ? (_operation ? "OPERATION STARTED" : "DEPLOYMENT STARTED") : "LULL";
-                    subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives"
-                                          : $"Surge {_surge} incoming · press G when ready";
+                    // Between surges there's no pop-up; only the start of a run (and Operations' objective lulls) say so.
+                    if (_surge == 1) _incomingCalled = 0;
+                    if (_surge == 1) title = _operation ? "OPERATION STARTED" : "DEPLOYMENT STARTED";
+                    else if (_operation) title = "LULL";
+                    if (title != null)
+                        subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives" : "Get ready";
                     break;
                 case RunPhase.Surge:
-                    title = $"SURGE {_surge}";
+                    // Called once, just before the surge (see Update); a surge that starts without that call says it now.
+                    if (_incomingCalled == _surge && _phase == RunPhase.Surge) return;
+                    _incomingCalled = _surge;
+                    title = $"SURGE {_surge} INCOMING";
                     subtitle = _type switch
                     {
                         SurgeType.Swarm => "Swarm · a flood of weak infected",

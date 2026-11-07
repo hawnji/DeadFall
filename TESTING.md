@@ -106,7 +106,7 @@ Solo, in the sandbox:
 - [ ] Press N: "DEPLOYMENT STARTED" appears, the top panel shows LULL with a 10 s timer and Field Credits 0.
 - [ ] When the timer runs out, "SURGE 1" appears and Husks walk in from one wall, out of sight where possible and never closer than 15 m. The panel counts enemies left down to 0.
 - [ ] Each kill shows "+10 Husk" (Bolter +15, Bulwark +60) and the credit total goes up.
-- [ ] Clearing a surge shows "SURGE 1 CLEARED, +60 Field Credits", then a 30 s LULL. G during the lull starts the next surge at once; G again before that cancels ready.
+- [ ] Clearing a surge shows "SURGE 1 CLEARED, +60 Field Credits", then a lull of 10-25 s (superseded by §3.63: no ready-up).
 - [ ] Bolters appear from surge 3, Bulwarks from surge 6. Surge 4 is a SWARM (only Husks, more of them at once). Surge 5 is a SIEGE (3 or more walls at once, a Bulwark may appear early).
 - [ ] Later surges have more enemies and they take more hits (the overlay line shows the plan: count, budget, at once, directions, health scale).
 - [ ] Die during a run: "SQUAD WIPED". N starts a new run (remaining enemies collapse).
@@ -117,7 +117,7 @@ Solo, in the sandbox:
 Two players (set up as in §3.1):
 
 - [ ] Host presses N. The client sees the same panel, timer and announcements. Client pressing N says the host starts runs.
-- [ ] Lull shows "0/2 ready". G on the client shows 1/2; G on the host starts the surge.
+- [ ] (Superseded by §3.63: ready-up removed.)
 - [ ] Kills by the client give the client the credits (shown on the client), kills by the host give the host credits. Surge clear pays both.
 - [ ] Spawn count is higher than solo for the same surge (the overlay plan line on the host).
 - [ ] One player dies: the run continues. Both dead at the same time: SQUAD WIPED on both screens.
@@ -704,6 +704,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Every firearm model is bare: no iron sights, scope (Vesper), holo (Wasp), carry handles (Anvil, Hailstorm), leaf sight (Mule), suppressor, flash hiders or brakes, bipod or foregrips. Barrels end where the muzzle flash appears.
 - [ ] Aiming down sights with no optic fitted: the screen centre sits just over the top of the gun and nothing on the model covers the aiming dot. The Vesper no longer opens a scope view on its own.
 - [ ] Fitting a Red Dot, Holo or Sniper Scope in the Armory still puts its sight on the aiming dot for every gun, including the Wasp, Mule, Vesper and Hailstorm, which couldn't take optics before.
+
+### 3.63 Random lulls, no ready-up, "Surge N incoming"
+- [ ] Survival and Endless: after a surge is cleared there is no LULL pop-up. The top panel reads "SURGE N INCOMING / Restock and get in position" with no countdown.
+- [ ] Each lull lasts somewhere between 10 and 25 s (varies surge to surge; Endless Relentless still trims it). G does nothing.
+- [ ] About 3 s before the surge, the big announcement "SURGE N INCOMING" shows with the surge type (Swarm, Siege, Elite...) and any Endless modifiers; when the surge starts there is no second announcement.
+- [ ] The first lull still says "DEPLOYMENT STARTED". Operations still show "LULL" with their objective timer and "OPERATION STARTED".
+- [ ] Co-op: host and client see the incoming call at the same moment.
 
 ## 4. Regression map
 
