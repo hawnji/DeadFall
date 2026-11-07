@@ -38,6 +38,7 @@ namespace Deadfall.Game
         private const byte GrantCacheAmmo = 2;
         private const byte GrantHeal = 3;
         private const byte GrantGrenades = 4;
+        private const byte GrantRefit = 5;
 
         private readonly Dictionary<int, SupplyCache> _caches = new Dictionary<int, SupplyCache>();
         private readonly Dictionary<ushort, WeaponDrop> _drops = new Dictionary<ushort, WeaponDrop>();
@@ -126,6 +127,13 @@ namespace Deadfall.Game
             Grant(to, GrantWeapon, def, mods);
         }
 
+        /// <summary>Host/offline: new attachments on a gun the player already carries (Mod Bench), keeping its ammo.</summary>
+        public void GiveRefit(ulong to, WeaponDefinition def, WeaponMods mods)
+        {
+            if (!IsAuthority || def == null) return;
+            Grant(to, GrantRefit, def, mods);
+        }
+
         /// <summary>Host/offline: refills every gun's reserve for one player (ammo stations).</summary>
         public void GiveAmmo(ulong to)
         {
@@ -212,6 +220,13 @@ namespace Deadfall.Game
             }
             if (def == null) return;
             int slot = weapons.SlotFor(def);
+            if (kind == GrantRefit && weapons.DefinitionAt(slot) == def)
+            {
+                weapons.Refit(slot, mods);
+                string parts = mods != null && mods.Attachments.Count > 0 ? mods.Describe() : "no attachments";
+                RunToasts.Show($"{def.DisplayName} built: {parts}", new Color(0.55f, 0.85f, 1f));
+                return;
+            }
             WeaponDefinition old = weapons.DefinitionAt(slot);
             weapons.ReplaceSlot(slot, def, mods);
             string extra = mods != null && mods.Describe().Length > 0 ? $" ({mods.Describe()})" : string.Empty;
@@ -235,7 +250,7 @@ namespace Deadfall.Game
             IReadOnlyList<WeaponDefinition> all = WeaponCatalog.All;
             WeaponDefinition def = all[_dropRng.Range(0, all.Count)];
             WeaponTier tier = boss ? WeaponTier.Prototype : LootRules.RollTier(_dropRng, waves.Surge);
-            WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category);
+            WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category, def.ContentId);
             PlayerIdentity killer = PlayerIdentity.Of(e.Killer);
             ulong finder = killer != null && !boss ? killer.ClientId : ulong.MaxValue; // the boss drop is anyone's
             ushort id = _nextDropId++;
@@ -253,7 +268,7 @@ namespace Deadfall.Game
             WaveManager waves = Waves;
             WeaponTier tier = LootRules.RollTier(_dropRng, waves != null ? waves.Surge : 1);
             if (tier < minTier) tier = minTier;
-            WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category);
+            WeaponMods mods = LootRules.RollMods(_dropRng, tier, def.Category, def.ContentId);
             ushort id = _nextDropId++;
             if (_nextDropId == 0) _nextDropId = 1;
             SpawnDrop(id, def, mods, position, ulong.MaxValue, 0);

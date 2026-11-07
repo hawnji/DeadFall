@@ -31,7 +31,7 @@ namespace Deadfall.Game
         public static Deadfall.Rules.Combat.WeaponMods ArmoryMods(ProfileService profile, WeaponDefinition w)
         {
             if (profile == null || w == null || w.Kind != WeaponKind.Firearm) return null;
-            return profile.Data.Attachments.TryGetValue(w.ContentId, out string[] ids) ? Deadfall.Rules.Combat.ArmoryAttachments.Build(ids) : null;
+            return profile.Data.Attachments.TryGetValue(w.ContentId, out string[] ids) ? Deadfall.Rules.Combat.ArmoryAttachments.Build(ids, w.ContentId, w.Category) : null;
         }
 
         /// <summary>Content ids of the class default, in slot order.</summary>

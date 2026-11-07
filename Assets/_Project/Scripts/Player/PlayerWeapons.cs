@@ -221,6 +221,34 @@ namespace Deadfall.Player
             LoadoutChanged?.Invoke();
         }
 
+        /// <summary>
+        /// New attachments on the weapon already in a slot (Mod Bench): the rounds it had carry over (clamped to the new
+        /// magazine and reserve), so refitting is never a free reload. Equips it.
+        /// </summary>
+        public void Refit(int index, WeaponMods mods)
+        {
+            if (index < 0 || index >= _slots.Count) return;
+            Slot old = _slots[index];
+            Slot slot = MakeSlot(old.Definition, mods);
+            if (old.Firearm != null && slot.Firearm != null)
+            {
+                int reserve = old.Firearm.Reserve;
+                slot.Firearm = new WeaponStateMachine(slot.Stats, old.Firearm.Magazine, 0);
+                _slots[index] = slot;
+                ApplyReserveCaps(false);
+                slot.Firearm.AddReserve(reserve);
+            }
+            else
+            {
+                _slots[index] = slot;
+                ApplyReserveCaps(false);
+            }
+            if (index < _loadout.Count) { while (_loadoutMods.Count <= index) _loadoutMods.Add(null); _loadoutMods[index] = mods; }
+            _current = -1;
+            Equip(index);
+            LoadoutChanged?.Invoke();
+        }
+
         /// <summary>Replaces the whole loadout at runtime (run start, class change).</summary>
         public void ResetLoadout(IList<LoadoutEntry> entries)
         {

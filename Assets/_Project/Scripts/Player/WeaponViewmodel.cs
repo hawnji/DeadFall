@@ -253,6 +253,10 @@ namespace Deadfall.Player
             return true;
         }
 
+        /// <summary>The bare muzzle point in model space (before muzzle devices), for previews of the weapon.</summary>
+        public static Vector3 MuzzlePoint(WeaponDefinition def) =>
+            new Vector3(0f, def != null && def.Kind == WeaponKind.Melee ? 0f : 0.02f, MuzzleDistance(def != null ? def.Category : WeaponCategory.AssaultRifle));
+
         /// <summary>Model id for a weapon: its content id with the dot replaced.</summary>
         public static string ModelId(WeaponDefinition def) => def != null && def.ContentId != null ? def.ContentId.Replace('.', '_') : null;
 
@@ -269,113 +273,18 @@ namespace Deadfall.Player
 
         // ---------------------------------------------------------------- attachments
 
-        /// <summary>Simple models for the fitted attachments: optic on the rail, muzzle device, underbarrel.</summary>
+        /// <summary>The fitted attachments' models (<see cref="WeaponDresser"/>); muzzle devices move the muzzle point forward.</summary>
         private void AddAttachments(WeaponDefinition def, WeaponMods mods)
         {
             if (mods == null || def.Kind != WeaponKind.Firearm) return;
-            WeaponSights.Sight sight = WeaponSights.For(def);
-            float muzzleZ = _muzzle != null ? _muzzle.localPosition.z : MuzzleDistance(def.Category);
-            float boreY = _muzzle != null ? _muzzle.localPosition.y : 0.02f;
-            Color dark = new Color(0.09f, 0.09f, 0.1f), metal = new Color(0.25f, 0.26f, 0.28f);
-            AttachmentDef optic = WeaponSights.Optic(def, mods);
-            if (optic != null)
-            {
-                float rail = sight.RailY, z = sight.RailZ, line = rail + WeaponSights.OpticLift(optic);
-                CreatePart("Mount", new Vector3(0.026f, 0.012f, 0.05f), new Vector3(0f, rail + 0.006f, z), metal);
-                switch (optic.Id)
-                {
-                    case "att.red_dot":
-                        CreatePart("RedDotHousing", new Vector3(0.03f, 0.03f, 0.04f), new Vector3(0f, line, z - 0.005f), dark);
-                        // Hollow it: the housing is drawn as a frame round an open window, with the dot on the sight line.
-                        CreatePart("RedDotTop", new Vector3(0.034f, 0.006f, 0.042f), new Vector3(0f, line + 0.018f, z), dark);
-                        Glow("RedDot", new Vector3(0.0035f, 0.0035f, 0.001f), new Vector3(0f, line, z + 0.016f), new Color(1f, 0.15f, 0.1f));
-                        StripCentre("RedDotHousing");
-                        break;
-                    case "att.holo_scope":
-                        CreatePart("HoloBase", new Vector3(0.034f, 0.012f, 0.07f), new Vector3(0f, rail + 0.016f, z), dark);
-                        CreatePart("HoloPostL", new Vector3(0.004f, 0.04f, 0.008f), new Vector3(-0.018f, line, z + 0.03f), dark);
-                        CreatePart("HoloPostR", new Vector3(0.004f, 0.04f, 0.008f), new Vector3(0.018f, line, z + 0.03f), dark);
-                        CreatePart("HoloTop", new Vector3(0.04f, 0.005f, 0.012f), new Vector3(0f, line + 0.02f, z + 0.03f), dark);
-                        Glow("HoloRing", new Vector3(0.012f, 0.0015f, 0.001f), new Vector3(0f, line + 0.006f, z + 0.03f), new Color(0.3f, 1f, 0.45f));
-                        Glow("HoloDot", new Vector3(0.003f, 0.003f, 0.001f), new Vector3(0f, line, z + 0.03f), new Color(0.3f, 1f, 0.45f));
-                        break;
-                    case "att.sniper_scope":
-                        Tube("ScopeTube", 0.022f, 0.24f, new Vector3(0f, line, z), dark);
-                        Tube("ScopeBell", 0.03f, 0.06f, new Vector3(0f, line, z + 0.12f), dark);
-                        Tube("ScopeEye", 0.027f, 0.04f, new Vector3(0f, line, z - 0.12f), dark);
-                        CreatePart("ScopeRingA", new Vector3(0.012f, line - rail, 0.012f), new Vector3(0f, (line + rail) * 0.5f, z - 0.06f), metal);
-                        CreatePart("ScopeRingB", new Vector3(0.012f, line - rail, 0.012f), new Vector3(0f, (line + rail) * 0.5f, z + 0.06f), metal);
-                        Glow("ScopeLens", new Vector3(0.05f, 0.05f, 0.002f), new Vector3(0f, line, z + 0.151f), new Color(0.2f, 0.5f, 0.9f));
-                        break;
-                }
-            }
-            foreach (AttachmentDef a in mods.Attachments)
-            {
-                switch (a.Id)
-                {
-                    case "att.compensator":
-                        Tube("Compensator", 0.019f, 0.06f, new Vector3(0f, boreY, muzzleZ + 0.03f), dark);
-                        CreatePart("CompPort", new Vector3(0.04f, 0.006f, 0.01f), new Vector3(0f, boreY + 0.012f, muzzleZ + 0.035f), metal);
-                        ExtendMuzzle(0.06f);
-                        break;
-                    case "att.long_barrel":
-                        Tube("LongBarrel", 0.012f, 0.13f, new Vector3(0f, boreY, muzzleZ + 0.065f), metal);
-                        ExtendMuzzle(0.13f);
-                        break;
-                    case "att.foregrip":
-                        CreatePart("Foregrip", new Vector3(0.024f, 0.075f, 0.028f), new Vector3(0f, boreY - 0.075f, muzzleZ * 0.62f), dark);
-                        break;
-                    case "att.laser":
-                        CreatePart("Laser", new Vector3(0.022f, 0.022f, 0.06f), new Vector3(0.026f, boreY - 0.02f, muzzleZ * 0.6f), dark);
-                        Glow("LaserEmitter", new Vector3(0.008f, 0.008f, 0.002f), new Vector3(0.026f, boreY - 0.02f, muzzleZ * 0.6f + 0.031f), new Color(1f, 0.1f, 0.1f));
-                        break;
-                    case "att.extended_mag":
-                        CreatePart("ExtMag", new Vector3(0.028f, 0.06f, 0.04f), new Vector3(0f, -0.14f, sight.RailZ + 0.04f), dark);
-                        break;
-                }
-            }
+            Vector3 muzzle = _muzzle != null ? _muzzle.localPosition : new Vector3(0f, 0.02f, MuzzleDistance(def.Category));
+            float extend = WeaponDresser.Fit(_model, def, mods, muzzle, gameObject.layer);
+            if (extend > 0f) ExtendMuzzle(extend);
         }
 
         private void ExtendMuzzle(float by)
         {
             if (_muzzle != null) _muzzle.localPosition += new Vector3(0f, 0f, by);
-        }
-
-        /// <summary>Removes the named part and puts four thin bars in its place, leaving the window open to look through.</summary>
-        private void StripCentre(string partName)
-        {
-            Transform t = _model.Find(partName);
-            if (t == null) return;
-            Vector3 size = t.localScale, at = t.localPosition;
-            Color c = new Color(0.09f, 0.09f, 0.1f);
-            float w = 0.004f;
-            CreatePart(partName + "L", new Vector3(w, size.y, size.z), at + new Vector3(-size.x * 0.5f + w * 0.5f, 0f, 0f), c);
-            CreatePart(partName + "R", new Vector3(w, size.y, size.z), at + new Vector3(size.x * 0.5f - w * 0.5f, 0f, 0f), c);
-            CreatePart(partName + "B", new Vector3(size.x, w, size.z), at + new Vector3(0f, -size.y * 0.5f + w * 0.5f, 0f), c);
-            Destroy(t.gameObject);
-        }
-
-        private void Tube(string partName, float radius, float length, Vector3 centre, Color color)
-        {
-            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            part.name = partName;
-            Object.Destroy(part.GetComponent<Collider>());
-            part.layer = gameObject.layer;
-            part.transform.SetParent(_model, false);
-            part.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            part.transform.localScale = new Vector3(radius * 2f, length * 0.5f, radius * 2f);
-            part.transform.localPosition = centre;
-            var r = part.GetComponent<Renderer>();
-            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            r.receiveShadows = false;
-            r.sharedMaterial = RuntimeMaterials.CreateLit(color);
-        }
-
-        private void Glow(string partName, Vector3 size, Vector3 localPos, Color color)
-        {
-            CreatePart(partName, size, localPos, color);
-            Transform t = _model.Find(partName);
-            if (t != null) t.GetComponent<Renderer>().sharedMaterial = RuntimeMaterials.CreateEmissive(color, 3f);
         }
 
         private void CreatePart(string partName, Vector3 size, Vector3 localPos, Color color)

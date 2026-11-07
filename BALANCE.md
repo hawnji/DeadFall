@@ -40,6 +40,10 @@ A Husk (110 HP) takes about 5 rifle body shots at surge 1 and about 11 at surge 
 
 Drop chance is 1.2% per threat point, at most 20%, which works out to about one weapon every 1–2 surges in mid-game. By surge 20 the tier odds are 20% Prototype, 50% Refined and 30% Standard. **Verdict: unchanged.**
 
+## Mod Bench attachments (first pass, 2026-11-07)
+
+Prices (`ModBenchRules.Price`): Red Dot 350, Holo 500, Sniper Scope 900, Compensator 450, Long Barrel 500, Foregrip 400, Laser 300, Extended Mag 600, Fast Mag 450, Light Stock 350, Heavy Stock 400. A fully kitted rifle costs about 2,300, a bit over two Forge steps' worth, so it competes with forging and perks. You only pay for new parts, and removing parts is free. Bench parts don't count against a tier's attachment slots (tiers only limit what loot rolls). Which gun takes which part is in `AttachmentFit`.
+
 ## Scrap and structures
 
 Scrap comes from kills (3 per threat point, ×1.5 for Engineers) plus 20 per surge and 40 per objective. That is roughly 200 a surge at surge 10. A sentry costs 120 (54 DPS, 300 rounds, refilling costs 30) and an Arc Fence costs 90. **Verdict: unchanged.** The drone is weak in attack mode (12–24 DPS), but it follows you and repairs things, so that's acceptable for now.

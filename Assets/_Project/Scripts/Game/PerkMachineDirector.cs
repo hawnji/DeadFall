@@ -23,7 +23,7 @@ namespace Deadfall.Game
     public sealed class PerkMachineDirector : MonoBehaviour, IWeaponHandlingSource
     {
         private const string Msg = "df.perk";
-        private const byte OpBuy = 0, OpGrant = 1, OpForge = 2;
+        private const byte OpBuy = 0, OpGrant = 1, OpForge = 2, OpModBuild = 3;
         private const float UseRange = 4f;
 
         public const float SwiftReload = 1.5f, SwiftEquip = 1.3f;
@@ -40,6 +40,7 @@ namespace Deadfall.Game
         private BuiltMap _builtFor;
         private readonly List<PerkMachine> _machines = new List<PerkMachine>(PerkMachine.Count);
         private WeaponForge _forge;
+        private ModBench _bench;
         private readonly List<Vector3> _positions = new List<Vector3>(16);
         private DeterministicRandom _forgeRng = new DeterministicRandom(0x0F0E6EUL);
 
@@ -53,6 +54,7 @@ namespace Deadfall.Game
         public static PerkMachineDirector Current { get; private set; }
         public IReadOnlyList<PerkMachine> Machines => _machines;
         public WeaponForge Forge => _forge;
+        public ModBench Bench => _bench;
 
         /// <summary>Revive channel speed for the local player (Field Medic). Read by the revive prompt.</summary>
         public static float LocalReviveSpeed => Owned[(int)PerkKind.FieldMedic] ? MedicReviveSpeed : 1f;
@@ -95,6 +97,8 @@ namespace Deadfall.Game
             _machines.Clear();
             if (_forge != null) Destroy(_forge.gameObject);
             _forge = null;
+            if (_bench != null) Destroy(_bench.gameObject);
+            _bench = null;
             _positions.Clear();
             _builtFor = null;
         }
@@ -138,7 +142,14 @@ namespace Deadfall.Game
                 _forge = WeaponForge.Create(parent, fp, fy);
                 _positions.Add(fp);
             }
-            GameLog.Info("Perks", $"{_machines.Count} perk machines placed, forge {(_forge != null ? "placed" : "missing")}.");
+            // The Mod Bench goes in the first sector, so attachments can be bought from the start.
+            if (TryPlace(map, 0, ForgeShape, rng, rooms, out Vector3 bp, out float by)
+                || TryPlaceAnywhere(map, sectors, ForgeShape, rng, rooms, out bp, out by))
+            {
+                _bench = ModBench.Create(parent, bp, by);
+                _positions.Add(bp);
+            }
+            GameLog.Info("Perks", $"{_machines.Count} perk machines placed, forge {(_forge != null ? "placed" : "missing")}, mod bench {(_bench != null ? "placed" : "missing")}.");
             return _positions;
         }
 
@@ -213,6 +224,42 @@ namespace Deadfall.Game
             }
         }
 
+        /// <summary>
+        /// The local player pressed BUILD at the Mod Bench: <paramref name="desired"/> is the gun in hand with the picked
+        /// parts. The host charges for the new parts and sends the refit back (ammo carries over).
+        /// </summary>
+        public void RequestModBuild(PlayerWeapons weapons, WeaponMods desired)
+        {
+            if (weapons == null || _bench == null || desired == null) return;
+            WeaponDefinition def = weapons.CurrentDefinition;
+            if (def == null || def.Kind != WeaponKind.Firearm) return;
+            WeaponMods current = weapons.CurrentMods ?? WeaponMods.Standard();
+            if (IsAuthority)
+            {
+                HandleModBuild(_session != null ? _session.LocalClientId : 0UL, def, current, desired);
+                return;
+            }
+            byte[] a = current.Encode(), b = desired.Encode();
+            using (var w = new FastBufferWriter(8 + a.Length + b.Length, Allocator.Temp))
+            {
+                w.WriteValueSafe(OpModBuild);
+                w.WriteValueSafe((byte)Mathf.Max(0, WeaponCatalog.IndexOf(def)));
+                w.WriteValueSafe((byte)a.Length);
+                foreach (byte x in a) w.WriteValueSafe(x);
+                w.WriteValueSafe((byte)b.Length);
+                foreach (byte x in b) w.WriteValueSafe(x);
+                _session.SendToServer(Msg, w, NetworkDelivery.ReliableSequenced);
+            }
+        }
+
+        private static WeaponMods ReadMods(FastBufferReader r)
+        {
+            r.ReadValueSafe(out byte len);
+            var bytes = new byte[len];
+            for (int i = 0; i < len; i++) r.ReadValueSafe(out bytes[i]);
+            return WeaponMods.Decode(bytes);
+        }
+
         private void OnMessage(ulong sender, FastBufferReader r)
         {
             r.ReadValueSafe(out byte op);
@@ -236,6 +283,13 @@ namespace Deadfall.Game
                 var bytes = new byte[len];
                 for (int i = 0; i < len; i++) r.ReadValueSafe(out bytes[i]);
                 HandleForge(sender, WeaponCatalog.At(defIndex), WeaponMods.Decode(bytes));
+            }
+            else if (op == OpModBuild)
+            {
+                r.ReadValueSafe(out byte defIndex);
+                WeaponMods current = ReadMods(r);
+                WeaponMods desired = ReadMods(r);
+                HandleModBuild(sender, WeaponCatalog.At(defIndex), current, desired);
             }
         }
 
@@ -279,9 +333,29 @@ namespace Deadfall.Game
                 economy.Notify(who, "Not enough Field Credits");
                 return;
             }
-            WeaponMods up = LootRules.Upgrade(_forgeRng, mods, def.Category);
+            WeaponMods up = LootRules.Upgrade(_forgeRng, mods, def.Category, def.ContentId);
             economy.GiveWeapon(who, def, up);
             GameAudio.Play(SfxId.Explosion, _forge.transform.position + Vector3.up * 1.1f, 0.35f);
+        }
+
+        private void HandleModBuild(ulong who, WeaponDefinition def, WeaponMods current, WeaponMods desired)
+        {
+            if (_bench == null || def == null || def.Kind != WeaponKind.Firearm || desired == null) return;
+            if (!CanUse(who, _bench.transform.position, out WaveManager waves, out RunEconomy economy))
+            {
+                if (economy != null && (waves == null || !waves.IsRunning)) economy.Notify(who, "Start a run to use the Mod Bench");
+                return;
+            }
+            WeaponMods next = ModBenchRules.Build(current, desired.Attachments, def.ContentId, def.Category);
+            if (ModBenchRules.Same(current, next)) return;
+            int price = ModBenchRules.Cost(current, next);
+            if (!waves.TrySpendCredits(who, price))
+            {
+                economy.Notify(who, "Not enough Field Credits");
+                return;
+            }
+            economy.GiveRefit(who, def, next);
+            GameAudio.Play(SfxId.UiConfirm, _bench.transform.position + Vector3.up * 1.1f);
         }
 
         // ---------------------------------------------------------------- local perks
