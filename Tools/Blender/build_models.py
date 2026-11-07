@@ -2828,6 +2828,367 @@ def preview_weapons(weapons, out_dir):
     return path
 
 
+# ----------------------------------------------------------------------------------------------- attachments
+# Review-only for now: built and rendered with --attachments, never exported to Resources/Models.
+# Origins (Unity space, +Z forward):
+#   optics       rail top centre, the window/tube faces +Z
+#   muzzle       bore centre at the muzzle face, extends +Z
+#   underbarrel  rail clamp top, hangs -Y
+#   magazines    mag well bottom centre, hang -Y
+#   stocks       receiver rear on the bore line, extend -Z
+
+def att_mount(m, length, y=0.0, z=0.0, w=0.026):
+    """A rail clamp: low base block with two cross bolts."""
+    m.box((0, y + 0.004, z), (w, 0.008, length), STEEL_M, bevel=0.0015)
+    for s in (-1, 1):
+        m.cyl((s * (w / 2 + 0.001), y + 0.004, z + length * 0.25), (0.007, 0.004, 0.007), STEEL_L, rot=(0, 0, 90), segments=6)
+    m.box((w / 2 + 0.003, y + 0.004, z - length * 0.2), (0.004, 0.006, 0.012), STEEL_L, bevel=0.0)  # throw lever
+
+
+def att_red_dot():
+    """Mini red dot: low body, open hood, green-tinted window centred 0.03 above the rail, red emitter."""
+    m = Model("att_red_dot", triangulate=True)
+    att_mount(m, 0.04, z=-0.004)
+    m.box((0, 0.014, -0.006), (0.028, 0.014, 0.044), POLY, bevel=0.003)  # body
+    for s in (-1, 1):
+        m.box((s * 0.0155, 0.031, 0.008), (0.004, 0.026, 0.016), POLY, bevel=0.0015)  # hood sides
+    m.sym([(0.0, 0.042), (0.016, 0.042), (0.016, 0.048), (0.004, 0.047)], 0.0175, POLY, chamfer=0.001)  # hood top
+    m.box((0, 0.031, 0.012), (0.027, 0.024, 0.002), GLASS_G, bevel=0.0)  # window
+    m.box((0, 0.024, -0.012), (0.004, 0.004, 0.003), DOT_R, bevel=0.0)  # emitter
+    m.cyl((0.016, 0.014, -0.012), (0.012, 0.004, 0.012), STEEL_L, rot=(0, 0, 90), segments=8)  # brightness dial
+    return m
+
+
+def att_holo():
+    """Holographic sight: battery tunnel base, tall square hood, window centred 0.036 above the rail."""
+    m = Model("att_holo", triangulate=True)
+    att_mount(m, 0.07, z=0.0)
+    m.box((0, 0.013, 0.0), (0.032, 0.014, 0.08), POLY, bevel=0.003)  # body / battery tunnel
+    m.cyl((0, 0.013, 0.041), (0.016, 0.004, 0.016), STEEL_L, rot=(90, 0, 0), segments=8)  # battery cap
+    for s in (-1, 1):
+        m.box((s * 0.018, 0.038, 0.012), (0.004, 0.036, 0.05), POLY, bevel=0.0015)  # hood sides
+    m.box((0, 0.058, 0.012), (0.04, 0.006, 0.05), POLY, bevel=0.0015)  # hood top
+    m.box((0, 0.037, -0.011), (0.032, 0.032, 0.002), GLASS_G, bevel=0.0)  # rear window
+    m.box((0, 0.037, 0.035), (0.032, 0.032, 0.002), GLASS_G, bevel=0.0)  # front window
+    m.box((0, 0.022, -0.03), (0.022, 0.006, 0.016), STEEL_L, bevel=0.0)  # up/down buttons
+    m.box((0, 0.022, -0.03), (0.003, 0.0065, 0.004), DOT_R, bevel=0.0)
+    return m
+
+
+def att_sniper_scope():
+    """Variable scope: 30 mm tube centred 0.048 above the rail, bells front and back, turrets, two rings."""
+    m = Model("att_sniper_scope", triangulate=True)
+    y = 0.048
+    for z in (-0.045, 0.055):  # rings
+        m.box((0, 0.004, z), (0.028, 0.008, 0.02), STEEL_M, bevel=0.0015)  # clamp
+        m.box((0, 0.019, z), (0.016, 0.026, 0.014), STEEL_M, bevel=0.0015)  # riser
+        tube(m, z - 0.008, z + 0.008, 0.038, STEEL_M, y=y, segments=12)
+        m.cyl((0.017, 0.006, z), (0.006, 0.004, 0.006), STEEL_L, rot=(0, 0, 90), segments=6)
+    tube(m, -0.09, 0.1, 0.03, POLY, y=y, segments=12)  # main tube
+    m.cone((0, y, 0.115), (0.044, 0.03, 0.044), POLY, rot=(90, 0, 0), segments=12)  # objective taper (points back)
+    tube(m, 0.12, 0.17, 0.046, POLY, y=y, segments=12)  # objective bell
+    tube(m, 0.17, 0.172, 0.04, GLASS_G, y=y, segments=12)
+    tube(m, -0.14, -0.09, 0.04, POLY, y=y, segments=12)  # eyepiece
+    tube(m, -0.12, -0.112, 0.042, RUBBER, y=y, segments=12)  # zoom ring
+    tube(m, -0.142, -0.14, 0.034, GLASS_G, y=y, segments=12)
+    m.cyl((0, y + 0.022, 0.0), (0.022, 0.016, 0.022), STEEL_M, segments=10)  # elevation turret
+    m.cyl((0.022, y, 0.0), (0.022, 0.016, 0.022), STEEL_M, rot=(0, 0, 90), segments=10)  # windage turret
+    m.cyl((-0.019, y, 0.0), (0.016, 0.01, 0.016), STEEL_L, rot=(0, 0, 90), segments=8)  # parallax
+    return m
+
+
+def att_compensator():
+    """Ported compensator for a ~0.02 bore barrel: clamp collar, three top ports, side slots, crown."""
+    m = Model("att_compensator", triangulate=True)
+    tube(m, 0.0, 0.012, 0.028, STEEL_M, y=0.0)  # collar
+    tube(m, 0.012, 0.07, 0.026, STEEL_D, y=0.0, segments=10)
+    for z in (0.026, 0.04, 0.054):
+        m.box((0, 0.0125, z), (0.012, 0.003, 0.007), POLY, bevel=0.0)  # top ports
+        for s in (-1, 1):
+            m.box((s * 0.0125, 0.0, z), (0.003, 0.012, 0.007), POLY, bevel=0.0)
+    tube(m, 0.07, 0.0705, 0.012, POLY, y=0.0)  # bore
+    return m
+
+
+def att_long_barrel():
+    """Barrel extension: threaded collar, fluted extension, crowned muzzle."""
+    m = Model("att_long_barrel", triangulate=True)
+    tube(m, 0.0, 0.018, 0.026, STEEL_M, y=0.0)
+    tube(m, 0.018, 0.16, 0.02, STEEL_D, y=0.0, segments=10)
+    for a in range(4):
+        ang = math.radians(a * 90 + 45)
+        m.box((math.cos(ang) * 0.0095, math.sin(ang) * 0.0095, 0.09), (0.003, 0.003, 0.1), POLY, rot=(0, 0, a * 90 + 45), bevel=0.0)
+    tube(m, 0.155, 0.165, 0.022, STEEL_L, y=0.0)  # crown
+    tube(m, 0.165, 0.1655, 0.011, POLY, y=0.0)
+    return m
+
+
+def att_foregrip():
+    """Vertical foregrip: rail clamp, raked grip with finger ribs, rubber cap."""
+    m = Model("att_foregrip", triangulate=True)
+    m.box((0, -0.006, 0.0), (0.028, 0.012, 0.045), STEEL_M, bevel=0.0015)
+    m.box((0.016, -0.006, -0.01), (0.004, 0.008, 0.012), STEEL_L, bevel=0.0)
+    m.limb((0, -0.012, 0.0), (0, -0.095, -0.012), (0.026, 0.026), POLY, kind="cyl")
+    for t in (0.35, 0.55, 0.75):
+        m.limb((0, -0.012 - 0.083 * t + 0.003, -0.012 * t), (0, -0.012 - 0.083 * t - 0.003, -0.012 * t), (0.029, 0.029), POLY_L, kind="cyl")
+    m.limb((0, -0.092, -0.0115), (0, -0.102, -0.013), (0.03, 0.03), RUBBER, kind="cyl")
+    return m
+
+
+def att_laser():
+    """Laser module: clamp, boxy housing, red laser lens and a green-tinted torch lens, rear pressure switch."""
+    m = Model("att_laser", triangulate=True)
+    m.box((0, -0.004, 0.0), (0.024, 0.008, 0.05), STEEL_M, bevel=0.0015)
+    m.box((0, -0.022, 0.002), (0.028, 0.028, 0.066), POLY, bevel=0.003)
+    tube(m, 0.035, 0.037, 0.012, DOT_R, y=-0.016, x=-0.006)
+    tube(m, 0.035, 0.037, 0.012, GLASS_G, y=-0.026, x=0.005)
+    m.box((0, -0.022, -0.033), (0.014, 0.012, 0.004), RUBBER, bevel=0.0)  # switch
+    m.box((0.0145, -0.022, 0.0), (0.002, 0.014, 0.03), STEEL_L, bevel=0.0)  # adjuster panel
+    return m
+
+
+def att_ext_mag_curved():
+    """Extended curved rifle mag (about 1.5x the stock one), steel with a polymer floor plate."""
+    m = Model("att_ext_mag_curved", triangulate=True)
+    curved_mag(m, (-0.034, 0.0), 0.031, 0.29, 0.15, 0.028, 0.016, STEEL_M, steps=9)
+    m.sym([(0.112, -0.292), (0.214, -0.28), (0.218, -0.296), (0.114, -0.308)], 0.018, POLY, chamfer=0.002)
+    for i in range(4):  # stiffening ribs
+        t = (i + 1) / 5
+        m.box((0, -0.29 * t, 0.15 * t * t + 0.012), (0.034, 0.004, 0.05), STEEL_D, rot=(-25 * t, 0, 0), bevel=0.0)
+    return m
+
+
+def att_ext_mag_stick():
+    """Extended straight stick mag for SMGs, pistols and the DMR (scaled per gun)."""
+    m = Model("att_ext_mag_stick", triangulate=True)
+    m.sym([(-0.022, 0.0), (0.022, 0.0), (0.03, -0.27), (-0.016, -0.27)], 0.014, STEEL_M, chamfer=0.003)
+    for i in range(7):
+        y = -0.03 - i * 0.034
+        m.box((0, y, 0.002 + i * 0.001), (0.03, 0.006, 0.042), STEEL_D, bevel=0.0)
+    m.sym([(-0.02, -0.268), (0.034, -0.268), (0.036, -0.282), (-0.02, -0.282)], 0.016, POLY, chamfer=0.002)
+    m.box((0, -0.25, 0.031), (0.028, 0.02, 0.004), TAN, bevel=0.0)  # pull tab
+    return m
+
+
+def att_ext_mag_top():
+    """Kestrel's extended top mag: longer translucent case that overhangs the back of the receiver."""
+    m = Model("att_ext_mag_top", triangulate=True)
+    m.box((0, 0.008, -0.04), (0.032, 0.016, 0.44), GLASS_G, bevel=0.002)
+    m.box((0, 0.008, -0.264), (0.034, 0.018, 0.012), POLY, bevel=0.002)  # end cap
+    for i in range(14):
+        m.box((0, 0.0165, -0.24 + i * 0.03), (0.028, 0.002, 0.004), BRASS, bevel=0.0)
+    return m
+
+
+def att_ext_drum():
+    """Big drum for the Hailstorm and Anvil: wider and deeper than the Hailstorm's stock drum, with a wind key."""
+    m = Model("att_ext_drum", triangulate=True)
+    m.box((0, -0.02, 0.0), (0.05, 0.04, 0.06), POLY, bevel=0.002)  # neck
+    m.cyl((0, -0.11, 0.0), (0.2, 0.09, 0.2), POLY, rot=(0, 0, 90), segments=16)
+    m.cyl((0, -0.11, 0.0), (0.16, 0.092, 0.16), POLY_L, rot=(0, 0, 90), segments=16)
+    m.cyl((0, -0.11, 0.0), (0.05, 0.094, 0.05), STEEL_M, rot=(0, 0, 90), segments=8)
+    m.box((0.05, -0.11, 0.0), (0.006, 0.01, 0.05), STEEL_L, bevel=0.0)  # wind key
+    for i in range(7):
+        ang = math.radians(200 + i * 22)
+        m.box((0.0465, -0.11 + math.sin(ang) * 0.065, math.cos(ang) * 0.065), (0.003, 0.012, 0.012), SHELL_RED, bevel=0.0)
+    return m
+
+
+def att_fast_mag():
+    """Fast mag: two stick mags taped side by side, the spare offset forward (shown at rifle-mag size)."""
+    m = Model("att_fast_mag", triangulate=True)
+    for x, dz in ((0.0, 0.0), (-0.034, 0.012)):
+        m.sym([(-0.03 + dz, 0.0 - (0.0 if x == 0 else 0.03)), (0.03 + dz, 0.0 - (0.0 if x == 0 else 0.03)),
+               (0.05 + dz, -0.2), (-0.012 + dz, -0.2)], 0.0155, STEEL_M, chamfer=0.003, x=x)
+        m.sym([(-0.014 + dz, -0.198), (0.054 + dz, -0.198), (0.056 + dz, -0.21), (-0.014 + dz, -0.21)], 0.017, POLY, chamfer=0.002, x=x)
+    for y in (-0.07, -0.15):
+        m.box((-0.017, y, 0.016 + (-y) * 0.1), (0.072, 0.022, 0.07), TAN, bevel=0.003)  # tape wraps
+    return m
+
+
+def att_speedloader():
+    """Bulldog fast mag: six-round speedloader with a knurled knob (rides on the belt, shown on its own)."""
+    m = Model("att_speedloader", triangulate=True)
+    m.cyl((0, 0.0, 0.0), (0.054, 0.016, 0.054), POLY, rot=(90, 0, 0), segments=12)
+    m.cyl((0, 0.0, -0.016), (0.02, 0.018, 0.02), STEEL_L, rot=(90, 0, 0), segments=8)
+    for a in range(6):
+        ang = a * math.pi / 3
+        x, y = 0.017 * math.cos(ang), 0.017 * math.sin(ang)
+        m.cyl((x, y, 0.018), (0.011, 0.03, 0.011), BRASS, rot=(90, 0, 0), segments=8)
+        m.cyl((x, y, 0.035), (0.009, 0.006, 0.009), STEEL_D, rot=(90, 0, 0), segments=8)
+    return m
+
+
+def att_light_stock():
+    """Skeleton stock: buffer tube, two thin struts, small rubber pad (light, quick to aim)."""
+    m = Model("att_light_stock", triangulate=True)
+    tube(m, -0.12, 0.0, 0.026, STEEL_M, y=0.0, segments=10)
+    m.sym([(-0.02, 0.012), (-0.24, 0.006), (-0.24, -0.006), (-0.02, 0.0)], 0.012, POLY, chamfer=0.002)
+    m.sym([(-0.04, -0.012), (-0.24, -0.09), (-0.24, -0.102), (-0.04, -0.024)], 0.012, POLY, chamfer=0.002)
+    m.sym([(-0.24, 0.016), (-0.256, 0.016), (-0.256, -0.112), (-0.24, -0.112)], 0.022, RUBBER, chamfer=0.003)
+    m.box((0, -0.03, -0.08), (0.02, 0.012, 0.02), STEEL_L, bevel=0.0)  # adjust latch
+    return m
+
+
+def att_heavy_stock():
+    """Padded precision stock: solid body, raised cheek pad, thick recoil pad, sling cup (steadier, slower)."""
+    m = Model("att_heavy_stock", triangulate=True)
+    m.sym([(0.0, 0.03), (-0.06, 0.028), (-0.29, 0.024), (-0.3, 0.012), (-0.3, -0.125), (-0.285, -0.135),
+           (-0.15, -0.095), (-0.05, -0.06), (0.0, -0.045)], 0.026, POLY_L, chamfer=0.006)
+    m.sym([(-0.09, 0.028), (-0.26, 0.026), (-0.26, 0.05), (-0.24, 0.058), (-0.11, 0.058), (-0.09, 0.046)], 0.022, TAN, chamfer=0.004)  # cheek pad
+    m.sym([(-0.3, 0.02), (-0.33, 0.02), (-0.33, -0.13), (-0.3, -0.138)], 0.03, RUBBER, chamfer=0.005)  # recoil pad
+    for y in (-0.01, -0.05, -0.09):
+        m.box((0, y, -0.331), (0.056, 0.004, 0.003), POLY, bevel=0.0)
+    m.cyl((-0.027, -0.1, -0.22), (0.014, 0.006, 0.014), STEEL_L, rot=(0, 0, 90), segments=8)  # sling cup
+    return m
+
+
+ATTACHMENTS = [att_red_dot, att_holo, att_sniper_scope, att_compensator, att_long_barrel, att_foregrip, att_laser,
+               att_ext_mag_curved, att_ext_mag_stick, att_ext_mag_top, att_ext_drum, att_fast_mag, att_speedloader,
+               att_light_stock, att_heavy_stock]
+
+# Mount points per gun (Unity space): rail (y, z) from WeaponSights; muzzle (y, z) and barrel diameter; underbarrel
+# clamp (y, z). Used only to lay the attachments onto the guns for the review renders.
+MOUNTS = {
+    "weapon_halberd_ar":    dict(rail=(0.052, 0.15), muzzle=(0.02, 0.65), bore=0.019, under=(-0.032, 0.40)),
+    "weapon_breacher_12":   dict(rail=(0.046, 0.14), muzzle=(0.02, 0.8), bore=0.03, under=(-0.035, 0.7)),
+    "weapon_ranger_9":      dict(rail=(0.044, 0.09), muzzle=(0.02, 0.2415), bore=0.018, under=(-0.022, 0.165)),
+    "weapon_wasp_smg":      dict(rail=(0.052, 0.115), muzzle=(0.02, 0.42), bore=0.022, under=(-0.028, 0.26)),
+    "weapon_anvil_lmg":     dict(rail=(0.087, 0.2), muzzle=(0.02, 0.9), bore=0.034, under=(-0.03, 0.62)),
+    "weapon_mule_launcher": dict(rail=(0.105, 0.12), muzzle=(0.02, 0.65), bore=0.08, under=(-0.015, 0.42)),
+    "weapon_vesper_dmr":    dict(rail=(0.052, 0.15), muzzle=(0.02, 0.65), bore=0.017, under=(-0.028, 0.45)),
+    "weapon_bulldog_44":    dict(rail=(0.047, 0.11), muzzle=(0.022, 0.2415), bore=0.02, under=(-0.008, 0.17)),
+    "weapon_hailstorm":     dict(rail=(0.05, 0.18), muzzle=(0.02, 0.8), bore=0.024, under=(-0.05, 0.5)),
+    "weapon_kestrel_pdw":   dict(rail=(0.065, 0.12), muzzle=(0.02, 0.42), bore=0.018, under=(-0.04, 0.32)),
+}
+
+# One example loadout per gun for the fitted renders (optic, muzzle, underbarrel).
+FITTED = {
+    "weapon_halberd_ar": ["att_holo", "att_compensator", "att_foregrip"],
+    "weapon_breacher_12": ["att_red_dot", "att_long_barrel", "att_laser"],
+    "weapon_ranger_9": ["att_red_dot", "att_compensator", "att_laser"],
+    "weapon_wasp_smg": ["att_red_dot", "att_compensator", "att_foregrip"],
+    "weapon_anvil_lmg": ["att_holo", "att_compensator", "att_foregrip"],
+    "weapon_mule_launcher": ["att_red_dot", "att_laser"],
+    "weapon_vesper_dmr": ["att_sniper_scope", "att_compensator", "att_foregrip"],
+    "weapon_bulldog_44": ["att_red_dot", "att_long_barrel", "att_laser"],
+    "weapon_hailstorm": ["att_holo", "att_long_barrel", "att_laser"],
+    "weapon_kestrel_pdw": ["att_red_dot", "att_compensator", "att_foregrip"],
+}
+OPTICS = {"att_red_dot", "att_holo", "att_sniper_scope"}
+MUZZLE = {"att_compensator", "att_long_barrel"}
+
+
+def _show(src, loc=(0, 0, 0), scale=1.0):
+    scene = bpy.context.scene
+    c = src.copy()
+    c.data = src.data
+    c.hide_render = False
+    c.location = loc
+    c.scale = (scale, scale, scale)
+    scene.collection.objects.link(c)
+    return c
+
+
+def _shot(objs, path, w, h, view=Vector((-2.0, -0.55, 0.45)), pad=1.15):
+    """Ortho 3/4 shot framing objs (seen from the left, muzzle to the right)."""
+    scene = bpy.context.scene
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ v.co for o in objs for v in o.data.vertices]
+    lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+    hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    centre = (lo + hi) / 2
+    bpy.ops.object.camera_add()
+    cam = bpy.context.active_object
+    cam.data.type = 'ORTHO'
+    span = max(hi.y - lo.y, (hi.z - lo.z) * w / h, 0.05)
+    cam.data.ortho_scale = span * pad
+    cam.location = centre + view
+    cam.rotation_euler = (centre - cam.location).to_track_quat('-Z', 'Y').to_euler()
+    scene.camera = cam
+    scene.render.resolution_x = w
+    scene.render.resolution_y = h
+    scene.render.filepath = path
+    bpy.ops.render.render(write_still=True)
+    bpy.data.objects.remove(cam, do_unlink=True)
+
+
+def preview_attachments(atts, guns, out_dir):
+    scene = bpy.context.scene
+    scene.render.engine = 'BLENDER_WORKBENCH'
+    scene.display.shading.light = 'STUDIO'
+    scene.display.shading.color_type = 'MATERIAL'
+    scene.display.shading.show_cavity = True
+    scene.display.shading.show_shadows = True
+    scene.display.shading.show_object_outline = True
+    scene.display.shading.background_type = 'VIEWPORT'
+    scene.display.shading.background_color = (0.04, 0.04, 0.045)
+    for o in list(atts.values()) + list(guns.values()):
+        o.hide_render = True
+    os.makedirs(out_dir, exist_ok=True)
+    paths = []
+    # Each attachment on its own, close up.
+    for name, src in atts.items():
+        c = _show(src)
+        p = os.path.join(out_dir, name + ".png")
+        _shot([c], p, 900, 600, view=Vector((-1.4, 1.3, 0.9)), pad=1.5)  # from behind-left, so windows show
+        bpy.data.objects.remove(c, do_unlink=True)
+        paths.append(p)
+    # Contact sheet: three rows of five.
+    scene.display.shading.background_type = 'VIEWPORT'
+    temp = []
+    for i, (name, src) in enumerate(atts.items()):
+        col, row = i % 5, i // 5
+        temp.append(_show(src, (0, -col * 0.45, -row * 0.42)))
+    p = os.path.join(out_dir, "attachments_sheet.png")
+    _shot(temp, p, 1800, 1100, pad=1.08)
+    paths.append(p)
+    for c in temp:
+        bpy.data.objects.remove(c, do_unlink=True)
+    # Each gun with its example loadout.
+    for gname, names in FITTED.items():
+        gun = guns.get(gname)
+        if gun is None:
+            continue
+        mt = MOUNTS[gname]
+        temp = [_show(gun)]
+        for an in names:
+            src = atts[an]
+            if an in OPTICS:
+                loc, s = (0, mt["rail"][0], mt["rail"][1] - (0.02 if an == "att_sniper_scope" else 0.0)), 1.0
+            elif an in MUZZLE:
+                loc, s = (0, mt["muzzle"][0], mt["muzzle"][1]), max(0.8, mt["bore"] / 0.019)
+            else:
+                loc, s = (0, mt["under"][0], mt["under"][1]), 1.0
+            temp.append(_show(src, to_b(loc), s))
+        p = os.path.join(out_dir, "fitted_" + gname.replace("weapon_", "") + ".png")
+        _shot(temp, p, 1400, 700)
+        paths.append(p)
+        for c in temp:
+            bpy.data.objects.remove(c, do_unlink=True)
+    return paths
+
+
+def build_attachments(preview_dir):
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    atts = {}
+    for b in ATTACHMENTS:
+        o = b().finish()
+        atts[o.name] = o
+        print("built", o.name, len(o.data.polygons), "faces")
+    guns = {}
+    for b in BUILDERS:
+        if b.__name__.startswith("weapon_"):
+            m = b()
+            if m.name in MOUNTS:
+                guns[m.name] = m.finish()
+            else:
+                for p in m.parts:
+                    bpy.data.objects.remove(p, do_unlink=True)
+    for p in preview_attachments(atts, guns, preview_dir):
+        print("preview", p)
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     preview_path = None
@@ -2836,6 +3197,9 @@ def main():
         preview_path = os.path.abspath(argv[argv.index("--preview") + 1])  # a folder
     if "--only" in argv:
         only = set(argv[argv.index("--only") + 1].split(","))
+    if "--attachments" in argv:  # review renders only: nothing is exported
+        build_attachments(os.path.abspath(argv[argv.index("--attachments") + 1]))
+        return
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     os.makedirs(OUT, exist_ok=True)
