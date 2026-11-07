@@ -6,8 +6,8 @@ using UnityEngine;
 namespace Deadfall.UI
 {
     /// <summary>
-    /// Player HUD in the shared <see cref="HudKit"/> style (T-60): health card (bottom left, segmented bar with a
-    /// trailing ghost), weapon card (bottom right), outlined crosshair that shows the real spread, hit markers,
+    /// Player HUD in the shared <see cref="HudKit"/> style (T-60): health card (bottom left, hex badge and a segmented
+    /// bar with a trailing ghost), stacked ammo readout (bottom right), outlined crosshair that shows the real spread, hit markers,
     /// damage vignette and direction marker, low-health pulse, interact prompt (with hold progress), pause overlay.
     /// It only reads state and listens to events, so a later UI Toolkit swap won't touch gameplay code.
     /// </summary>
@@ -104,11 +104,7 @@ namespace Deadfall.UI
 
             // Interact prompt.
             if (_interactor == null) _interactor = _player.GetComponent<PlayerInteractor>();
-            if (_interactor != null && !string.IsNullOrEmpty(_interactor.Prompt))
-            {
-                string text = _interactor.IsHold && _interactor.CanUse ? "Hold  ·  " + _interactor.Prompt : _interactor.Prompt;
-                HudKit.Prompt(w * 0.5f, h * 0.5f + 84f, _interactor.CanUse ? "F" : null, text, _interactor.CanUse, _interactor.HoldProgress);
-            }
+            if (_interactor != null && !string.IsNullOrEmpty(_interactor.Prompt)) DrawInteract(w * 0.5f, h * 0.5f + 84f);
 
             // Health card (bottom left).
             if (_health != null)
@@ -116,11 +112,16 @@ namespace Deadfall.UI
                 float n = Mathf.Clamp01(_health.Normalized);
                 _ghostHealth = n >= _ghostHealth ? n : Mathf.MoveTowards(_ghostHealth, n, Time.unscaledDeltaTime * 0.35f);
                 Color hc = n > 0.5f ? HudKit.Good : n > 0.25f ? HudKit.Warn : HudKit.Bad;
+                // Hex badge with the number, then a slim angular card with the caption and a segmented bar.
                 var card = new Rect(28f, h - 28f - 66f, 340f, 66f);
-                HudKit.AccentPanel(card, hc);
-                HudKit.Label(new Rect(card.x + 16f, card.y + 6f, 200f, 24f), "HEALTH", 13, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
-                HudKit.Label(new Rect(card.x + 16f, card.y + 2f, card.width - 32f, 32f), Mathf.CeilToInt(_health.Current).ToString(), 28, Color.white, TextAnchor.MiddleRight, head: true);
-                HudKit.Bar(new Rect(card.x + 16f, card.y + 40f, card.width - 32f, 14f), n, hc, 10, null, _ghostHealth);
+                var panel = new Rect(card.x + 52f, card.y + 8f, card.width - 52f, 52f);
+                HudKit.Panel(panel);
+                var hex = new Rect(card.x, card.y, 62f, 66f);
+                HudKit.Hex(hex, new Color(HudKit.Glass.r, HudKit.Glass.g, HudKit.Glass.b, 0.95f), hc);
+                HudKit.Label(hex, Mathf.CeilToInt(_health.Current).ToString(), 22, Color.white, TextAnchor.MiddleCenter, head: true);
+                HudKit.Label(new Rect(panel.x + 20f, panel.y + 3f, 200f, 22f), "HEALTH", 15, HudKit.Text, TextAnchor.MiddleLeft, head: true);
+                HudKit.Label(new Rect(panel.x + 20f, panel.y + 3f, panel.width - 34f, 22f), Mathf.RoundToInt(n * 100f) + "%", 15, hc, TextAnchor.MiddleRight, head: true);
+                HudKit.Bar(new Rect(panel.x + 20f, panel.y + 28f, panel.width - 34f, 12f), n, hc, 10, null, _ghostHealth);
                 // Downed and eliminated screens are drawn by the squad HUD (M11).
             }
 
@@ -128,21 +129,25 @@ namespace Deadfall.UI
             if (_weapons != null && _weapons.CurrentDefinition != null)
             {
                 WeaponDefinition def = _weapons.CurrentDefinition;
+                // Stacked readout: slot and name on top, a big magazine count with the reserve beside it.
                 var card = new Rect(w - 28f - 360f, h - 28f - 84f, 360f, 84f);
-                HudKit.Panel(card);
-                HudKit.KeyChip(card.x + 16f, card.y + 12f, (_weapons.CurrentIndex + 1).ToString(), 22f);
-                HudKit.Label(new Rect(card.x + 46f, card.y + 10f, card.width - 62f, 26f), def.DisplayName.ToUpperInvariant(), 17, HudKit.Text, TextAnchor.MiddleLeft, head: true);
+                HudKit.Panel(card, 0.85f);
+                float kw = HudKit.KeyChip(card.x + 16f, card.y + 12f, (_weapons.CurrentIndex + 1).ToString(), 22f);
+                HudKit.Label(new Rect(card.x + 24f + kw, card.y + 10f, card.width - 40f - kw, 26f), def.DisplayName.ToUpperInvariant(), 18, HudKit.Text, TextAnchor.MiddleLeft, head: true);
                 string mods = ModsSuffix();
-                if (mods.Length > 0) HudKit.Label(new Rect(card.x + 16f, card.y + 52f, card.width - 170f, 22f), mods, 12, HudKit.Accent, TextAnchor.MiddleLeft);
+                if (mods.Length > 0) HudKit.Label(new Rect(card.x + 16f, card.y + 52f, card.width - 190f, 22f), mods, 12, HudKit.Accent, TextAnchor.MiddleLeft);
                 if (def.Kind == WeaponKind.Firearm)
                 {
                     int mag = _weapons.Magazine;
                     float magMax = Mathf.Max(1, _weapons.MagazineCapacity);
                     Color mc = mag == 0 ? HudKit.Bad : mag <= magMax * 0.25f ? HudKit.Warn : Color.white;
-                    float rw = HudKit.TextWidth("/ " + _weapons.Reserve, 18, head: true);
-                    HudKit.Label(new Rect(card.x, card.y + 34f, card.width - 16f, 44f), "/ " + _weapons.Reserve, 18, HudKit.TextDim, TextAnchor.LowerRight, head: true);
-                    HudKit.Label(new Rect(card.x, card.y + 30f, card.width - 22f - rw, 48f), mag.ToString(), 40, mc, TextAnchor.LowerRight, head: true);
-                    HudKit.Bar(new Rect(card.x + 16f, card.yMax - 10f, card.width - 32f, 5f), mag / magMax, new Color(1f, 1f, 1f, 0.75f), 0, new Color(0f, 0f, 0f, 0.4f));
+                    // Reserve column on the far right (caption over number), magazine big to its left.
+                    var reserve = new Rect(card.xMax - 16f - 64f, card.y + 34f, 64f, 42f);
+                    HudKit.Label(new Rect(reserve.x, reserve.y, reserve.width, 14f), "RESERVE", 11, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
+                    HudKit.Label(new Rect(reserve.x, reserve.y + 12f, reserve.width, 30f), _weapons.Reserve.ToString(), 24, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
+                    HudKit.Fill(new Rect(reserve.x - 10f, reserve.y + 4f, 2f, 34f), new Color(1f, 1f, 1f, 0.25f));
+                    HudKit.Label(new Rect(card.x, card.y + 26f, reserve.x - 18f - card.x, 54f), mag.ToString(), 46, mc, TextAnchor.LowerRight, head: true);
+                    HudKit.Bar(new Rect(card.x + 16f, card.yMax - 9f, card.width - 32f, 5f), mag / magMax, new Color(1f, 1f, 1f, 0.75f), 0, new Color(0f, 0f, 0f, 0.4f));
                 }
                 else
                 {
@@ -215,6 +220,30 @@ namespace Deadfall.UI
                 HudKit.Label(new Rect(w - 320f, h - 30f, 300f, 20f), BuildInfo.Label, 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             }
             HudKit.End();
+        }
+
+        /// <summary>
+        /// Interact prompt under the crosshair: the action in big caps, then "[F] Use" or "[F] Hold" with the hold
+        /// progress as a thin bar under it.
+        /// </summary>
+        private void DrawInteract(float cx, float y)
+        {
+            bool can = _interactor.CanUse;
+            string title = _interactor.Prompt.ToUpperInvariant();
+            HudKit.Label(new Rect(cx - 400f, y, 800f, 28f), title, 22, can ? Color.white : HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
+            if (!can) return;
+            string verb = _interactor.IsHold ? "Hold" : "Use";
+            float vw = HudKit.TextWidth(verb, 16, head: true);
+            float kw = Mathf.Max(24f, HudKit.TextWidth("F", 13, head: true) + 12f);
+            float x = cx - (kw + 8f + vw) * 0.5f;
+            HudKit.KeyChip(x, y + 32f, "F", 24f);
+            HudKit.Label(new Rect(x + kw + 8f, y + 32f, vw + 4f, 24f), verb, 16, HudKit.Accent, TextAnchor.MiddleLeft, head: true);
+            float p = _interactor.HoldProgress;
+            if (p >= 0f && _interactor.IsHold)
+            {
+                var bar = new Rect(cx - 90f, y + 62f, 180f, 6f);
+                HudKit.Bar(bar, p, HudKit.Accent);
+            }
         }
 
         private string ModsSuffix()

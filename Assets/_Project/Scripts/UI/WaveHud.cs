@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Deadfall.UI
 {
     /// <summary>
-    /// Survival HUD (<see cref="HudKit"/> style): surge panel at the top centre with a phase-coloured rule, a
-    /// credits pill under it, big announcements when a surge starts or ends, and "+15" credit pops by the crosshair.
+    /// Survival HUD (<see cref="HudKit"/> style): surge panel in the right column under the objectives, a credits
+    /// counter at the bottom centre, big announcements when a surge starts or ends, and "+15" credit pops by the crosshair.
     /// </summary>
     public sealed class WaveHud : MonoBehaviour
     {
@@ -62,19 +62,33 @@ namespace Deadfall.UI
 
             if (_waves.Phase != RunPhase.NotStarted)
             {
+                // Surge panel in the right column, under the objective card: caption, then a big readout (infected
+                // left during a surge, the objective clock in an operation's lull).
                 Color accent = PhaseColor();
-                var box = new Rect(w * 0.5f - 210f, 18f, 420f, 70f);
-                HudKit.Panel(box);
-                HudKit.Fill(new Rect(box.x + 18f, box.y, box.width - 36f, 3f), accent);
-                HudKit.Label(new Rect(box.x, box.y + 8f, box.width, 32f), PanelLine(), 24, Color.white, TextAnchor.MiddleCenter, head: true);
-                HudKit.Label(new Rect(box.x, box.y + 40f, box.width, 22f), SubLine(), 14, HudKit.TextDim, TextAnchor.MiddleCenter);
+                const float pw = 380f;
+                string big = BigValue();
+                var box = new Rect(w - 28f - pw, HudKit.RightColumnY + 10f, pw, big != null ? 104f : 74f);
+                HudKit.AccentPanel(box, accent);
+                var inner = new Rect(box.x + 18f, box.y + 8f, box.width - 36f, box.height - 16f);
+                if (big != null)
+                {
+                    HudKit.Readout(new Rect(inner.x, inner.y, inner.width, 66f), PanelLine(), big, 44, accent == HudKit.Bad ? Color.white : accent, accent);
+                    HudKit.Label(new Rect(inner.x, inner.yMax - 18f, inner.width, 18f), SubLine(), 13, HudKit.TextDim, TextAnchor.MiddleRight);
+                }
+                else
+                {
+                    HudKit.Label(new Rect(inner.x, inner.y, inner.width, 32f), PanelLine(), 24, Color.white, TextAnchor.MiddleRight, head: true);
+                    HudKit.Label(new Rect(inner.x, inner.y + 34f, inner.width, 20f), SubLine(), 13, HudKit.TextDim, TextAnchor.MiddleRight);
+                }
 
+                // Credits counter, bottom centre.
                 string credits = _waves.LocalCredits.ToString("N0");
-                float cw = HudKit.TextWidth(credits, 18, head: true) + 110f;
-                var pill = new Rect(w * 0.5f - cw * 0.5f, box.yMax + 8f, cw, 30f);
+                float cw = HudKit.TextWidth(credits, 24, head: true) + 120f;
+                var pill = new Rect(w * 0.5f - cw * 0.5f, h - 28f - 38f, cw, 38f);
                 HudKit.Panel(pill, 0.9f);
-                HudKit.Label(new Rect(pill.x + 14f, pill.y, 90f, pill.height), "CREDITS", 12, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
-                HudKit.Label(new Rect(pill.x, pill.y, pill.width - 14f, pill.height), credits, 18, HudKit.Accent, TextAnchor.MiddleRight, head: true);
+                HudKit.Hex(new Rect(pill.x + 12f, pill.y + 8f, 20f, 22f), new Color(HudKit.Accent.r, HudKit.Accent.g, HudKit.Accent.b, 0.25f), HudKit.Accent);
+                HudKit.Label(new Rect(pill.x + 40f, pill.y, 90f, pill.height), "CREDITS", 13, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
+                HudKit.Label(new Rect(pill.x, pill.y, pill.width - 14f, pill.height), credits, 24, HudKit.Accent, TextAnchor.MiddleRight, head: true);
             }
 
             // Big announcement: slides in, holds, fades out.
@@ -133,7 +147,7 @@ namespace Deadfall.UI
             switch (_waves.Phase)
             {
                 // Operations show the objective clock; Survival/Endless just warn of the next surge (random 10-25 s lull).
-                case RunPhase.Lull: return _waves.IsOperation ? $"LULL  {Clock(_waves.TimeLeft)}" : $"SURGE {_waves.Surge} INCOMING";
+                case RunPhase.Lull: return _waves.IsOperation ? "LULL" : $"SURGE {_waves.Surge} INCOMING";
                 case RunPhase.Surge:
                     string type = _waves.SurgeType == SurgeType.Standard ? string.Empty : $"  ·  {_waves.SurgeType.ToString().ToUpperInvariant()}";
                     return $"SURGE {_waves.Surge}{final}{type}";
@@ -144,13 +158,24 @@ namespace Deadfall.UI
             }
         }
 
+        /// <summary>The panel's big number, or null when the phase has none (it then shows the caption large).</summary>
+        private string BigValue()
+        {
+            switch (_waves.Phase)
+            {
+                case RunPhase.Surge: return _waves.EnemiesRemaining.ToString();
+                case RunPhase.Lull: return _waves.IsOperation ? Clock(_waves.TimeLeft) : null;
+                default: return null;
+            }
+        }
+
         private string SubLine()
         {
             switch (_waves.Phase)
             {
                 case RunPhase.Lull:
                     return _waves.IsOperation ? $"Surge {_waves.Surge} next  ·  work the objectives" : "Restock and get in position";
-                case RunPhase.Surge: return $"{_waves.EnemiesRemaining} infected left";
+                case RunPhase.Surge: return "infected left";
                 case RunPhase.Reward: return "Next lull starting";
                 case RunPhase.Complete:
                 case RunPhase.Failed: return _waves.IsAuthority ? "N to start a new run" : "Waiting for the host";

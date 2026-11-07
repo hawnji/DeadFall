@@ -56,7 +56,7 @@ namespace Deadfall.Game
             var card = new Rect(28f, 24f, 300f, 74f);
             HudKit.AccentPanel(card, sc);
             HudKit.Label(new Rect(card.x + 16f, card.y + 6f, card.width - 32f, 20f), MapShortName() + (sector >= 0 ? $"  ·  SECTOR {sector}" : string.Empty), 12, sc, TextAnchor.MiddleLeft, head: true);
-            HudKit.Label(new Rect(card.x + 16f, card.y + 24f, card.width - 32f, 26f), room, 19, Color.white, TextAnchor.MiddleLeft, head: true);
+            HudKit.Label(new Rect(card.x + 16f, card.y + 26f, card.width - 32f, 26f), room.ToUpperInvariant(), 20, Color.white, TextAnchor.MiddleLeft, head: true);
             HudKit.Label(new Rect(card.x + 16f, card.y + 50f, card.width - 32f, 18f),
                 $"Sectors {s.OpenSectors}/{s.SectorCount}   ·   Doors {s.DoorsOpened}/{s.DoorCount}", 12, HudKit.TextDim, TextAnchor.MiddleLeft);
 

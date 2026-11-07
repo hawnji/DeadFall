@@ -726,6 +726,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Die in a run, fail it, and return to the FOB (or wait at the results screen): you stay at the FOB / where you are and are never moved to the original firing-range spawn. Dying at base outside a run gets you up where you fell after about 3 s.
 - [ ] Engineer's Deploy Sentry skill places a smaller copy of the scrap-built sentry (same base and head), whose green panels redden as it takes damage; it still turns, fires and expires as before.
 
+### 3.66 Angular HUD restyle
+- [ ] Panels everywhere (HUD cards, menus, Mod Bench) have clipped top-left and bottom-right corners, a faint edge and a short bright tick on the top-right edge; headings use the condensed caps font (Bahnschrift Condensed on Windows).
+- [ ] Top centre: a compass strip with ticks every 5°, bearings every 15°, N/NE/E/... letters (N in gold) and the exact heading under a gold notch. It turns with the camera in the FOB and in a run, and doesn't overlap a boss bar.
+- [ ] Top right: the objective card uses small square boxes instead of dots. The surge panel sits right under it (or at the top when there are no objectives): "SURGE N / M" over a big infected-left count during a surge, "LULL" over the clock in an operation, "SURGE N INCOMING / Restock and get in position" in Survival lulls. It moves down and up as objectives come and go.
+- [ ] Bottom centre: a credits counter with a gold hex; it doesn't cover the extraction bar or the Engineer build list.
+- [ ] Bottom left: a hex badge with your health number, a "HEALTH" card with a percentage and the segmented bar (ghost trail still works). The class card, scrap pill and perk badges still line up above/right of it. Teammates on the left show a numbered hex badge in their state colour.
+- [ ] Bottom right: weapon slot key and name, a big magazine count, and a "RESERVE" column on the right; low and empty mags still turn amber/red.
+- [ ] Interact prompts read as a big caps label under the crosshair with "[F] Use" or "[F] Hold" under it and a fill bar while holding; unusable prompts show only the dimmed label. The reload prompt above it doesn't overlap.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
