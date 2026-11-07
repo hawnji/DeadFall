@@ -73,6 +73,7 @@ namespace Deadfall.DebugTools
             // M6: run economy UI (Supply Cache menu, Field Mod picks with T, toasts, weapon XP).
             ui.AddComponent<RunToasts>();
             ui.AddComponent<SupplyCacheMenu>();
+            ui.AddComponent<ModBenchMenu>();
             ui.AddComponent<FieldModPanel>();
             ui.AddComponent<WeaponXpTracker>().Bind(player);
             ui.AddComponent<BossHud>();

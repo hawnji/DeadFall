@@ -75,7 +75,8 @@ namespace Deadfall.Rules.Combat
             for (int i = 0; i < n; i++)
             {
                 AttachmentDef a = AttachmentCatalog.At(bytes[3 + i]);
-                if (a != null && !m.Has(a.Slot) && m.Attachments.Count < WeaponModder.SlotsFor(m.Tier)) m.Attachments.Add(a);
+                // One per slot. Tiers limit what loot rolls, not what a copy can carry (the Mod Bench fits every slot).
+                if (a != null && !m.Has(a.Slot)) m.Attachments.Add(a);
             }
             return m;
         }
@@ -189,7 +190,7 @@ namespace Deadfall.Rules.Combat
         /// Mods for a set of saved attachment ids: unknown ids, repeats of a slot, and anything past
         /// <see cref="MaxFitted"/> are dropped. Null when nothing valid is left.
         /// </summary>
-        public static WeaponMods Build(IEnumerable<string> ids)
+        public static WeaponMods Build(IEnumerable<string> ids, string weaponId = null, WeaponCategory category = WeaponCategory.AssaultRifle)
         {
             if (ids == null) return null;
             var m = new WeaponMods();
@@ -197,6 +198,7 @@ namespace Deadfall.Rules.Combat
             {
                 AttachmentDef a = AttachmentCatalog.ById(id);
                 if (a == null || m.Has(a.Slot) || m.Attachments.Count >= MaxFitted) continue;
+                if (weaponId != null && !AttachmentFit.Allows(weaponId, category, a)) continue;
                 m.Attachments.Add(a);
             }
             return m.Attachments.Count > 0 ? m : null;
@@ -206,7 +208,7 @@ namespace Deadfall.Rules.Combat
         /// The ids after cycling <paramref name="slot"/> by <paramref name="dir"/> through none and each option.
         /// A pick that would go past <see cref="MaxFitted"/> is skipped back to none.
         /// </summary>
-        public static string[] Cycle(string[] ids, AttachmentSlot slot, int dir)
+        public static string[] Cycle(string[] ids, AttachmentSlot slot, int dir, string weaponId = null, WeaponCategory category = WeaponCategory.AssaultRifle)
         {
             var list = new List<string>();
             string current = null;
@@ -217,7 +219,7 @@ namespace Deadfall.Rules.Combat
                     if (a == null) continue;
                     if (a.Slot == slot) current = id; else list.Add(id);
                 }
-            List<AttachmentDef> options = For(slot);
+            List<AttachmentDef> options = weaponId != null ? AttachmentFit.For(weaponId, category, slot) : For(slot);
             int at = -1; // -1 = none
             for (int i = 0; i < options.Count; i++) if (options[i].Id == current) at = i;
             int count = options.Count + 1;
@@ -244,7 +246,7 @@ namespace Deadfall.Rules.Combat
         }
 
         /// <summary>A tier's attachments: one per slot type, none for melee or launchers' magazine.</summary>
-        public static WeaponMods RollMods(DeterministicRandom rng, WeaponTier tier, WeaponCategory category)
+        public static WeaponMods RollMods(DeterministicRandom rng, WeaponTier tier, WeaponCategory category, string weaponId = null)
         {
             var m = new WeaponMods { Tier = tier, DamageRoll = 0.95f + rng.NextFloat() * 0.1f };
             if (category == WeaponCategory.Melee) return m;
@@ -252,8 +254,7 @@ namespace Deadfall.Rules.Combat
             for (int tries = 0; m.Attachments.Count < want && tries < 20; tries++)
             {
                 AttachmentDef a = AttachmentCatalog.All[rng.Range(0, AttachmentCatalog.All.Length)];
-                if (m.Has(a.Slot)) continue;
-                if (category == WeaponCategory.Heavy && a.Slot == AttachmentSlot.Optic) continue;
+                if (m.Has(a.Slot) || !Fits(weaponId, category, a)) continue;
                 m.Attachments.Add(a);
             }
             return m;
@@ -263,23 +264,29 @@ namespace Deadfall.Rules.Combat
         /// The Weapon Forge: the same weapon one tier up. Keeps its attachments, adds one for the new tier's slot,
         /// and never lowers the damage roll. Returns null at Prototype.
         /// </summary>
-        public static WeaponMods Upgrade(DeterministicRandom rng, WeaponMods current, WeaponCategory category)
+        public static WeaponMods Upgrade(DeterministicRandom rng, WeaponMods current, WeaponCategory category, string weaponId = null)
         {
             current = current ?? WeaponMods.Standard();
             if (current.Tier >= WeaponTier.Prototype) return null;
             var m = new WeaponMods { Tier = current.Tier + 1, DamageRoll = Math.Max(current.DamageRoll, 0.95f + rng.NextFloat() * 0.1f) };
             foreach (AttachmentDef a in current.Attachments)
-                if (!m.Has(a.Slot) && m.Attachments.Count < WeaponModder.SlotsFor(m.Tier)) m.Attachments.Add(a);
+                if (!m.Has(a.Slot)) m.Attachments.Add(a); // keeps everything, Mod Bench parts included
             if (category == WeaponCategory.Melee) return m;
             int want = Math.Min(WeaponModder.SlotsFor(m.Tier), m.Attachments.Count + 1);
             for (int tries = 0; m.Attachments.Count < want && tries < 30; tries++)
             {
                 AttachmentDef a = AttachmentCatalog.All[rng.Range(0, AttachmentCatalog.All.Length)];
-                if (m.Has(a.Slot)) continue;
-                if (category == WeaponCategory.Heavy && a.Slot == AttachmentSlot.Optic) continue;
+                if (m.Has(a.Slot) || !Fits(weaponId, category, a)) continue;
                 m.Attachments.Add(a);
             }
             return m;
+        }
+
+        /// <summary>Loot only rolls attachments the weapon takes (no optics on unknown heavy weapons).</summary>
+        private static bool Fits(string weaponId, WeaponCategory category, AttachmentDef a)
+        {
+            if (weaponId != null) return AttachmentFit.Allows(weaponId, category, a);
+            return !(category == WeaponCategory.Heavy && a.Slot == AttachmentSlot.Optic);
         }
 
         /// <summary>Weapon Forge price to raise a weapon from <paramref name="current"/> (0 when it can't go higher).</summary>
@@ -311,5 +318,111 @@ namespace Deadfall.Rules.Combat
         /// <summary>Supply Cache: full heal and a full set of grenades (the cache sells supplies, not guns).</summary>
         public const int CacheHealPrice = 250;
         public const int CacheGrenadePrice = 300;
+    }
+
+    /// <summary>
+    /// Which attachments each gun takes (reviewed with the attachment models, 2026-11-07). Melee takes none; the
+    /// loot-only Special perks fit any firearm; a gun not listed here takes everything (new content stays usable).
+    /// </summary>
+    public static class AttachmentFit
+    {
+        private static readonly Dictionary<string, string[]> Table = new Dictionary<string, string[]>
+        {
+            ["weapon.halberd_ar"] = new[] { "red_dot", "holo_scope", "sniper_scope", "compensator", "long_barrel", "foregrip", "laser", "extended_mag", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.breacher_12"] = new[] { "red_dot", "holo_scope", "long_barrel", "laser", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.ranger_9"] = new[] { "red_dot", "compensator", "long_barrel", "laser", "extended_mag", "fast_mag" },
+            ["weapon.wasp_smg"] = new[] { "red_dot", "holo_scope", "compensator", "long_barrel", "foregrip", "laser", "extended_mag", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.anvil_lmg"] = new[] { "red_dot", "holo_scope", "compensator", "long_barrel", "foregrip", "laser", "extended_mag", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.mule_launcher"] = new[] { "red_dot", "foregrip", "laser", "light_stock", "heavy_stock" },
+            ["weapon.vesper_dmr"] = new[] { "red_dot", "holo_scope", "sniper_scope", "compensator", "long_barrel", "foregrip", "laser", "extended_mag", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.bulldog_44"] = new[] { "red_dot", "long_barrel", "laser", "fast_mag" },
+            ["weapon.hailstorm"] = new[] { "red_dot", "holo_scope", "long_barrel", "foregrip", "laser", "extended_mag", "fast_mag", "light_stock", "heavy_stock" },
+            ["weapon.kestrel_pdw"] = new[] { "red_dot", "holo_scope", "compensator", "long_barrel", "foregrip", "laser", "extended_mag" },
+        };
+
+        public static bool Allows(string weaponId, WeaponCategory category, AttachmentDef a)
+        {
+            if (a == null || category == WeaponCategory.Melee) return false;
+            if (a.Slot == AttachmentSlot.Special) return true;
+            if (weaponId == null || !Table.TryGetValue(weaponId, out string[] ids)) return true;
+            string shortId = a.Id.StartsWith("att.", StringComparison.Ordinal) ? a.Id.Substring(4) : a.Id;
+            return Array.IndexOf(ids, shortId) >= 0;
+        }
+
+        /// <summary>The catalog's attachments for a slot that this gun takes, in catalog order.</summary>
+        public static List<AttachmentDef> For(string weaponId, WeaponCategory category, AttachmentSlot slot)
+        {
+            var list = new List<AttachmentDef>();
+            foreach (AttachmentDef a in AttachmentCatalog.All) if (a.Slot == slot && Allows(weaponId, category, a)) list.Add(a);
+            return list;
+        }
+    }
+
+    /// <summary>
+    /// The Mod Bench (in-run attachment shop): prices, and the copy you get after a build. A build keeps the gun's tier,
+    /// damage roll and loot-only Special perk; you pay only for parts you don't already have, and taking parts off is free.
+    /// </summary>
+    public static class ModBenchRules
+    {
+        /// <summary>Slots the bench offers, in menu order.</summary>
+        public static readonly AttachmentSlot[] Slots = ArmoryAttachments.Slots;
+
+        public static int Price(AttachmentDef a)
+        {
+            switch (a != null ? a.Id : null)
+            {
+                case "att.red_dot": return 350;
+                case "att.holo_scope": return 500;
+                case "att.sniper_scope": return 900;
+                case "att.compensator": return 450;
+                case "att.long_barrel": return 500;
+                case "att.foregrip": return 400;
+                case "att.laser": return 300;
+                case "att.extended_mag": return 600;
+                case "att.fast_mag": return 450;
+                case "att.light_stock": return 350;
+                case "att.heavy_stock": return 400;
+                default: return 0; // Special perks are loot-only
+            }
+        }
+
+        /// <summary>Credits to go from <paramref name="current"/> to <paramref name="next"/>: the parts that are new.</summary>
+        public static int Cost(WeaponMods current, WeaponMods next)
+        {
+            if (next == null) return 0;
+            int total = 0;
+            foreach (AttachmentDef a in next.Attachments)
+                if (current == null || !current.Attachments.Contains(a)) total += Price(a);
+            return total;
+        }
+
+        /// <summary>
+        /// The copy after a build: <paramref name="current"/>'s tier, roll and Special perk plus the picked parts (one per
+        /// slot, only ones the gun takes, never a Special). Unknown or unfit picks are dropped.
+        /// </summary>
+        public static WeaponMods Build(WeaponMods current, IEnumerable<AttachmentDef> picks, string weaponId, WeaponCategory category)
+        {
+            current = current ?? WeaponMods.Standard();
+            var m = new WeaponMods { Tier = current.Tier, DamageRoll = current.DamageRoll };
+            if (picks != null)
+                foreach (AttachmentDef a in picks)
+                {
+                    if (a == null || a.Slot == AttachmentSlot.Special || m.Has(a.Slot) || !AttachmentFit.Allows(weaponId, category, a)) continue;
+                    m.Attachments.Add(a);
+                }
+            foreach (AttachmentDef a in current.Attachments)
+                if (a.Slot == AttachmentSlot.Special && !m.Has(a.Slot)) m.Attachments.Add(a);
+            return m;
+        }
+
+        /// <summary>Same parts (order ignored), same tier and roll.</summary>
+        public static bool Same(WeaponMods a, WeaponMods b)
+        {
+            a = a ?? WeaponMods.Standard();
+            b = b ?? WeaponMods.Standard();
+            if (a.Attachments.Count != b.Attachments.Count) return false;
+            foreach (AttachmentDef x in a.Attachments) if (!b.Attachments.Contains(x)) return false;
+            return true;
+        }
     }
 }

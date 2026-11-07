@@ -259,7 +259,7 @@ namespace Deadfall.Game
             int index = GunDispenserRules.PickIndex(_rng, guns, exclude);
             _offer = WeaponCatalog.At(index);
             WeaponTier tier = GunDispenserRules.RollTier(_rng, _waves != null ? _waves.Surge : 1);
-            _offerMods = _offer != null ? LootRules.RollMods(_rng, tier, _offer.Category) : null;
+            _offerMods = _offer != null ? LootRules.RollMods(_rng, tier, _offer.Category, _offer.ContentId) : null;
         }
 
         // ---------------------------------------------------------------- host loop

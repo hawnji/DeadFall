@@ -89,6 +89,49 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void FitTableLimitsWhatEachGunTakes()
+        {
+            AttachmentDef sniper = AttachmentCatalog.ById("att.sniper_scope"), comp = AttachmentCatalog.ById("att.compensator");
+            Assert.IsTrue(AttachmentFit.Allows("weapon.vesper_dmr", WeaponCategory.AssaultRifle, sniper));
+            Assert.IsFalse(AttachmentFit.Allows("weapon.ranger_9", WeaponCategory.Pistol, sniper), "pistols take the red dot only");
+            Assert.IsFalse(AttachmentFit.Allows("weapon.breacher_12", WeaponCategory.Shotgun, comp));
+            Assert.IsFalse(AttachmentFit.Allows("weapon.saber_7", WeaponCategory.Melee, comp));
+            Assert.IsTrue(AttachmentFit.Allows("weapon.not_listed", WeaponCategory.AssaultRifle, comp), "new guns take everything");
+            Assert.IsTrue(AttachmentFit.Allows("weapon.bulldog_44", WeaponCategory.Pistol, AttachmentCatalog.ById("att.hot_loads")), "Special perks fit any firearm");
+            Assert.IsEmpty(AttachmentFit.For("weapon.kestrel_pdw", WeaponCategory.SubmachineGun, AttachmentSlot.Stock));
+            string[] ids = ArmoryAttachments.Cycle(null, AttachmentSlot.Optic, 1, "weapon.mule_launcher", WeaponCategory.Heavy);
+            ids = ArmoryAttachments.Cycle(ids, AttachmentSlot.Optic, 1, "weapon.mule_launcher", WeaponCategory.Heavy);
+            Assert.AreEqual(0, ids.Length, "the Mule's only optic is the red dot");
+            var rng = new DeterministicRandom(3);
+            for (int i = 0; i < 200; i++)
+                foreach (AttachmentDef a in LootRules.RollMods(rng, WeaponTier.Prototype, WeaponCategory.Pistol, "weapon.bulldog_44").Attachments)
+                    Assert.IsTrue(AttachmentFit.Allows("weapon.bulldog_44", WeaponCategory.Pistol, a));
+        }
+
+        [Test]
+        public void ModBenchChargesOnlyForNewPartsAndKeepsThePerk()
+        {
+            AttachmentDef dot = AttachmentCatalog.ById("att.red_dot"), grip = AttachmentCatalog.ById("att.foregrip"), comp = AttachmentCatalog.ById("att.compensator");
+            AttachmentDef hot = AttachmentCatalog.ById("att.hot_loads"), sniper = AttachmentCatalog.ById("att.sniper_scope");
+            var current = new WeaponMods { Tier = WeaponTier.Refined, DamageRoll = 1.03f };
+            current.Attachments.Add(dot);
+            current.Attachments.Add(hot);
+            WeaponMods next = ModBenchRules.Build(current, new[] { dot, grip, comp, AttachmentCatalog.ById("att.holo_scope"), hot }, "weapon.halberd_ar", WeaponCategory.AssaultRifle);
+            Assert.AreEqual(WeaponTier.Refined, next.Tier);
+            Assert.AreEqual(1.03f, next.DamageRoll, 1e-4f);
+            Assert.AreEqual(4, next.Attachments.Count, "red dot, foregrip, compensator, and the kept Hot Loads (second optic dropped)");
+            Assert.Contains(hot, next.Attachments);
+            Assert.AreEqual(ModBenchRules.Price(grip) + ModBenchRules.Price(comp), ModBenchRules.Cost(current, next));
+            Assert.AreEqual(0, ModBenchRules.Cost(current, ModBenchRules.Build(current, new AttachmentDef[0], "weapon.halberd_ar", WeaponCategory.AssaultRifle)), "taking parts off is free");
+            Assert.IsEmpty(ModBenchRules.Build(null, new[] { sniper }, "weapon.wasp_smg", WeaponCategory.SubmachineGun).Attachments, "unfit picks are dropped");
+            WeaponMods five = ModBenchRules.Build(null, new[] { dot, comp, grip, AttachmentCatalog.ById("att.extended_mag"), AttachmentCatalog.ById("att.heavy_stock") }, "weapon.halberd_ar", WeaponCategory.AssaultRifle);
+            Assert.AreEqual(5, WeaponMods.Decode(five.Encode()).Attachments.Count, "a Standard gun keeps every bench part over the wire");
+            Assert.IsTrue(ModBenchRules.Same(five, WeaponMods.Decode(five.Encode())));
+            foreach (AttachmentSlot slot in ModBenchRules.Slots)
+                foreach (AttachmentDef a in ArmoryAttachments.For(slot)) Assert.Greater(ModBenchRules.Price(a), 0, a.Id);
+        }
+
+        [Test]
         public void ArmoryAttachmentsSurviveASave()
         {
             var p = new PlayerProfile();

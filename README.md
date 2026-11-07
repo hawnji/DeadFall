@@ -85,7 +85,7 @@ Classes (M4): Esc shows the class list on the left of the pause screen; Q uses t
 
 Maps (M5): Esc shows the map panel on the right: type a seed and press Generate (or Random) to play a generated Cinder Ridge map, M opens the full map, J the debug map overlay (F9 stays respawn), F uses pickups. Back to sandbox returns here.
 
-Run economy (M6): F opens Supply Caches and takes weapon drops; T picks a Field Mod when one is offered (every third surge, and after a Specimen).
+Run economy (M6): F opens Supply Caches and takes weapon drops, and at the Mod Bench buys attachments for the gun in your hands; T picks a Field Mod when one is offered (every third surge, and after a Specimen).
 
 Enemies (M7): F12 spawns the next advanced enemy in the sandbox (hold Ctrl for a mutation variant).
 

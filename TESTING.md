@@ -712,6 +712,15 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The first lull still says "DEPLOYMENT STARTED". Operations still show "LULL" with their objective timer and "OPERATION STARTED".
 - [ ] Co-op: host and client see the incoming call at the same moment.
 
+### 3.64 Attachment models and the Mod Bench
+- [ ] Every map has a Mod Bench (blue sign, pegboard with attachments hanging on it) against a wall in the first sector. Outside a run the prompt says to start a run; holding a melee weapon it says to hold a gun.
+- [ ] F opens the Mod Bench menu: a turning preview of the gun in your hands on the left, the stats under it, and Optic / Muzzle / Underbarrel / Magazine / Stock rows on the right. Each row only lists parts this gun takes (e.g. the Ranger's only optic is the Red Dot, the Breacher has no compensator, the Kestrel has no stock row options), with prices.
+- [ ] Clicking a part updates the preview straight away (an Extended Mag or new stock replaces the gun's own), shows the part's effect under the row, and the stats show old > new values in green (better) or red (worse). Parts already on the gun say FITTED and cost nothing.
+- [ ] TOTAL shows the price of the new parts; BUILD is greyed out with nothing changed or not enough credits. BUILD takes the credits, refits the gun in your hands (toast "<gun> built: ..."), and keeps its current ammo (no free refill). Removing parts is free.
+- [ ] Esc or walking away closes the menu. Co-op: a client can build; the host takes the credits; both players see their own Mod Bench at the same spot.
+- [ ] First person: fitted parts use the new models (red dot, holo, scope with rings, compensator, long barrel, foregrip, laser, extended mags, drums, taped fast mag, light and heavy stocks) and sit on the gun without floating. Red Dot shows a red dot and Holo a green dot and ring through an open window when aiming; the Sniper Scope still opens the full-screen scope view.
+- [ ] Armory (FOB): attachment buttons only cycle through parts the gun takes, and slots a gun takes nothing in are hidden. Drops and the Gun Dispenser only roll parts the gun takes. Forging keeps every Mod Bench part.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

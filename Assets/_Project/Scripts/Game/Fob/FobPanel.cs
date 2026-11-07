@@ -345,6 +345,7 @@ namespace Deadfall.Game
             foreach (AttachmentSlot slot in ArmoryAttachments.Slots)
             {
                 if (slot == AttachmentSlot.Optic && !WeaponSights.CanFitOptic(wd)) continue;
+                if (AttachmentFit.For(wd.ContentId, wd.Category, slot).Count == 0) continue; // this gun takes nothing here
                 string name = "none";
                 foreach (string id in ids)
                 {
@@ -356,7 +357,7 @@ namespace Deadfall.Game
                 if (GUILayout.Button($"{slot}\n{name}", _small, GUILayout.Width(104f), GUILayout.Height(34f)))
                 {
                     int dir = Event.current.button == 1 ? -1 : 1;
-                    p.Attachments[wd.ContentId] = ArmoryAttachments.Cycle(ids, slot, dir);
+                    p.Attachments[wd.ContentId] = ArmoryAttachments.Cycle(ids, slot, dir, wd.ContentId, wd.Category);
                     changed = true;
                 }
                 GUI.color = Color.white;
