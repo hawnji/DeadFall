@@ -5,7 +5,8 @@ namespace Deadfall.Core
 {
     /// <summary>
     /// Shared look for every IMGUI screen (T-60): resolution scaling (layouts are authored at 1080p and scaled with
-    /// <see cref="GUI.matrix"/>), a dark glass palette with one amber accent, rounded panels, bars, key chips,
+    /// <see cref="GUI.matrix"/>), a dark industrial palette with one yellow-amber accent, angular cut-corner panels
+    /// (top-left and bottom-right corners clipped; 2026-11-07 restyle), hexagon badges, bars, key chips,
     /// prompts, buttons, windows and a <see cref="Skin"/> for GUILayout menus. OS fonts are used when present
     /// (Bahnschrift / Segoe UI on Windows), with Unity's built-in font as the fallback.
     /// Call <see cref="Begin"/> at the top of OnGUI and <see cref="End"/> at the bottom, then lay out in
@@ -13,10 +14,10 @@ namespace Deadfall.Core
     /// </summary>
     public static class HudKit
     {
-        public static readonly Color Accent = new Color(1f, 0.67f, 0.24f);
-        public static readonly Color AccentDim = new Color(0.62f, 0.4f, 0.13f);
-        public static readonly Color Glass = new Color(0.05f, 0.06f, 0.075f, 0.8f);
-        public static readonly Color GlassLight = new Color(0.13f, 0.145f, 0.17f, 0.92f);
+        public static readonly Color Accent = new Color(1f, 0.78f, 0.22f);
+        public static readonly Color AccentDim = new Color(0.62f, 0.46f, 0.12f);
+        public static readonly Color Glass = new Color(0.035f, 0.045f, 0.05f, 0.82f);
+        public static readonly Color GlassLight = new Color(0.12f, 0.135f, 0.145f, 0.92f);
         public static readonly Color Track = new Color(0f, 0f, 0f, 0.55f);
         public static readonly Color Text = new Color(0.94f, 0.95f, 0.96f);
         public static readonly Color TextDim = new Color(0.64f, 0.68f, 0.73f);
@@ -37,7 +38,7 @@ namespace Deadfall.Core
         public static float PauseColumnBottom => PauseTop + 260f;
 
         private static Matrix4x4 _saved;
-        private static Texture2D _round, _roundSmall, _ring, _vignette;
+        private static Texture2D _round, _roundSmall, _ring, _vignette, _hex, _hexRing;
         private static GUIStyle _roundStyle, _roundSmallStyle, _ringStyle;
         private static readonly Dictionary<int, GUIStyle> Styles = new Dictionary<int, GUIStyle>();
         private static Font _body, _head;
@@ -87,7 +88,9 @@ namespace Deadfall.Core
             {
                 string[] installed = Font.GetOSInstalledFontNames();
                 _body = Pick(installed, "Segoe UI", "Roboto", "Helvetica Neue", "Noto Sans", "Arial");
-                _head = Pick(installed, "Bahnschrift", "Segoe UI Semibold", "Roboto Condensed", "DIN Alternate", "Arial Narrow") ?? _body;
+                // Headings use a condensed face (the angular HUD reads best in tall, narrow caps).
+                _head = Pick(installed, "Bahnschrift SemiBold Condensed", "Bahnschrift Condensed", "Bahnschrift SemiBold SemiConden",
+                    "Roboto Condensed", "Arial Narrow", "Bahnschrift", "Segoe UI Semibold", "DIN Alternate") ?? _body;
             }
             catch (System.Exception)
             {
@@ -128,8 +131,8 @@ namespace Deadfall.Core
             Color old = GUI.color;
             if (shadow)
             {
-                GUI.color = new Color(0f, 0f, 0f, 0.65f * color.a * old.a);
-                GUI.Label(new Rect(r.x + 1f, r.y + 1.5f, r.width, r.height), text, s);
+                GUI.color = new Color(0f, 0f, 0f, 0.8f * color.a * old.a);
+                GUI.Label(new Rect(r.x + 1.5f, r.y + 1.5f, r.width, r.height), text, s);
             }
             GUI.color = new Color(color.r, color.g, color.b, color.a * old.a);
             GUI.Label(r, text, s);
@@ -149,7 +152,7 @@ namespace Deadfall.Core
             GUI.color = old;
         }
 
-        /// <summary>Rounded rectangle (radius 8, or 4 when <paramref name="small"/>).</summary>
+        /// <summary>Cut-corner rectangle (top-left and bottom-right clipped 8 px, or 4 when <paramref name="small"/>).</summary>
         public static void Round(Rect r, Color c, bool small = false)
         {
             if (Event.current.type != EventType.Repaint) return;
@@ -160,7 +163,7 @@ namespace Deadfall.Core
             GUI.color = old;
         }
 
-        /// <summary>A thin rounded outline.</summary>
+        /// <summary>A thin cut-corner outline.</summary>
         public static void Outline(Rect r, Color c)
         {
             if (Event.current.type != EventType.Repaint) return;
@@ -171,13 +174,54 @@ namespace Deadfall.Core
             GUI.color = old;
         }
 
-        /// <summary>Dark glass panel with a faint edge.</summary>
+        /// <summary>Dark angular panel with a faint edge and a short bright tick on the top edge.</summary>
         public static void Panel(Rect r, float alpha = 1f)
         {
-            Round(new Rect(r.x, r.y + 3f, r.width, r.height), new Color(0f, 0f, 0f, 0.25f * alpha));
+            Round(new Rect(r.x + 2f, r.y + 3f, r.width, r.height), new Color(0f, 0f, 0f, 0.3f * alpha));
             Round(r, new Color(Glass.r, Glass.g, Glass.b, Glass.a * alpha));
-            Outline(r, new Color(1f, 1f, 1f, 0.07f * alpha));
+            Outline(r, new Color(1f, 1f, 1f, 0.1f * alpha));
+            if (r.width > 60f) Fill(new Rect(r.xMax - 34f, r.y, 26f, 2f), new Color(1f, 1f, 1f, 0.35f * alpha));
         }
+
+        /// <summary>A hexagon badge (pointy top), filled with <paramref name="fill"/> and edged with <paramref name="edge"/>.</summary>
+        public static void Hex(Rect r, Color fill, Color edge)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            EnsureTextures();
+            Color old = GUI.color;
+            GUI.color = new Color(fill.r, fill.g, fill.b, fill.a * old.a);
+            GUI.DrawTexture(r, _hex, ScaleMode.StretchToFill);
+            GUI.color = new Color(edge.r, edge.g, edge.b, edge.a * old.a);
+            GUI.DrawTexture(r, _hexRing, ScaleMode.StretchToFill);
+            GUI.color = old;
+        }
+
+        /// <summary>A small square checkbox (objective lists): outlined, filled with a tick mark when done.</summary>
+        public static void CheckBox(Rect r, bool done, Color c)
+        {
+            Fill(new Rect(r.x, r.y, r.width, 1.5f), c);
+            Fill(new Rect(r.x, r.yMax - 1.5f, r.width, 1.5f), c);
+            Fill(new Rect(r.x, r.y, 1.5f, r.height), c);
+            Fill(new Rect(r.xMax - 1.5f, r.y, 1.5f, r.height), c);
+            if (done) Fill(new Rect(r.x + 3f, r.y + 3f, r.width - 6f, r.height - 6f), c);
+        }
+
+        /// <summary>
+        /// Big tabular number with a small caption above it, right-aligned (timers, ammo): the angular HUD's "readout".
+        /// </summary>
+        public static void Readout(Rect r, string caption, string value, int size, Color valueColor, Color? captionColor = null)
+        {
+            if (!string.IsNullOrEmpty(caption))
+                Label(new Rect(r.x, r.y, r.width, 22f), caption.ToUpperInvariant(), 17, captionColor ?? Text, TextAnchor.MiddleRight, head: true);
+            float top = string.IsNullOrEmpty(caption) ? r.y : r.y + 20f;
+            Label(new Rect(r.x, top, r.width, r.yMax - top), value, size, valueColor, TextAnchor.MiddleRight, head: true);
+        }
+
+        /// <summary>
+        /// Right column under the objective card (top right): the objective HUD stores where its card ends each frame,
+        /// so the surge/timer panel can sit right below it.
+        /// </summary>
+        public static float RightColumnY = 24f;
 
         /// <summary><see cref="Panel"/> with a coloured strip on the left.</summary>
         public static void AccentPanel(Rect r, Color accent, float alpha = 1f)
@@ -335,8 +379,8 @@ namespace Deadfall.Core
         /// <summary>Small caps section heading with a rule.</summary>
         public static void Section(Rect r, string text, Color? color = null)
         {
-            Label(new Rect(r.x, r.y, r.width, r.height), text.ToUpperInvariant(), 13, color ?? Accent, TextAnchor.MiddleLeft, head: true);
-            float tw = TextWidth(text.ToUpperInvariant(), 13, head: true);
+            Label(new Rect(r.x, r.y, r.width, r.height), text.ToUpperInvariant(), 15, color ?? Accent, TextAnchor.MiddleLeft, head: true);
+            float tw = TextWidth(text.ToUpperInvariant(), 15, head: true);
             Fill(new Rect(r.x + tw + 10f, r.y + r.height * 0.5f, Mathf.Max(0f, r.width - tw - 10f), 1f), new Color(1f, 1f, 1f, 0.08f));
         }
 
@@ -418,6 +462,8 @@ namespace Deadfall.Core
             _round = MakeRound(32, 8f, 0f);
             _roundSmall = MakeRound(16, 4f, 0f);
             _ring = MakeRound(32, 8f, 1.4f);
+            _hex = MakeHex(64, 0f);
+            _hexRing = MakeHex(64, 3f);
             _vignette = MakeVignette(128);
             _roundStyle = new GUIStyle { border = new RectOffset(9, 9, 9, 9) };
             _roundStyle.normal.background = _round;
@@ -440,25 +486,50 @@ namespace Deadfall.Core
             return t;
         }
 
-        /// <summary>White rounded rectangle (or ring when <paramref name="ring"/> &gt; 0) with anti-aliased edges.</summary>
-        private static Texture2D MakeRound(int size, float radius, float ring)
+        /// <summary>
+        /// White cut-corner rectangle (or ring when <paramref name="ring"/> &gt; 0) with anti-aliased edges: the top-left and
+        /// bottom-right corners are clipped by <paramref name="cut"/> pixels (drawn 9-sliced, so they stay that size).
+        /// </summary>
+        private static Texture2D MakeRound(int size, float cut, float ring)
         {
             var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
             var px = new Color32[size * size];
-            float half = size * 0.5f;
+            const float invSqrt2 = 0.70710678f;
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
-                    // Signed distance to a rounded box filling the texture.
-                    float px0 = Mathf.Abs(x + 0.5f - half) - (half - radius);
-                    float py0 = Mathf.Abs(y + 0.5f - half) - (half - radius);
-                    float outside = new Vector2(Mathf.Max(px0, 0f), Mathf.Max(py0, 0f)).magnitude + Mathf.Min(Mathf.Max(px0, py0), 0f) - radius;
-                    float a = Mathf.Clamp01(0.5f - outside);
-                    if (ring > 0f) a *= Mathf.Clamp01(outside + ring + 0.5f);
+                    float u = x + 0.5f, v = size - (y + 0.5f); // v from the top (GUI draws the top row at the top)
+                    // Signed distance to the convex outline: max over its edges (box sides and the two diagonal cuts).
+                    float sd = -Mathf.Min(Mathf.Min(u, v), Mathf.Min(size - u, size - v));
+                    sd = Mathf.Max(sd, (cut - (u + v)) * invSqrt2);
+                    sd = Mathf.Max(sd, (cut - ((size - u) + (size - v))) * invSqrt2);
+                    float a = Mathf.Clamp01(0.5f - sd);
+                    if (ring > 0f) a *= Mathf.Clamp01(sd + ring + 0.5f);
                     px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255f));
                 }
             t.SetPixels32(px);
             t.Apply(false, false); // stays readable: Tex() tints a copy of these pixels
+            return t;
+        }
+
+        /// <summary>White pointy-top hexagon filling the texture (or its ring of <paramref name="ring"/> px).</summary>
+        private static Texture2D MakeHex(int size, float ring)
+        {
+            var t = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            var px = new Color32[size * size];
+            float c = size * 0.5f, rad = size * 0.5f - 1f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = Mathf.Abs(x + 0.5f - c), dy = Mathf.Abs(y + 0.5f - c);
+                    // Pointy-top hexagon: flat left/right sides at 0.866 r, slanted edges meeting at the top and bottom.
+                    float sd = Mathf.Max(dx - rad * 0.866f, (dx * 0.5f + dy * 0.866f) - rad * 0.866f);
+                    float a = Mathf.Clamp01(0.5f - sd);
+                    if (ring > 0f) a *= Mathf.Clamp01(sd + ring + 0.5f);
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                }
+            t.SetPixels32(px);
+            t.Apply(false, true);
             return t;
         }
 

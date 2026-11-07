@@ -46,6 +46,7 @@ namespace Deadfall.Game
         private void OnGUI()
         {
             ObjectiveDirector d = _bound;
+            HudKit.RightColumnY = 24f - 10f; // nothing in the right column yet: the surge panel goes to the top
             if (d == null) return;
             HudKit.Begin();
             float sw = HudKit.W, sh = HudKit.H;
@@ -63,6 +64,7 @@ namespace Deadfall.Game
                 float ch = 16f + (head != null ? 28f : 0f) + RowsHeight(rows) + (hasEvent ? 30f : 0f) + 6f;
                 var card = new Rect(sw - 28f - cw, 24f, cw, ch);
                 HudKit.Panel(card);
+                HudKit.RightColumnY = card.yMax;
                 float y = card.y + 10f;
                 if (head != null)
                 {
@@ -80,10 +82,9 @@ namespace Deadfall.Game
                         y += RowHeight(o);
                         continue;
                     }
-                    Color dot = o.Required ? HudKit.Accent : HudKit.Info;
-                    // A gently cycling rainbow dot marks the quest.
-                    Color rainbow = Color.HSVToRGB(Mathf.Repeat(Time.unscaledTime * 0.22f + o.Id * 0.17f, 1f), 0.75f, 1f);
-                    HudKit.Round(new Rect(card.x + 17f, y + 7f, 9f, 9f), o.Required ? rainbow : dot, true);
+                    // A square box per objective; required ones gently cycle through colours to mark the quest.
+                    Color rainbow = Color.HSVToRGB(Mathf.Repeat(Time.unscaledTime * 0.22f + o.Id * 0.17f, 1f), 0.55f, 1f);
+                    HudKit.CheckBox(new Rect(card.x + 15f, y + 5f, 12f, 12f), false, o.Required ? rainbow : HudKit.Info);
                     HudKit.Label(rowRect, o.Describe(), 14, o.Required ? HudKit.Text : new Color(0.78f, 0.9f, 1f), TextAnchor.MiddleLeft);
                     y += 24f;
                     float bar = BarValue(o, out Color barColor);

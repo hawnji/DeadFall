@@ -75,13 +75,17 @@ namespace Deadfall.Game
             foreach (ISquadMember m in Sorted)
             {
                 Color c = m.Disconnected ? HudKit.TextDim : m.Life == LifeState.Alive ? HudKit.Good : m.Life == LifeState.Downed ? HudKit.Bad : HudKit.Warn;
-                var r = new Rect(28f, y, 240f, 40f);
-                HudKit.AccentPanel(r, c, 0.9f);
+                // Hex badge with the player number, then a slim card with the name, state and a bar.
+                var r = new Rect(28f + 26f, y + 2f, 240f - 26f, 36f);
+                HudKit.Panel(r, 0.9f);
+                var hex = new Rect(28f, y - 1f, 36f, 42f);
+                HudKit.Hex(hex, new Color(HudKit.Glass.r, HudKit.Glass.g, HudKit.Glass.b, 0.95f), c);
+                HudKit.Label(hex, m.ClientId.ToString(), 15, Color.white, TextAnchor.MiddleCenter, head: true);
                 string state = m.Disconnected ? "RECONNECTING" : m.Life == LifeState.Alive ? "" : m.Life == LifeState.Downed ? "DOWN" : "OUT";
-                HudKit.Label(new Rect(r.x + 14f, r.y + 2f, 150f, 20f), $"PLAYER {m.ClientId}", 13, HudKit.Text, TextAnchor.MiddleLeft, head: true);
-                HudKit.Label(new Rect(r.x + 100f, r.y + 2f, r.width - 112f, 20f), state, 12, c, TextAnchor.MiddleRight, head: true);
+                HudKit.Label(new Rect(r.x + 18f, r.y + 1f, 150f, 20f), $"PLAYER {m.ClientId}", 13, HudKit.Text, TextAnchor.MiddleLeft, head: true);
+                HudKit.Label(new Rect(r.x + 90f, r.y + 1f, r.width - 102f, 20f), state, 12, c, TextAnchor.MiddleRight, head: true);
                 float bar = m.Life == LifeState.Downed && !m.Disconnected ? m.BleedOut01 : m.Life == LifeState.Alive ? m.Health01 : 0f;
-                HudKit.Bar(new Rect(r.x + 14f, r.y + 26f, r.width - 28f, 6f), bar, c);
+                HudKit.Bar(new Rect(r.x + 18f, r.y + 22f, r.width - 30f, 6f), bar, c);
                 y += 46f;
             }
         }
