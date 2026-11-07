@@ -2890,7 +2890,6 @@ def att_red_dot():
     for s in (-1, 1):
         m.box((s * 0.0155, 0.031, 0.008), (0.004, 0.026, 0.016), POLY, bevel=0.0015)  # hood sides
     m.sym([(0.0, 0.042), (0.016, 0.042), (0.016, 0.048), (0.004, 0.047)], 0.0175, POLY, chamfer=0.001)  # hood top
-    m.box((0, 0.024, -0.012), (0.004, 0.004, 0.003), DOT_R, bevel=0.0)  # emitter
     m.cyl((0.016, 0.014, -0.012), (0.012, 0.004, 0.012), STEEL_L, rot=(0, 0, 90), segments=8)  # brightness dial
     return m
 
@@ -2905,7 +2904,6 @@ def att_holo():
         m.box((s * 0.018, 0.038, 0.012), (0.004, 0.036, 0.05), POLY, bevel=0.0015)  # hood sides
     m.box((0, 0.058, 0.012), (0.04, 0.006, 0.05), POLY, bevel=0.0015)  # hood top
     m.box((0, 0.022, -0.03), (0.022, 0.006, 0.016), STEEL_L, bevel=0.0)  # up/down buttons
-    m.box((0, 0.022, -0.03), (0.003, 0.0065, 0.004), DOT_R, bevel=0.0)
     return m
 
 
