@@ -17,7 +17,9 @@ namespace Deadfall.Classes
         private const int IgnoreRaycastLayer = 2;
         private const float RetargetInterval = 0.25f;
         private const float TurnSpeed = 540f;
-        private const float MuzzleHeight = 0.95f;
+        /// <summary>The deployed sentry is the Engineer's scrap-built sentry (eng_sentry_*) at this scale.</summary>
+        private const float ModelScale = 0.72f;
+        private const float MuzzleHeight = 1.05f * ModelScale;
 
         private float _health = 300f, _maxHealth = 300f;
         private float _range, _damage, _shotInterval;
@@ -55,6 +57,12 @@ namespace Deadfall.Classes
             turret._head.localPosition = new Vector3(0f, MuzzleHeight, 0f);
             Part(PrimitiveType.Cube, turret._head, Vector3.zero, new Vector3(0.45f, 0.3f, 0.5f), turret._bodyMat);
             Part(PrimitiveType.Cube, turret._head, new Vector3(0f, 0f, 0.45f), new Vector3(0.1f, 0.1f, 0.5f), dark);
+            // A smaller copy of the scrap-built sentry over the placeholder parts; its accent panels take the health tint.
+            Transform baseModel = turret.Dress("eng_sentry_base", root.transform);
+            Transform headModel = turret.Dress("eng_sentry_head", turret._head);
+            if (baseModel != null && headModel != null)
+                foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
+                    if (!r.transform.IsChildOf(baseModel) && !r.transform.IsChildOf(headModel)) r.enabled = false;
 
             turret._mirror = mirror;
             turret._range = range;
@@ -66,6 +74,23 @@ namespace Deadfall.Classes
             turret.OwnerClientId = ownerClientId;
             if (!mirror) CombatTargets.Register(turret);
             return turret;
+        }
+
+        private Transform Dress(string id, Transform parent)
+        {
+            GameObject model = ModelLibrary.Spawn(id, parent);
+            if (model == null) return null;
+            model.transform.localScale = Vector3.one * ModelScale;
+            foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                r.gameObject.layer = IgnoreRaycastLayer;
+                Material[] mats = r.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name == "Model Accent") { mats[i] = _bodyMat; changed = true; }
+                if (changed) r.sharedMaterials = mats;
+            }
+            return model.transform;
         }
 
         private static void Part(PrimitiveType type, Transform parent, Vector3 pos, Vector3 scale, Material m)

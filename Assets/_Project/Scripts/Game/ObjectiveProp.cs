@@ -34,6 +34,10 @@ namespace Deadfall.Game
     {
         private Renderer _light;
         private Material _lightMaterial;
+        // Stand-in-range objectives: a glowing ring on the floor at the channel range (ObjectiveRules.ChannelRange).
+        private GameObject _ring;
+        private Material _ringMaterial;
+        private static readonly Color RingIdle = new Color(1f, 0.78f, 0.25f), RingActive = new Color(0.35f, 1f, 0.55f);
 
         public ushort Id { get; private set; }
         public byte ObjectiveId { get; private set; }
@@ -112,7 +116,53 @@ namespace Deadfall.Game
             GameObject model = ModelLibrary.Spawn(ModelId(kind), root.transform);
             if (model != null) ModelLibrary.HideExcept(root.transform, model.transform, r => r == p._light);
             InteractGlow.AddRainbow(root, () => !p.Done);
+            if (p.IsChannel) p.BuildRing();
             return p;
+        }
+
+        /// <summary>A thin glowing circle of floor segments showing how close you must stay while it channels.</summary>
+        private void BuildRing()
+        {
+            _ring = new GameObject("Range Ring");
+            _ring.transform.SetParent(transform, false);
+            _ring.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+            _ringMaterial = RuntimeMaterials.CreateEmissive(RingIdle, 2.2f);
+            float r = Deadfall.Rules.Encounters.ObjectiveRules.ChannelRange;
+            const int segments = 56;
+            float len = 2f * Mathf.PI * r / segments * 1.04f;
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                GameObject seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(seg.GetComponent<Collider>());
+                seg.transform.SetParent(_ring.transform, false);
+                seg.transform.localPosition = new Vector3(Mathf.Sin(a) * r, 0f, Mathf.Cos(a) * r);
+                seg.transform.localRotation = Quaternion.Euler(0f, a * Mathf.Rad2Deg + 90f, 0f);
+                seg.transform.localScale = new Vector3(len, 0.02f, 0.07f);
+                Renderer rend = seg.GetComponent<Renderer>();
+                rend.sharedMaterial = _ringMaterial;
+                rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+
+        private void Update()
+        {
+            if (_ring == null) return;
+            if (Done)
+            {
+                if (_ring.activeSelf) _ring.SetActive(false);
+                return;
+            }
+            // A slow pulse; brighter and green while it's channelling, so you can see the zone that matters.
+            float pulse = 0.65f + 0.35f * Mathf.Sin(Time.time * (Started ? 4f : 2f));
+            Color c = Started ? RingActive : RingIdle;
+            RuntimeMaterials.SetColor(_ringMaterial, c);
+            if (_ringMaterial.HasProperty("_EmissionColor")) _ringMaterial.SetColor("_EmissionColor", c * (Started ? 3f : 1.6f) * pulse);
+        }
+
+        private void OnDestroy()
+        {
+            if (_ringMaterial != null) Destroy(_ringMaterial);
         }
 
         private static string ModelId(ObjectivePropKind kind)

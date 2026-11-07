@@ -721,6 +721,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] First person: fitted parts use the new models (red dot, holo, scope with rings, compensator, long barrel, foregrip, laser, extended mags, drums, taped fast mag, light and heavy stocks) and sit on the gun without floating. Red Dot shows a red dot and Holo a green dot and ring through an open window when aiming; the Sniper Scope still opens the full-screen scope view.
 - [ ] Armory (FOB): attachment buttons only cycle through parts the gun takes, and slots a gun takes nothing in are hidden. Drops and the Gun Dispenser only roll parts the gun takes. Forging keeps every Mod Bench part.
 
+### 3.65 Objective range rings, FOB return, deployed sentry model
+- [ ] Every stand-near objective (generator, data/lockdown terminal, containment console, cryo container, coolant valve) has a thin glowing circle on the floor around it at the range you must stay in. Gold and slowly pulsing before it starts; green and pulsing faster while it channels; gone once it's done. Leaving the circle stops progress.
+- [ ] Die in a run, fail it, and return to the FOB (or wait at the results screen): you stay at the FOB / where you are and are never moved to the original firing-range spawn. Dying at base outside a run gets you up where you fell after about 3 s.
+- [ ] Engineer's Deploy Sentry skill places a smaller copy of the scrap-built sentry (same base and head), whose green panels redden as it takes damage; it still turns, fires and expires as before.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
