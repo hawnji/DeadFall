@@ -91,9 +91,10 @@ namespace Deadfall.DebugTools
             else if (_health != null && !_health.IsAlive && _respawnAt < 0f) _respawnAt = Time.time + 3f;
             if (_respawnAt > 0f && Time.time >= _respawnAt)
             {
+                // Get up where you fell. This used to teleport to the firing range spawn, which also fired after a
+                // failed run and could pull you off the FOB (or out of a map) onto the original test range.
                 _respawnAt = -1f;
-                _health.Revive();
-                _motor.Teleport(_spawnPos, _spawnYaw);
+                if (!_health.IsAlive) _health.Revive();
             }
         }
 
