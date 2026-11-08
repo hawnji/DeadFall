@@ -465,6 +465,14 @@ namespace Deadfall.Encounters
                 if (spitters > 0) _director.SpawnNear(PrototypeEnemies.Retcher, boss.transform.position, spitters, 4f, 8f);
                 return;
             }
+            if (boss.Definition != null && boss.Definition.BossKind == SpecimenKind.Orderly)
+            {
+                // The wards empty out: Husks, with a Pyre in every four.
+                int pyres = count / 4;
+                _director.SpawnNear(PrototypeEnemies.Husk, boss.transform.position, count - pyres, 3f, 7f);
+                if (pyres > 0) _director.SpawnNear(PrototypeEnemies.Pyre, boss.transform.position, pyres, 4f, 8f);
+                return;
+            }
             int bolters = count / 4;
             _director.SpawnNear(PrototypeEnemies.Husk, boss.transform.position, count - bolters, 3f, 7f);
             if (bolters > 0) _director.SpawnNear(PrototypeEnemies.Bolter, boss.transform.position, bolters, 3f, 7f);
@@ -603,7 +611,8 @@ namespace Deadfall.Encounters
                         SurgeType.Elite => "Elite · Alphas lead the pack, mutations everywhere",
                         SurgeType.Hunt => "Hunt · something is tracking you. Stay together",
                         SurgeType.Supply => "Supply · crates are dropping into the area",
-                        SurgeType.Specimen => PreferredBossId == "enemy.broodmother" ? "Specimen · the Broodmother has woken" : "Specimen · the test subject is loose",
+                        SurgeType.Specimen => PreferredBossId == "enemy.broodmother" ? "Specimen · the Broodmother has woken"
+                            : PreferredBossId == PrototypeEnemies.OrderlyId ? "Specimen · the Orderly is making its rounds" : "Specimen · the test subject is loose",
                         _ => !_endless && _surge == FinalSurge ? "Final surge" : null,
                     };
                     if (_endless && EndlessRules.Steps(_surge) > 0)

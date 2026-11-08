@@ -139,6 +139,18 @@ namespace Deadfall.Rules.Combat
         Brood = 4,
     }
 
+    /// <summary>Which boss rule set a Specimen-role enemy follows.</summary>
+    public enum SpecimenKind : byte
+    {
+        /// <summary>Specimen Zero (Cinder Ridge): stalk, rampage with charges and summons, exposed core with acid.</summary>
+        Specimen = 0,
+        /// <summary>The Broodmother (Harrow Line): never charges, spits and calls Creepers in every phase.</summary>
+        Brood = 1,
+        /// <summary>The Orderly (Mercy Vale): charges in every phase, empties the wards from Rampage on, and
+        /// self-medicates (regenerates) with its core exposed if the squad lets up.</summary>
+        Orderly = 2,
+    }
+
     /// <summary>The Specimen (boss) framework: phases by health, per-phase stats and weak points, summons.</summary>
     public static class SpecimenRules
     {
@@ -166,10 +178,28 @@ namespace Deadfall.Rules.Combat
         }
 
         /// <summary>Broodmother (M12): calls her brood in every phase, more often while enraged.</summary>
-        public static bool SummonsIn(SpecimenPhase phase, bool brood) => brood || phase == SpecimenPhase.Rampage;
+        public static bool SummonsIn(SpecimenPhase phase, bool brood) => SummonsIn(phase, brood ? SpecimenKind.Brood : SpecimenKind.Specimen);
 
-        public static float SummonInterval(SpecimenPhase phase, bool brood) =>
-            !brood ? SummonIntervalSeconds : phase == SpecimenPhase.Rampage ? 6f : 10f;
+        public static float SummonInterval(SpecimenPhase phase, bool brood) => SummonInterval(phase, brood ? SpecimenKind.Brood : SpecimenKind.Specimen);
+
+        /// <summary>The Orderly keeps calling patients from Rampage on (Specimen Zero only while rampaging).</summary>
+        public static bool SummonsIn(SpecimenPhase phase, SpecimenKind kind) => kind switch
+        {
+            SpecimenKind.Brood => true,
+            SpecimenKind.Orderly => phase != SpecimenPhase.Stalk,
+            _ => phase == SpecimenPhase.Rampage,
+        };
+
+        public static float SummonInterval(SpecimenPhase phase, SpecimenKind kind) => kind switch
+        {
+            SpecimenKind.Brood => phase == SpecimenPhase.Rampage ? 6f : 10f,
+            SpecimenKind.Orderly => 8f,
+            _ => SummonIntervalSeconds,
+        };
+
+        /// <summary>Fraction of max health per second the Orderly regenerates with its core exposed, once it has gone
+        /// <see cref="VariantRules.RegenDelaySeconds"/> without taking damage.</summary>
+        public const float OrderlyRegenFraction = 0.008f;
 
         /// <summary>Infected summoned per wave in the Rampage phase (the Broodmother brings two more each time).</summary>
         public static int SummonCount(int players, SpecimenModifiers mods, bool brood = false)
@@ -198,11 +228,34 @@ namespace Deadfall.Rules.Combat
         }
 
         /// <summary>Writes the phase's stats into <paramref name="target"/> (the boss's own copy), starting from its base stats.</summary>
-        public static void ApplyPhase(EnemyStats baseStats, EnemyStats target, SpecimenPhase phase, SpecimenModifiers mods, bool brood = false)
+        public static void ApplyPhase(EnemyStats baseStats, EnemyStats target, SpecimenPhase phase, SpecimenModifiers mods, bool brood = false) =>
+            ApplyPhase(baseStats, target, phase, mods, brood ? SpecimenKind.Brood : SpecimenKind.Specimen);
+
+        public static void ApplyPhase(EnemyStats baseStats, EnemyStats target, SpecimenPhase phase, SpecimenModifiers mods, SpecimenKind kind)
         {
             if (baseStats == null || target == null) return;
             target.CopyFrom(baseStats);
-            if (brood)
+            if (kind == SpecimenKind.Orderly)
+            {
+                // The Orderly: always charging. Rampaging it charges far more often; exposed it slows, drops its
+                // guard and regenerates whenever the squad stops shooting it.
+                target.CanCharge = true;
+                target.CanShoot = false;
+                if (phase == SpecimenPhase.Rampage)
+                {
+                    target.ChaseSpeed *= 1.2f;
+                    target.ChargeCooldownSeconds *= 0.55f;
+                    target.DamageReduction = Math.Max(0f, target.DamageReduction - 0.15f);
+                }
+                else if (phase == SpecimenPhase.ExposedCore)
+                {
+                    target.ChaseSpeed *= 0.8f;
+                    target.ChargeCooldownSeconds *= 0.8f;
+                    target.DamageReduction = 0f;
+                    target.RegenPerSecond = target.MaxHealth * OrderlyRegenFraction;
+                }
+            }
+            else if (kind == SpecimenKind.Brood)
             {
                 // Broodmother: keeps her distance and spits; never charges. Enraged she moves faster and spits more often.
                 target.CanCharge = false;

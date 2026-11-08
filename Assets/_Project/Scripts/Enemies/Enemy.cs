@@ -504,7 +504,7 @@ namespace Deadfall.Enemies
             if (phase == _phase && !announce) return;
             bool changed = phase != _phase;
             _phase = phase;
-            if (!_mirrored) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.IsBrood);
+            if (!_mirrored) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.BossKind);
             ShowPhaseParts();
             if (changed)
             {
@@ -537,7 +537,7 @@ namespace Deadfall.Enemies
             _bossMods = _definition.IsBoss ? bossMods : SpecimenModifiers.None;
             VariantRules.Apply(_stats, _traits);
             _phase = SpecimenPhase.Stalk;
-            if (_definition.IsBoss) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.IsBrood);
+            if (_definition.IsBoss) SpecimenRules.ApplyPhase(_definition.Stats, _stats, _phase, _bossMods, _definition.BossKind);
             ShowPhaseParts();
             ShowTraitMarkers();
             _exploded = false;
@@ -905,11 +905,11 @@ namespace Deadfall.Enemies
             {
                 SpecimenPhase want = SpecimenRules.PhaseFor(Health01);
                 if (want > _phase) SetPhase(want, now, false); // phases only move forward
-                bool brood = _definition.IsBrood;
-                if (SpecimenRules.SummonsIn(_phase, brood) && now >= _nextSummonAt)
+                SpecimenKind kind = _definition.BossKind;
+                if (SpecimenRules.SummonsIn(_phase, kind) && now >= _nextSummonAt)
                 {
-                    _nextSummonAt = now + SpecimenRules.SummonInterval(_phase, brood);
-                    SummonRequested?.Invoke(this, SpecimenRules.SummonCount(Mathf.Max(1, CombatTargets.All.Count), _bossMods, brood));
+                    _nextSummonAt = now + SpecimenRules.SummonInterval(_phase, kind);
+                    SummonRequested?.Invoke(this, SpecimenRules.SummonCount(Mathf.Max(1, CombatTargets.All.Count), _bossMods, kind == SpecimenKind.Brood));
                 }
             }
 

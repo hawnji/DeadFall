@@ -12,13 +12,13 @@ namespace Deadfall.Enemies
     /// </summary>
     public static class PrototypeEnemies
     {
-        private static EnemyDefinition _husk, _bolter, _bulwark, _creeper, _pyre, _retcher, _alpha, _goliath, _stalker, _specimen, _brood;
+        private static EnemyDefinition _husk, _bolter, _bulwark, _creeper, _pyre, _retcher, _alpha, _goliath, _stalker, _specimen, _brood, _orderly;
         private static EnemyDefinition[] _all;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
-            _husk = _bolter = _bulwark = _creeper = _pyre = _retcher = _alpha = _goliath = _stalker = _specimen = _brood = null;
+            _husk = _bolter = _bulwark = _creeper = _pyre = _retcher = _alpha = _goliath = _stalker = _specimen = _brood = _orderly = null;
             _all = null;
         }
 
@@ -185,12 +185,33 @@ namespace Deadfall.Enemies
             EnemyBodyType.Brood, 2.6f, 1.3f, new Color(0.46f, 0.5f, 0.38f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
             role: EnemyRole.Boss);
 
+        public const string OrderlyId = "enemy.orderly";
+
+        /// <summary>
+        /// The Orderly, Mercy Vale's Specimen: a hulking night orderly swollen by the outbreak, still in the scraps of
+        /// its scrubs. It charges in every phase, empties the wards (Husks with a Pyre in every four) from Rampage on,
+        /// and with its core exposed it regenerates whenever the squad lets up. Same body and weak points as Specimen Zero.
+        /// </summary>
+        public static EnemyDefinition Orderly => _orderly != null ? _orderly : _orderly = EnemyDefinition.CreateRuntime(
+            OrderlyId, "The Orderly",
+            new EnemyStats
+            {
+                MaxHealth = 6400f, DamageReduction = 0.3f, ChaseSpeed = 3.6f, Acceleration = 11f, TurnSpeedDegrees = 220f, DetectRange = 999f,
+                AttackRange = 3f, AttackDamage = 40f, AttackWindupSeconds = 0.6f, AttackRecoverSeconds = 0.8f, AttackArcDegrees = 150f,
+                StaggerThreshold = 0f, StaggerSeconds = 1.2f, StaggerImmunitySeconds = 0f,
+                CanCharge = true, ChargeMinRange = 5f, ChargeMaxRange = 22f, ChargeWindupSeconds = 0.85f,
+                ChargeSpeed = 13f, ChargeSeconds = 1.3f, ChargeCooldownSeconds = 6f, ChargeDamage = 55f, ChargeCanBeStaggered = false,
+                PoolDamagePerSecond = 12f, PoolRadius = 2.5f, PoolSeconds = 6f,
+            },
+            EnemyBodyType.Specimen, 3.4f, 1f, new Color(0.52f, 0.62f, 0.6f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
+            role: EnemyRole.Boss);
+
         /// <summary>Fixed order: the network numbers enemy types by position here (EnemyCatalog). Append only.</summary>
         public static IReadOnlyList<EnemyDefinition> All
         {
             get
             {
-                if (_all == null || _all[0] == null) _all = new[] { Husk, Bolter, Bulwark, Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, SpecimenZero, Broodmother };
+                if (_all == null || _all[0] == null) _all = new[] { Husk, Bolter, Bulwark, Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, SpecimenZero, Broodmother, Orderly };
                 return _all;
             }
         }
