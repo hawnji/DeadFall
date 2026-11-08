@@ -13,6 +13,8 @@ namespace Deadfall.Game
     {
         public static List<PlayerWeapons.LoadoutEntry> For(string classId)
         {
+            // Gauntlet: one fixed loadout for everyone, whatever the class or Armory picks.
+            if (MapSession.Current != null && Deadfall.Rules.World.EnvironmentCatalog.IsGauntlet(MapSession.Current.Seed)) return Gauntlet();
             List<PlayerWeapons.LoadoutEntry> def = Default(classId);
             ProfileService profile = ProfileService.Current;
             if (profile == null) return def;
@@ -24,6 +26,18 @@ namespace Deadfall.Game
                 if (w == null) return def;
                 list.Add(new PlayerWeapons.LoadoutEntry(w, ArmoryMods(profile, w)));
             }
+            return list;
+        }
+
+        /// <summary>The Gauntlet's fixed loadout: Halberd AR with a Red Dot, Breacher 12, Ranger 9, Saber-7.</summary>
+        public static List<PlayerWeapons.LoadoutEntry> Gauntlet()
+        {
+            WeaponDefinition ar = WeaponCatalog.HalberdAR;
+            var list = new List<PlayerWeapons.LoadoutEntry>(4)
+            {
+                new PlayerWeapons.LoadoutEntry(ar, ar != null ? Deadfall.Rules.Combat.ArmoryAttachments.Build(new[] { "att.red_dot" }, ar.ContentId, ar.Category) : null),
+            };
+            Add(list, WeaponCatalog.Breacher12, WeaponCatalog.Ranger9, WeaponCatalog.Saber7);
             return list;
         }
 

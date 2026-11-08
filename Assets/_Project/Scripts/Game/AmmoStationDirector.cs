@@ -80,6 +80,7 @@ namespace Deadfall.Game
             if (map == null || map == _builtFor) return _positions;
             Clear();
             _builtFor = map;
+            if (EnvironmentCatalog.IsGauntlet(map.Layout.Seed)) return _positions; // Gauntlet: no shops
             var rng = new DeterministicRandom(map.Layout.Seed ^ 0xA3307A71UL);
             var rooms = new List<int>(8);
             for (int sector = 0; sector < map.Layout.SectorCount; sector++)

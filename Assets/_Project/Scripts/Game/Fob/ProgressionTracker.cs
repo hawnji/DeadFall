@@ -219,6 +219,12 @@ namespace Deadfall.Game
             // Operations / Endless flags are synced after the run starts on clients; take the latest view.
             if (ObjectiveDirector.Current != null && ObjectiveDirector.Current.IsOperation) _run.Operation = true;
             if (_waves != null && _waves.IsEndless) _run.Endless = true;
+            if (_waves != null && _waves.IsGauntlet)
+            {
+                _run.Gauntlet = true;
+                _run.GauntletEnvironment = MapSession.Current != null ? Deadfall.Rules.World.EnvironmentCatalog.IndexOf(MapSession.Current.Seed) : 0;
+                _run.GauntletMs = GauntletClock.Current != null ? GauntletClock.Current.ClearMsFor(won) : 0;
+            }
             if (aborted && _run.SurgesCleared == 0 && _run.Kills == 0) return; // aborted before anything happened
             if (_profile == null) return;
             RunSummary s = _profile.BankRun(_runClass ?? ClassId, _run);

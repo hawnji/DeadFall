@@ -140,6 +140,10 @@ namespace Deadfall.Rules.World
         /// <summary>Validation: the whole map needs at least this many loot slots.</summary>
         public int MinLootSlots = 6;
         public int MaxAttempts = 16;
+        /// <summary>One Supply Cache per sector (off in Gauntlet: no shops).</summary>
+        public bool SupplyCaches = true;
+        /// <summary>Chance a free loot slot gets an ammo crate or medkit, and the share of those that are ammo.</summary>
+        public float LootChance = 0.35f, AmmoShare = 0.65f;
         /// <summary>Chance a main-route link is a corridor piece rather than a direct room-to-room door.</summary>
         public float CorridorChance = 0.7f;
         /// <summary>Chance a side branch sits behind its own locked door (opened with credits).</summary>

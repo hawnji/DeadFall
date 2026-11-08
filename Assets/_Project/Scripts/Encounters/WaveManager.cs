@@ -83,6 +83,9 @@ namespace Deadfall.Encounters
         /// <summary>Endless run (no final surge, escalation modifiers from surge 21). Synced to clients.</summary>
         public bool IsEndless => _endless;
         private bool _endless;
+        /// <summary>Gauntlet run (<see cref="GauntletRules"/>): six hard surges, fixed lulls, no shops. Synced to clients.</summary>
+        public bool IsGauntlet => _gauntlet;
+        private bool _gauntlet;
         /// <summary>The environment's boss for Specimen surges (set when a map is built; null for any boss).</summary>
         public string PreferredBossId { get => _planner != null ? _planner.PreferredBossId : null; set { if (_planner != null) _planner.PreferredBossId = value; } }
         public float TimeLeft => Mathf.Max(0f, (float)(_phaseEndsAt - Time.timeAsDouble));
@@ -228,6 +231,18 @@ namespace Deadfall.Encounters
             return true;
         }
 
+        /// <summary>Host/offline: starts a Gauntlet run (six surges played as 5-10, fixed short lulls).</summary>
+        public bool StartGauntlet(ulong seed = 0)
+        {
+            if (!StartRun(seed)) return false;
+            _gauntlet = true;
+            _runSettings.FinalSurge = GauntletRules.Surges;
+            _runSettings.LullSeconds = GauntletRules.LullSeconds;
+            _stateDirty = true;
+            GameLog.Info("Waves", $"Gauntlet run: {GauntletRules.Surges} surges.");
+            return true;
+        }
+
         /// <summary>Host/offline: lull length for the rest of the run (extraction pressure).</summary>
         public void SetLullSeconds(float seconds)
         {
@@ -268,6 +283,7 @@ namespace Deadfall.Encounters
             StopRun();
             _operation = false;
             _endless = false;
+            _gauntlet = false;
             _planner.Endless = false;
             _completeSubtitle = null;
             _failSubtitle = null;
@@ -291,6 +307,7 @@ namespace Deadfall.Encounters
             EnemyAttacks.ClearAll();
             _run.Abort();
             _operation = false;
+            _gauntlet = false;
             _runSettings.FinalSurge = _defaultFinalSurge;
             _runSettings.LullSeconds = _defaultLullSeconds;
             _plan = null;
@@ -361,9 +378,10 @@ namespace Deadfall.Encounters
             if ((e & SurgeRunEvents.SurgeStarted) != 0)
             {
                 _ready.Clear();
-                _plan = _planner.Plan(_run.Surge, Mathf.Max(1, _players.Count), _seed);
+                _plan = _planner.Plan(_gauntlet ? GauntletRules.PlannedSurge(_run.Surge) : _run.Surge, Mathf.Max(1, _players.Count), _seed);
                 // Endless "Relentless": shorter lulls after this surge.
-                if (!_operation)
+                if (_gauntlet) _runSettings.LullSeconds = GauntletRules.LullSeconds;
+                else if (!_operation)
                 {
                     // Next lull: a random 10-25 s from the run seed (Endless "Relentless" still trims it).
                     var rng = new System.Random(unchecked((int)(_seed ^ ((ulong)_run.Surge * 0x9E3779B97F4A7C15UL))));
@@ -496,8 +514,9 @@ namespace Deadfall.Encounters
         {
             double now = Time.timeAsDouble;
             int remaining = _run.Phase == RunPhase.Surge ? _director.Remaining : 0;
-            SurgeType type = _plan != null && _plan.Surge == _run.Surge ? _plan.Type : WavePlanner.TypeFor(Mathf.Max(1, _run.Surge));
-            int directions = _plan != null && _plan.Surge == _run.Surge ? _director.ActiveGroups.Count : 0;
+            int planned = _gauntlet ? GauntletRules.PlannedSurge(_run.Surge) : Mathf.Max(1, _run.Surge);
+            SurgeType type = _plan != null && _plan.Surge == planned ? _plan.Type : WavePlanner.TypeFor(planned);
+            int directions = _plan != null && _plan.Surge == planned ? _director.ActiveGroups.Count : 0;
             ApplyState(_run.Phase, _run.Surge, type, directions, now + _run.TimeLeft(now), remaining,
                 CountReady(), Mathf.Max(1, _players.Count));
             if (_run.Phase != RunPhase.Lull) _localReady = false;
@@ -549,10 +568,10 @@ namespace Deadfall.Encounters
                 case RunPhase.Lull:
                     // Between surges there's no pop-up; only the start of a run (and Operations' objective lulls) say so.
                     if (_surge == 1) _incomingCalled = 0;
-                    if (_surge == 1) title = _operation ? "OPERATION STARTED" : "DEPLOYMENT STARTED";
+                    if (_surge == 1) title = _operation ? "OPERATION STARTED" : _gauntlet ? "GAUNTLET" : "DEPLOYMENT STARTED";
                     else if (_operation) title = "LULL";
                     if (title != null)
-                        subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives" : "Get ready";
+                        subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives" : _gauntlet ? $"{GauntletRules.Surges} surges · the clock starts with the first" : "Get ready";
                     break;
                 case RunPhase.Surge:
                     // Called once, just before the surge (see Update); a surge that starts without that call says it now.
@@ -650,7 +669,7 @@ namespace Deadfall.Encounters
                     w.WriteValueSafe(kv.Key);
                     w.WriteValueSafe(kv.Value);
                 }
-                w.WriteValueSafe((byte)((_endless ? 1 : 0) | (_failSubtitle != null ? 2 : 0) | (_completeSubtitle != null ? 4 : 0)));
+                w.WriteValueSafe((byte)((_endless ? 1 : 0) | (_failSubtitle != null ? 2 : 0) | (_completeSubtitle != null ? 4 : 0) | (_gauntlet ? 8 : 0)));
                 if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgState, w, NetworkDelivery.ReliableSequenced);
                 else _session.SendToClient(MsgState, onlyTo, w, NetworkDelivery.ReliableSequenced);
             }
@@ -678,6 +697,7 @@ namespace Deadfall.Encounters
             }
             r.ReadValueSafe(out byte flags);
             _endless = (flags & 1) != 0;
+            _gauntlet = (flags & 8) != 0;
             // Clients don't get the host's wording, but the end screen title should still say how the run ended.
             if ((flags & 2) == 0) _failSubtitle = null;
             else if (_failSubtitle == null) _failSubtitle = "A required objective failed";

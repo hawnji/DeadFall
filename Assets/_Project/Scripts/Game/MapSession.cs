@@ -168,7 +168,7 @@ namespace Deadfall.Game
             // M12: the environment travels inside the seed.
             Environment = EnvironmentCatalog.ForSeed(seed);
             _kit = Environment.CreateKit();
-            _graph = Environment.CreateGraph();
+            _graph = EnvironmentCatalog.GraphFor(seed);
             if (WaveManager.Current != null) WaveManager.Current.PreferredBossId = Environment.BossId;
             Layout layout = LayoutGenerator.Generate(_kit, _graph, seed);
             if (layout == null)
@@ -279,7 +279,7 @@ namespace Deadfall.Game
         }
 
         /// <summary>Doors are free outside a run, so a generated map can be explored from the pause screen (as T-51).</summary>
-        private bool DoorsFree => _waves == null || !_waves.IsRunning;
+        private bool DoorsFree => _waves == null || !_waves.IsRunning || _waves.IsGauntlet;
         private ulong LocalId => _session != null ? _session.LocalClientId : 0UL;
 
         /// <summary>Host/offline: opens every door (Operations runs, T-47).</summary>
@@ -381,7 +381,7 @@ namespace Deadfall.Game
             switch (door.Lock)
             {
                 case DoorLock.Credits:
-                    if (DoorsFree) return "Open door (free outside a run)";
+                    if (DoorsFree) return _waves != null && _waves.IsGauntlet ? "Open door" : "Open door (free outside a run)";
                     int credits = _waves != null ? _waves.LocalCredits : 0;
                     return credits >= door.Cost ? $"Open door ({door.Cost} credits)" : $"Open door ({door.Cost} credits, you have {credits})";
                 case DoorLock.Switch:

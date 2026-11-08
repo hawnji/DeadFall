@@ -50,6 +50,10 @@ namespace Deadfall.Rules.Progression
         /// <summary>Endless run (M12): it always ends in a wipe, so nothing is cut for failing; deep surges pay extra.</summary>
         public bool Endless;
         public int SurgesCleared;
+        /// <summary>Gauntlet run: the environment it ran on and the clear time (ms, 0 if not cleared).</summary>
+        public bool Gauntlet;
+        public int GauntletEnvironment;
+        public long GauntletMs;
         public int Kills;
         public int Objectives;
         public int Specimens;
@@ -113,6 +117,9 @@ namespace Deadfall.Rules.Progression
         public List<ChallengeCompletion> Completed;
         /// <summary>The run had already been banked; nothing was paid.</summary>
         public bool Duplicate;
+        /// <summary>Gauntlet: the best time before this run (ms, 0 = none) and whether this run beat it.</summary>
+        public long GauntletBestBefore;
+        public bool GauntletNewBest;
     }
 
     /// <summary>Changes to a profile. Every write path goes through here so tests cover it.</summary>
@@ -147,6 +154,17 @@ namespace Deadfall.Rules.Progression
             p.Wallet.Add(s.Reward.Currency);
             p.AddStat(result.Won ? StatKeys.RunsWon : StatKeys.RunsFailed);
             if (result.Endless) p.SetStatMax(StatKeys.EndlessBest, result.SurgesCleared);
+            if (result.Gauntlet)
+            {
+                string key = GauntletRecords.BestKey(result.GauntletEnvironment);
+                s.GauntletBestBefore = p.Stat(key);
+                if (result.Won && GauntletRecords.IsNewBest(result.GauntletMs, s.GauntletBestBefore))
+                {
+                    p.Stats[key] = result.GauntletMs;
+                    s.GauntletNewBest = true;
+                }
+                if (result.Won) p.AddStat(StatKeys.GauntletsWon);
+            }
             if (result.Won && result.Operation) p.AddStat(StatKeys.OperationsWon);
             s.OperatorLevelAfter = p.OperatorLevel;
             s.RankAfter = p.RankOf(classId);

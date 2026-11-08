@@ -44,6 +44,13 @@ Drop chance is 1.2% per threat point, at most 20%, which works out to about one 
 
 Prices (`ModBenchRules.Price`): Red Dot 350, Holo 500, Sniper Scope 900, Compensator 450, Long Barrel 500, Foregrip 400, Laser 300, Extended Mag 600, Fast Mag 450, Light Stock 350, Heavy Stock 400. A fully kitted rifle costs about 2,300, a bit over two Forge steps' worth, so it competes with forging and perks. You only pay for new parts, and removing parts is free. Bench parts don't count against a tier's attachment slots (tiers only limit what loot rolls). Which gun takes which part is in `AttachmentFit`.
 
+## Gauntlet (first pass, 2026-11-08)
+- Six surges planned as surges 5-10 (Siege, Hunt, Elite, Swarm, Supply, then the Specimen), 8 s fixed lulls (`GauntletRules`).
+- Map: 5-6 main rooms, 3-5 side rooms, 3 sectors, no secrets, fixed seed per environment. Doors are free.
+- Loot: no Supply Caches; free slots get loot at 50% (Survival 35%) and 72% of that is ammo (Survival 65%), about 1.6x the ammo crates per slot.
+- Loadout: Halberd AR + Red Dot, Breacher 12, Ranger 9, Saber-7. No dispenser, perks, Mod Bench, forge, ammo stations or weapon drops. Field Mod picks between surges stay.
+- Par 8:00 is a guess; set it from real clear times. Rewards are a normal won run.
+
 ## Scrap and structures
 
 Scrap comes from kills (3 per threat point, ×1.5 for Engineers) plus 20 per surge and 40 per objective. That is roughly 200 a surge at surge 10. A sentry costs 120 (54 DPS, 300 rounds, refilling costs 30) and an Arc Fence costs 90. **Verdict: unchanged.** The drone is weak in attack mode (12–24 DPS), but it follows you and repairs things, so that's acceptable for now.

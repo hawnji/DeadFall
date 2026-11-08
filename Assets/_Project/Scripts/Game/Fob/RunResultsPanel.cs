@@ -62,25 +62,39 @@ namespace Deadfall.Game
             if (!_show || UiModal.Owner != ModalId) return;
             HudKit.Begin();
             GUI.depth = -30;
-            string head = _result.Won ? (_result.Operation ? "OPERATION COMPLETE" : "DEPLOYMENT COMPLETE") : _aborted ? "DEPLOYMENT ABORTED" : "SQUAD WIPED";
+            bool gauntlet = _result.Gauntlet;
+            string head = _result.Won ? (_result.Operation ? "OPERATION COMPLETE" : gauntlet ? "GAUNTLET CLEARED" : "DEPLOYMENT COMPLETE") : _aborted ? "DEPLOYMENT ABORTED" : "SQUAD WIPED";
             Color hc = _result.Won ? HudKit.Good : HudKit.Bad;
             RunStatsDirector stats = RunStatsDirector.Current;
             int statRows = stats != null ? stats.RowCount : 0;
             float squadH = statRows > 0 ? 54f + statRows * 30f : 0f;
-            Rect c = HudKit.Window(660f, 560f + squadH, head, null, hc);
+            Rect c = HudKit.Window(660f, 560f + squadH + (gauntlet ? 28f : 0f), head, null, hc);
 
             // Stat tiles.
-            string[] labels = { "SURGES", "KILLS", "OBJECTIVES", "SPECIMENS" };
-            int[] values = { _result.SurgesCleared, _result.Kills, _result.Objectives, _result.Specimens };
+            // Gauntlet swaps the objectives tile for the clear time.
+            string[] labels = { "SURGES", "KILLS", gauntlet ? "TIME" : "OBJECTIVES", "SPECIMENS" };
+            string time = _result.GauntletMs > 0 ? Deadfall.Rules.Encounters.GauntletRules.Clock(_result.GauntletMs / 1000.0) : "--";
+            string[] values = { _result.SurgesCleared.ToString("N0"), _result.Kills.ToString("N0"), gauntlet ? time : _result.Objectives.ToString("N0"), _result.Specimens.ToString("N0") };
             float tw = (c.width - 3 * 10f) / 4f;
             for (int i = 0; i < 4; i++)
             {
                 var t = new Rect(c.x + i * (tw + 10f), c.y, tw, 70f);
                 HudKit.Round(t, HudKit.GlassLight);
-                HudKit.Label(new Rect(t.x, t.y + 8f, t.width, 34f), values[i].ToString("N0"), 28, Color.white, TextAnchor.MiddleCenter, head: true);
+                HudKit.Label(new Rect(t.x, t.y + 8f, t.width, 34f), values[i], 28, Color.white, TextAnchor.MiddleCenter, head: true);
                 HudKit.Label(new Rect(t.x, t.y + 44f, t.width, 18f), labels[i], 11, HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
             }
             float y = c.y + 86f;
+            if (gauntlet)
+            {
+                string par = Deadfall.Rules.Encounters.GauntletRules.Clock(Deadfall.Rules.Encounters.GauntletRules.ParSeconds);
+                string before = _summary.GauntletBestBefore > 0 ? Deadfall.Rules.Encounters.GauntletRules.Clock(_summary.GauntletBestBefore / 1000.0) : "none";
+                string line = _summary.GauntletNewBest ? $"NEW BEST TIME!  Previous: {before}  ·  Par {par}"
+                    : _result.GauntletMs > 0 ? $"Best: {before}  ·  Par {par}" : $"Not cleared  ·  Best: {before}  ·  Par {par}";
+                bool underPar = _result.GauntletMs > 0 && _result.GauntletMs <= Deadfall.Rules.Encounters.GauntletRules.ParSeconds * 1000f;
+                HudKit.Label(new Rect(c.x, y - 6f, c.width, 24f), line + (underPar ? "  ·  under par" : string.Empty), 15,
+                    _summary.GauntletNewBest ? HudKit.Accent : HudKit.TextDim, TextAnchor.MiddleCenter, head: true);
+                y += 28f;
+            }
 
             // Per-player stats with the MVP.
             if (statRows > 0)

@@ -742,6 +742,17 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Clients see the dodge too (it moves the host's enemy, so snapshots carry it).
 - [ ] Creepers' footsteps use the new spider walk sound (SpiderWalk_1), slightly higher and in quick scuttles, instead of the regular enemy walk. The Broodmother uses it too, deeper and louder.
 
+### 3.68 Gauntlet mode
+- [ ] Command Center lists **Gauntlet** under Endless, with the fixed loadout, par time and your best for the picked environment. Deploying ignores the seed box: every Gauntlet on an environment is the same small map (3 sectors, short main route).
+- [ ] You (and every squad member, whatever their class or Armory loadout) start with Halberd AR + Red Dot, Breacher 12, Ranger 9 and Saber-7. Getting back up after being eliminated gives the same loadout. Back at the FOB your own loadout returns.
+- [ ] No Gun Dispenser, perk machines, Weapon Forge, Mod Bench, ammo stations or Supply Caches on the map, and kills never drop weapons. Doors open for free with the prompt "Open door".
+- [ ] Noticeably more ammo crates lying around than in Survival; the Supply surge (surge 5) still drops crates.
+- [ ] "GAUNTLET" banner at the start; six surges with 8 s lulls, the sixth is the Specimen and killing it wins.
+- [ ] Under the compass: a clock (0:00.0 until surge 1 starts), "GAUNTLET · SURGE n/6 · PAR 8:00 · BEST …". It turns amber past par and green when you win, and stops on the win.
+- [ ] Results screen says GAUNTLET CLEARED, shows TIME instead of OBJECTIVES, and "NEW BEST TIME!" when you beat your record (failed runs show "Not cleared" and never set a time).
+- [ ] Trophy Room shows a GAUNTLET BEST TIMES row per environment (★ under par) and the number of Gauntlets cleared. Times persist after a restart.
+- [ ] Co-op: clients see the clock, free doors and the fixed loadout; each player's own best time is saved.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
