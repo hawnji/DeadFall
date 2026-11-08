@@ -200,6 +200,9 @@ namespace Deadfall.Game
             long best = p.Stat(StatKeys.EndlessBest);
             Mission("Endless", "No final surge. From surge 21 a new escalation stacks every 5 surges (Armored, Swarming, Frenzied, Elite Tide, Relentless). Rewards keep growing." +
                     (best > 0 ? $" Your best: surge {best}." : string.Empty), () => Deploy(DeployMode.Endless));
+            Mission("Escort", "Push a reactor cart from the spawn room to the far end of the map while the horde tries to wreck it. It only rolls while someone stays in its ring and the infected aren't swarming it. " +
+                    $"It forces doors open as it goes and patches up at each sector door. Surges keep coming until it arrives; if its health runs out, the run is lost." +
+                    (p.Stat(StatKeys.EscortsWon) > 0 ? $" Delivered: {p.Stat(StatKeys.EscortsWon)}." : string.Empty), () => Deploy(DeployMode.Escort));
             long gBest = p.Stat(GauntletRecords.BestKey(_environment));
             Mission("Gauntlet", $"A short, hard map, the same every time. One fixed loadout (Halberd AR with a Red Dot, Breacher 12, Ranger 9, Saber-7), no shops, free doors and extra ammo crates. " +
                     $"{GauntletRules.Surges} surges ending in a Specimen, against the clock. Par {GauntletRules.Clock(GauntletRules.ParSeconds)}." +
@@ -234,7 +237,7 @@ namespace Deadfall.Game
             GUILayout.EndVertical();
         }
 
-        private enum DeployMode { Operation, Survival, Endless, Gauntlet }
+        private enum DeployMode { Operation, Survival, Endless, Gauntlet, Escort }
         private int _environment;
         /// <summary>The Operation picked in the deploy list (null = the environment's own).</summary>
         private string _missionId;
@@ -246,7 +249,9 @@ namespace Deadfall.Game
         {
             if (!ulong.TryParse(_seedText, out ulong seed) || seed == 0) seed = (ulong)Random.Range(1, int.MaxValue);
             // The Gauntlet always runs on the same map, so times compare fairly; the seed box doesn't apply.
-            seed = mode == DeployMode.Gauntlet ? EnvironmentCatalog.GauntletSeed(_environment, GauntletRules.MapSeed) : EnvironmentCatalog.Encode(seed, _environment);
+            seed = mode == DeployMode.Gauntlet ? EnvironmentCatalog.GauntletSeed(_environment, GauntletRules.MapSeed)
+                : mode == DeployMode.Escort ? EnvironmentCatalog.EscortSeed(seed, _environment)
+                : EnvironmentCatalog.Encode(seed, _environment);
             Close();
             if (WorldControl.EnterMap == null || !WorldControl.EnterMap(seed)) { RunToasts.Show("Deployment failed: the map would not generate.", new Color(1f, 0.5f, 0.4f)); return; }
             if (mode == DeployMode.Operation)
@@ -258,6 +263,7 @@ namespace Deadfall.Game
             {
                 if (mode == DeployMode.Endless) WaveManager.Current.StartEndless();
                 else if (mode == DeployMode.Gauntlet) WaveManager.Current.StartGauntlet();
+                else if (mode == DeployMode.Escort) WaveManager.Current.StartEscort();
                 else WaveManager.Current.StartRun();
             }
         }
@@ -578,7 +584,7 @@ namespace Deadfall.Game
             GUILayout.Label("LIFETIME", Section());
             GUILayout.Label($"Runs: {p.Stat(StatKeys.RunsStarted)} started, {p.Stat(StatKeys.RunsWon)} won ({p.Stat(StatKeys.OperationsWon)} Operations), {p.Stat(StatKeys.RunsFailed)} failed. " +
                             $"Kills: {p.Stat(StatKeys.Kills)} ({p.Stat(StatKeys.CritKills)} critical, {p.Stat(StatKeys.MeleeKills)} melee). Surges cleared: {p.Stat(StatKeys.SurgesCleared)}. " +
-                            $"Objectives: {p.Stat(StatKeys.Objectives)}. Specimens: {p.Stat(StatKeys.Specimens)}. Structures: {p.Stat(StatKeys.StructuresBuilt)}.", _small);
+                            $"Objectives: {p.Stat(StatKeys.Objectives)}. Escorts delivered: {p.Stat(StatKeys.EscortsWon)}. Specimens: {p.Stat(StatKeys.Specimens)}. Structures: {p.Stat(StatKeys.StructuresBuilt)}.", _small);
             GUILayout.Space(4f);
             GUILayout.Label("GAUNTLET BEST TIMES", Section());
             foreach (EnvironmentDef env in EnvironmentCatalog.All)

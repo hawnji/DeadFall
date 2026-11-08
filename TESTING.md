@@ -753,6 +753,17 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Trophy Room shows a GAUNTLET BEST TIMES row per environment (★ under par) and the number of Gauntlets cleared. Times persist after a restart.
 - [ ] Co-op: clients see the clock, free doors and the fixed loadout; each player's own best time is saved.
 
+### 3.69 Escort mode
+- [ ] Command Center lists **Escort**. Deploying builds a medium map (4 sectors) with the reactor cart in the spawn room: a flatbed with a spinning cyan core, a light, and a ring on the floor.
+- [ ] "ESCORT" banner, a toast, and a panel under the compass: cart health bar, route bar, and what the cart is doing.
+- [ ] The cart rolls (about walking pace, a bit faster with more players in the ring) only while someone is inside the ring. Step out and it stops ("Stopped: stay near the cart"). Let infected crowd it and it stops ("Contested"). Stand right in front of it and it waits ("Blocked").
+- [ ] It follows the main route room to room along the floor (around props, through doorways) without clipping through walls.
+- [ ] At a closed door on the route it stops, forces it open ("The cart forced the door", "SECTOR OPEN" for sector doors) and carries on; sector doors heal it 20% with a "Checkpoint" toast. Side doors off the route still cost credits.
+- [ ] Infected go for the cart when near it and chew its health down; the core shifts towards red, flickers below 25%, flashes when hit, and "The cart is under attack!" pops up now and then.
+- [ ] Reaching the boss room wins: "CART DELIVERED / The cart made it through" and the results screen says CART DELIVERED. Health hitting 0 loses: the core goes dark, an explosion, "MISSION FAILED / The cart was destroyed". A squad wipe still loses.
+- [ ] Shops (dispenser, perks, Mod Bench, ammo stations, caches) work as in Survival. A Specimen still shows up on surge 10 if you're slow.
+- [ ] Co-op: clients see the cart move smoothly, its health, the ring colour and the panel; anyone in the ring counts as a pusher. The Trophy Room counts "Escorts delivered".
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

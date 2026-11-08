@@ -307,6 +307,14 @@ namespace Deadfall.Game
         /// Opens a door. <paramref name="sound"/> plays the opening sound at the door (and the purchase sound for
         /// credit doors); off for bulk opens such as Operations starting or a client catching up on join.
         /// </summary>
+        /// <summary>Host/offline: opens a door whatever its lock (the Escort cart forcing its way through). False if it can't.</summary>
+        public bool ForceOpenDoor(int connection, string announce)
+        {
+            if (!IsAuthority || Map == null || connection < 0 || connection >= _doorOpen.Length || Sealed) return false;
+            OpenDoor(connection, announce);
+            return _doorOpen[connection];
+        }
+
         private void OpenDoor(int connection, string announce, bool sync = true, bool sound = true)
         {
             if (Map == null || connection < 0 || connection >= _doorOpen.Length || _doorOpen[connection]) return;

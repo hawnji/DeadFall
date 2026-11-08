@@ -219,6 +219,7 @@ namespace Deadfall.Game
             // Operations / Endless flags are synced after the run starts on clients; take the latest view.
             if (ObjectiveDirector.Current != null && ObjectiveDirector.Current.IsOperation) _run.Operation = true;
             if (_waves != null && _waves.IsEndless) _run.Endless = true;
+            if (_waves != null && _waves.IsEscort) _run.Escort = true;
             if (_waves != null && _waves.IsGauntlet)
             {
                 _run.Gauntlet = true;
