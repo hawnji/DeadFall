@@ -764,6 +764,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Shops (dispenser, perks, Mod Bench, ammo stations, caches) work as in Survival. A Specimen still shows up on surge 10 if you're slow.
 - [ ] Co-op: clients see the cart move smoothly, its health, the ring colour and the panel; anyone in the ring counts as a pusher. The Trophy Room counts "Escorts delivered".
 
+### 3.70 Co-op shield and sentry damage, Overwatch marks
+- [ ] Co-op (host + client): a Tank on either machine raises Bulwark Shield and the infected hit it. On the other machine the shield's hex field shifts from blue towards red, flashes and sparks on hits, and flickers below 30%, the same as on the host. It breaks on both at the same moment.
+- [ ] Same for the Engineer's Deploy Sentry: its panels redden on the client as it takes damage.
+- [ ] Overwatch (Gunner + Engineer): enemies hit by a scrap-built sentry or a repair drone (not only the Deploy Sentry turret) take +20% from the Gunner for 5 s.
+- [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.

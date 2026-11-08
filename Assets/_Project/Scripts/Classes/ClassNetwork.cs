@@ -20,6 +20,10 @@ namespace Deadfall.Classes
         private const string MsgRequest = "df.abreq";   // client → host: spawn this for me
         private const string MsgSpawn = "df.absp";      // host → clients: a spawn happened (make a copy)
         private const string MsgGone = "df.abgone";     // host → clients: a spawn is gone
+        private const string MsgHealth = "df.abhp";     // host → clients: shield / sentry health
+        private const float HealthSendInterval = 0.2f;
+        private float _healthTimer;
+        private static readonly Dictionary<ushort, byte> SentHealth = new Dictionary<ushort, byte>();
         private const float MaxRequestOriginError = 4f;
 
         private static ClassNetwork _instance;
@@ -34,6 +38,7 @@ namespace Deadfall.Classes
         {
             _instance = null;
             Spawns.Clear();
+            SentHealth.Clear();
             _nextId = 1;
         }
 
@@ -66,6 +71,7 @@ namespace Deadfall.Classes
             _session.RegisterHandler(MsgRequest, OnRequestMessage);
             _session.RegisterHandler(MsgSpawn, OnSpawnMessage);
             _session.RegisterHandler(MsgGone, OnGoneMessage);
+            _session.RegisterHandler(MsgHealth, OnHealthMessage);
         }
 
         private void OnDisable()
@@ -78,6 +84,7 @@ namespace Deadfall.Classes
             _session.PeerConnected -= OnPeerConnected;
             _session.PeerDisconnected -= OnPeerDisconnected;
             _session.UnregisterHandler(MsgClass);
+            _session.UnregisterHandler(MsgHealth);
             _session.UnregisterHandler(MsgRoster);
             _session.UnregisterHandler(MsgRequest);
             _session.UnregisterHandler(MsgSpawn);
@@ -256,6 +263,36 @@ namespace Deadfall.Classes
             Create((SpawnKind)kindByte, position, direction, owner != null ? owner.gameObject : null, ownerId, true, id);
         }
 
+        /// <summary>Host: sends the health of shields and sentries that changed (a few times a second), so mirrors show damage.</summary>
+        private void Update()
+        {
+            if (!IsHost || Session.RemotePeerCount == 0) return;
+            _healthTimer -= Time.unscaledDeltaTime;
+            if (_healthTimer > 0f) return;
+            _healthTimer = HealthSendInterval;
+            foreach (KeyValuePair<ushort, IAbilitySpawn> kv in Spawns)
+            {
+                if (!(kv.Value is IAbilityHealth h) || IsMirror(kv.Value)) continue;
+                byte b = (byte)Mathf.Clamp(Mathf.RoundToInt(h.Health01 * 255f), 0, 255);
+                if (SentHealth.TryGetValue(kv.Key, out byte last) && last == b) continue;
+                SentHealth[kv.Key] = b;
+                using (var w = new FastBufferWriter(4, Allocator.Temp))
+                {
+                    w.WriteValueSafe(kv.Key);
+                    w.WriteValueSafe(b);
+                    Session.SendToRemoteClients(MsgHealth, w, NetworkDelivery.UnreliableSequenced);
+                }
+            }
+        }
+
+        private void OnHealthMessage(ulong sender, FastBufferReader r)
+        {
+            if (!IsClient) return;
+            r.ReadValueSafe(out ushort id);
+            r.ReadValueSafe(out byte health);
+            if (Spawns.TryGetValue(id, out IAbilitySpawn s) && s is IAbilityHealth h) h.SetMirrorHealth01(health / 255f);
+        }
+
         private void OnGoneMessage(ulong sender, FastBufferReader r)
         {
             if (!IsClient) return;
@@ -268,6 +305,7 @@ namespace Deadfall.Classes
         {
             if (s == null || !Spawns.TryGetValue(s.NetId, out IAbilitySpawn known) || !ReferenceEquals(known, s)) return;
             Spawns.Remove(s.NetId);
+            SentHealth.Remove(s.NetId);
 
             // The owner's shield or sentry is gone (broken, destroyed or expired): its ability goes on cooldown now.
             if (s.OwnerClientId == LocalId && !(s is ClusterCharge) && PlayerClass.Local != null) PlayerClass.Local.EndAbilityEarly();
