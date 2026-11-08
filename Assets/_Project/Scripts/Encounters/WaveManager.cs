@@ -517,6 +517,7 @@ namespace Deadfall.Encounters
             int oldSurge = _surge;
             _phase = phase;
             _surge = surge;
+            Enemy.DodgeSurge = surge;
             _type = type;
             _directions = directions;
             _phaseEndsAt = endsAt;

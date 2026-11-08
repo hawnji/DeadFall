@@ -735,6 +735,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Bottom right: weapon slot key and name, a big magazine count, and a "RESERVE" column on the right; low and empty mags still turn amber/red.
 - [ ] Interact prompts read as a big caps label under the crosshair with "[F] Use" or "[F] Hold" under it and a fill bar while holding; unusable prompts show only the dimmed label. The reload prompt above it doesn't overlap.
 
+### 3.67 Husk dodges, spider footsteps
+- [ ] Shoot standard Husks: now and then (about 1 in 10 rolls early on) one sidesteps about 2 m left or right with a lean, then keeps coming. Holding automatic fire doesn't make them dodge every bullet (a roll at most every 0.6 s, a dodge at most every 2.5 s). They don't dodge into walls or off the NavMesh, and staggered Husks don't dodge.
+- [ ] Late surges dodge more: from surge 5 it climbs 1% a surge to 25% at surge 20 and stays there.
+- [ ] Bolters, Bulwarks, Creepers, Pyres, Retchers, Alphas, Goliaths, the Stalker and bosses never dodge. Knife, sentry, drone, grenade and launcher hits never cause a dodge.
+- [ ] Clients see the dodge too (it moves the host's enemy, so snapshots carry it).
+- [ ] The Broodmother's footsteps use the new spider walk sound (SpiderWalk_1) at a quicker step instead of the heavy enemy walk.
+
 ## 4. Regression map
 
 When you change the left column, retest the right.
