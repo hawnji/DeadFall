@@ -1592,6 +1592,7 @@ class Zombie:
         self.name, self.h, self.k = name, h, h / 1.8
         self.girth, self.limb, self.depth = girth, limb, depth
         self.shirt, self.short_pants, self.sleeves = shirt, short_pants, sleeves
+        self.cloth, self.pants, self.tears = CLOTH, CLOTH_DARK, True  # shirt / trouser colours; torn shirt
         self.radius_override = {}
         self.extras = Model(name + "_extras")  # primitive factory; parts are bound to self.bone
         self.bound = {}
@@ -1747,18 +1748,20 @@ class Zombie:
             u = to_u(c)
             mat = "Skin"
             if bone.startswith(("UpperLeg", "LowerLeg", "Foot")) or bone == "Hips":
-                mat = CLOTH_DARK
+                mat = self.pants
                 if self.short_pants and (bone.startswith(("LowerLeg", "Foot")) or (bone.startswith("UpperLeg") and t > 0.85)):
                     mat = "Skin"
                 if bone == "Hips" and t > 0.75 and self.shirt:
-                    mat = CLOTH
+                    mat = self.cloth
             elif bone in ("Spine", "Chest"):
                 tear = math.sin(u[0] * 41.0 + 1.3) * math.sin(u[1] * 37.0 + u[2] * 23.0)
-                mat = CLOTH if self.shirt and tear < 0.45 else "Skin"
+                mat = self.cloth if self.shirt and (tear < 0.45 or not self.tears) else "Skin"
+                if self.shirt and not self.tears and tear > 0.8:
+                    mat = "SkinDark"  # a few rips in the scrubs
                 if not self.shirt and tear > 0.7:
                     mat = "SkinDark"
             elif bone.startswith("UpperArm") and self.sleeves and self.shirt and t < 0.35:
-                mat = CLOTH
+                mat = self.cloth
             elif bone.startswith(("UpperArm", "LowerArm")):
                 bruise = math.sin(u[0] * 53.0) * math.sin(u[1] * 47.0 + u[2] * 31.0)
                 mat = "SkinDark" if bruise > 0.75 else "Skin"
@@ -1971,7 +1974,59 @@ def zm_specimen():
     return z
 
 
-ZOMBIES = [zm_standard, zm_lean, zm_plated, zm_bloated, zm_spitter, zm_alpha, zm_specimen]
+SCRUBS = "C_3D6E6A"
+SCRUBS_DARK = "C_2C524F"
+LEATHER = "C_4A3424"
+MASK = "C_A9C9CC"
+
+
+def zm_orderly():
+    """Mercy Vale's boss: a night orderly swollen to Specimen size, still in torn teal scrubs, a surgical mask over
+    its jaw, burst restraint straps across the chest and broken cuffs on its wrists. Same frame as the Specimen so
+    the game-built phase growths and core sit in the same places."""
+    h = 3.4
+    z = Zombie("zm_orderly", h, w=2.5, hunch=0.1, arm_drop=0.1, girth=2.5, limb=2.3, depth=1.3, shirt=True,
+               sleeves=True, stance=1.1)
+    z.cloth, z.pants, z.tears = SCRUBS, SCRUBS_DARK, False
+    z.radius_override.update({"uchest": (0.15, 0.1), "chest": (0.18, 0.12), "shoulderL": (0.075, 0.075),
+                              "shoulderR": (0.075, 0.075)})
+    c = z.head(size=(0.26, 0.27, 0.28), jaw=(0.17, 0.07, 0.14), eye_spread=0.065)
+    z.hands(fist=False, mat="SkinDark")
+    z.shoes(mat="C_D8DCDA")  # hospital clogs
+    k = z.k
+    with z.on("Head"):  # surgical mask over the jaw, with ear loops
+        z.add(z.extras.box, (c.x, c.y - 0.1 * k, c.z + 0.11 * k), (0.2 * k, 0.12 * k, 0.07 * k), MASK, rot=(8, 0, 0), bevel=0.02 * k)
+        for s in (-1, 1):
+            z.add(z.extras.box, (c.x + s * 0.12 * k, c.y - 0.06 * k, c.z + 0.02 * k), (0.012 * k, 0.012 * k, 0.16 * k), MASK, bevel=0.0)
+    u, ch, sp = Vector(z.J["uchest"]), Vector(z.J["chest"]), Vector(z.J["spine"])
+    hw = 0.2 * 2.5 * k  # torso half-width at the chest
+    with z.on("Chest"):
+        # Two restraint straps crossing the chest and back; one has burst and hangs loose.
+        for zz, sgn in ((ch.z + 0.2 * k * 1.3, 1), (ch.z - 0.2 * k * 1.3, -1)):
+            z.add(z.extras.box, (0, ch.y + 0.05 * k, zz), (hw * 1.55, 0.09 * k, 0.03 * k), LEATHER, rot=(0, 0, 18 * sgn), bevel=0.0)
+            z.add(z.extras.box, (0, ch.y + 0.05 * k, zz + 0.02 * k * sgn), (0.1 * k, 0.11 * k, 0.03 * k), METAL_LIGHT, bevel=0.0)
+        z.add(z.extras.box, (hw * 0.5, ch.y - 0.16 * k, ch.z + 0.27 * k), (0.07 * k, 0.26 * k, 0.025 * k), LEATHER, rot=(-10, 0, 12), bevel=0.0)
+        # ID badge on its clip.
+        z.add(z.extras.box, (-hw * 0.45, u.y - 0.06 * k, u.z + 0.24 * k), (0.07 * k, 0.1 * k, 0.012 * k), "C_E8E8E2", bevel=0.0)
+        z.add(z.extras.box, (-hw * 0.45, u.y - 0.04 * k, u.z + 0.247 * k), (0.05 * k, 0.025 * k, 0.006 * k), "C_2F6FA8", bevel=0.0)
+    with z.on("Spine"):  # waist restraint belt
+        z.add(z.extras.box, (0, sp.y - 0.04 * k, sp.z), (hw * 1.5, 0.08 * k, 0.2 * 1.3 * 1.9 * k), LEATHER, bevel=0.01 * k)
+        z.add(z.extras.box, (0, sp.y - 0.04 * k, sp.z + 0.2 * 1.3 * 0.96 * k), (0.09 * k, 0.1 * k, 0.02 * k), METAL_LIGHT, bevel=0.0)
+    for side in ("L", "R"):  # broken wrist cuffs with a trailing strap, and an IV cannula in the left forearm
+        w = Vector(z.J["wrist" + side])
+        with z.on("LowerArm." + side):
+            z.add(z.extras.cyl, tuple(w + Vector((0, 0, -0.06 * k))), (0.12 * k * 2.3 * 0.5, 0.06 * k, 0.12 * k * 2.3 * 0.5), LEATHER,
+                  rot=(90, 0, 0), segments=8)
+            if side == "L":
+                e = Vector(z.J["elbowL"])
+                m = e.lerp(w, 0.45) + Vector((0, 0.07 * k, 0))
+                z.add(z.extras.box, tuple(m), (0.06 * k, 0.015 * k, 0.08 * k), "C_E8E8E2", bevel=0.0)
+                z.add(z.extras.cyl, tuple(m + Vector((0, 0.1 * k, -0.05 * k))), (0.008 * k, 0.22 * k, 0.008 * k), "C_C8D8DA",
+                      rot=(35, 0, 0), segments=6)
+    return z
+
+
+ZOMBIES = [zm_standard, zm_lean, zm_plated, zm_bloated, zm_spitter, zm_alpha, zm_specimen, zm_orderly]
 
 
 # ----------------------------------------------------------------------------------------------- zombie clips

@@ -190,7 +190,7 @@ namespace Deadfall.Enemies
         /// <summary>
         /// The Orderly, Mercy Vale's Specimen: a hulking night orderly swollen by the outbreak, still in the scraps of
         /// its scrubs. It charges in every phase, empties the wards (Husks with a Pyre in every four) from Rampage on,
-        /// and with its core exposed it regenerates whenever the squad lets up. Same body and weak points as Specimen Zero.
+        /// and with its core exposed it regenerates whenever the squad lets up. Its own zm_orderly model (scrubs, mask, burst restraints) on Specimen Zero's frame and weak points.
         /// </summary>
         public static EnemyDefinition Orderly => _orderly != null ? _orderly : _orderly = EnemyDefinition.CreateRuntime(
             OrderlyId, "The Orderly",
@@ -203,7 +203,7 @@ namespace Deadfall.Enemies
                 ChargeSpeed = 13f, ChargeSeconds = 1.3f, ChargeCooldownSeconds = 6f, ChargeDamage = 55f, ChargeCanBeStaggered = false,
                 PoolDamagePerSecond = 12f, PoolRadius = 2.5f, PoolSeconds = 6f,
             },
-            EnemyBodyType.Specimen, 3.4f, 1f, new Color(0.52f, 0.62f, 0.6f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
+            EnemyBodyType.Specimen, 3.4f, 1f, new Color(0.6f, 0.62f, 0.58f), threatCost: 40f, unlockSurge: 10, spawnWeight: 1f,
             role: EnemyRole.Boss);
 
         /// <summary>Fixed order: the network numbers enemy types by position here (EnemyCatalog). Append only.</summary>

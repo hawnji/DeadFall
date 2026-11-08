@@ -780,7 +780,7 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] The map HUD reads MERCY VALE. Gauntlet and Escort both build on it, and its Gauntlet best time shows in the Trophy Room.
 
 ### 3.73 Mercy Vale boss: The Orderly
-- [ ] Specimen surges on Mercy Vale bring The Orderly (banner: "the Orderly is making its rounds"). It is the Specimen body tinted pale grey-green, and the boss bar names it.
+- [ ] Specimen surges on Mercy Vale bring The Orderly (banner: "the Orderly is making its rounds"). It has its own model: a hulking figure in teal scrubs with a surgical mask, leather restraint straps and broken wrist cuffs, animated like the other zombies. The boss bar names it.
 - [ ] Stalk (above 66%): it charges on sight, about every 6 s, and has no ranged attack.
 - [ ] Rampage: it charges roughly twice as often and calls Husks, plus a Pyre in every four, about every 8 s.
 - [ ] Exposed core (below 33%): it is slower and still charges and summons. If nobody hits it for a few seconds, its health bar climbs back up (about 0.8% a second). Keep shooting to stop it.

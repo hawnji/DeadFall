@@ -345,6 +345,8 @@ namespace Deadfall.Enemies
             System.Func<string, Color?> tint = slot => slot == "Skin" ? skin : slot == "SkinDark" ? dark : (Color?)null;
             // The rigged, animated zombie when there is one for this body; else the limb-swing model.
             string zm = RiggedModelFor(_definition.BodyType);
+            // The Orderly has its own model (scrubs, mask, restraints) on the Specimen frame.
+            if (_definition.IsBoss && _definition.BossKind == SpecimenKind.Orderly && ModelLibrary.Has("zm_orderly")) zm = "zm_orderly";
             GameObject model = zm != null && ModelLibrary.Has(zm) ? ModelLibrary.Spawn(zm, _visual, tint, keepAnimator: true) : null;
             if (model != null)
             {
