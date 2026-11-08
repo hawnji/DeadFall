@@ -28,12 +28,21 @@ namespace Deadfall.Enemies
             _stride = Mathf.Clamp(0.9f + r * 2.2f, 1f, 3.2f);
             _pitch = Mathf.Clamp(1.25f - r * 0.6f, 0.65f, 1.15f);
             _volume = Mathf.Clamp(0.55f + r * 0.6f, 0.6f, 1.2f);
-            if (_enemy.Definition != null && _enemy.Definition.IsBrood)
+            EnemyDefinition def = _enemy.Definition;
+            if (def != null && def.BodyType == EnemyBodyType.Crawler)
             {
-                // Spiders skitter: the spider walk sound at its own pitch, every short step of her six legs.
+                // Creepers skitter like bugs: the spider walk sound, a little higher, every short scuttle.
+                _sound = SfxId.SpiderWalk;
+                _stride = 0.9f;
+                _pitch = 1.1f;
+                _volume = 0.75f;
+            }
+            else if (def != null && def.IsBrood)
+            {
+                // The Broodmother: the same sound, deeper and louder, on her longer six-legged steps.
                 _sound = SfxId.SpiderWalk;
                 _stride = 1.4f;
-                _pitch = 1f;
+                _pitch = 0.85f;
                 _volume = 1f;
             }
         }

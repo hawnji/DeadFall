@@ -740,7 +740,7 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Late surges dodge more: from surge 5 it climbs 1% a surge to 25% at surge 20 and stays there.
 - [ ] Bolters, Bulwarks, Creepers, Pyres, Retchers, Alphas, Goliaths, the Stalker and bosses never dodge. Knife, sentry, drone, grenade and launcher hits never cause a dodge.
 - [ ] Clients see the dodge too (it moves the host's enemy, so snapshots carry it).
-- [ ] The Broodmother's footsteps use the new spider walk sound (SpiderWalk_1) at a quicker step instead of the heavy enemy walk.
+- [ ] Creepers' footsteps use the new spider walk sound (SpiderWalk_1), slightly higher and in quick scuttles, instead of the regular enemy walk. The Broodmother uses it too, deeper and louder.
 
 ## 4. Regression map
 
