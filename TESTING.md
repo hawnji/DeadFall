@@ -785,6 +785,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Rampage: it charges roughly twice as often and calls Husks, plus a Pyre in every four, about every 8 s.
 - [ ] Exposed core (below 33%): it is slower and still charges and summons. If nobody hits it for a few seconds, its health bar climbs back up (about 0.8% a second). Keep shooting to stop it.
 - [ ] Specimen Zero on Cinder Ridge and the Broodmother on Harrow Line behave the same as before.
+
+### 3.74 Title screen camera
+- [ ] Leave the title screen up for a couple of minutes. The chase camera stays smoothly behind the lure as the horde streams past, and it no longer jerks in towards the lure whenever an infected crosses between them.
+- [ ] When the lure stops, the camera slowly orbits. When it sets off again, the camera eases back behind it rather than snapping round.
+- [ ] In narrow halls and tunnels it still stays inside the walls and under the ceiling.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map
