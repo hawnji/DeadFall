@@ -33,6 +33,8 @@ namespace Deadfall.Game
         private float _nextTopUp;
         private Vector3 _heading = Vector3.forward;
         private Vector3 _camVel;
+        private Vector3 _back = Vector3.back;
+        private static readonly RaycastHit[] CastHits = new RaycastHit[24];
         private float _orbit;
         private System.Random _rng;
         private NavMeshPath _navPath;
@@ -82,6 +84,8 @@ namespace Deadfall.Game
             _nextTopUp = 0f;
             _camVel = Vector3.zero;
             _orbit = (float)_rng.NextDouble() * 360f;
+            _back = Quaternion.Euler(0f, _orbit, 0f) * Vector3.back;
+            _heading = -_back;
             _running = true;
             return true;
         }
@@ -214,15 +218,19 @@ namespace Deadfall.Game
             if (camera == null || _lure == null || !_running || _map == null || !_map.HasMap || _map.Map == null) return;
             Vector3 focus = _lure.transform.position + Vector3.up * 1.1f;
             bool resting = Time.time < _pauseUntil;
-            // While the lure waits, swing slowly around it to show the horde arriving.
-            _orbit += dt * (resting ? 14f : 0f);
-            Vector3 back = resting ? Quaternion.Euler(0f, _orbit, 0f) * Vector3.back : -_heading;
-            if (!resting) _orbit = Quaternion.LookRotation(-back).eulerAngles.y;
+            // While the lure waits, swing slowly around it to show the horde arriving; moving, settle in behind it.
+            // The direction eases between the two so the camera never whips round when the lure sets off again.
+            if (resting) _orbit += dt * 14f;
+            else _orbit = Quaternion.LookRotation(-_back).eulerAngles.y;
+            Vector3 wantBack = resting ? Quaternion.Euler(0f, _orbit, 0f) * Vector3.back : -_heading;
+            _back = Vector3.Slerp(_back, wantBack, 1f - Mathf.Exp(-dt * 1.6f));
+            _back.y = 0f;
+            _back = _back.sqrMagnitude > 0.001f ? _back.normalized : Vector3.back;
             Vector3 eye = _lure.transform.position + Vector3.up * 1.6f;
-            Vector3 desired = _lure.transform.position + back * CameraBack + Vector3.up * CameraHeight;
+            Vector3 desired = _lure.transform.position + _back * CameraBack + Vector3.up * CameraHeight;
             Vector3 d = desired - eye;
-            if (Physics.SphereCast(eye, 0.3f, d.normalized, out RaycastHit hit, d.magnitude, Mask, QueryTriggerInteraction.Ignore))
-                desired = eye + d.normalized * Mathf.Max(0.8f, hit.distance - 0.2f);
+            if (WorldCast(eye, 0.3f, d, out float hitDistance))
+                desired = eye + d.normalized * Mathf.Max(0.8f, hitDistance - 0.2f);
             Vector3 pos = Vector3.SmoothDamp(camera.transform.position, desired, ref _camVel, 0.6f, 20f, Mathf.Max(0.0001f, dt));
             if ((camera.transform.position - desired).sqrMagnitude > 40f * 40f) pos = desired; // first frame
             pos = KeepInside(eye, pos);
@@ -241,9 +249,9 @@ namespace Deadfall.Game
             pos.y = Mathf.Clamp(pos.y, floor + 1.2f, ceiling);
             Vector3 d = pos - eye;
             float len = d.magnitude;
-            if (len > 0.01f && Physics.SphereCast(eye, 0.25f, d / len, out RaycastHit hit, len, Mask, QueryTriggerInteraction.Ignore))
+            if (len > 0.01f && WorldCast(eye, 0.25f, d, out float hitDistance))
             {
-                pos = eye + d / len * Mathf.Max(0.5f, hit.distance - 0.15f);
+                pos = eye + d / len * Mathf.Max(0.5f, hitDistance - 0.15f);
                 _camVel = Vector3.zero;
             }
             BuiltMap m = _map.Map;
@@ -253,6 +261,28 @@ namespace Deadfall.Game
                 _camVel = Vector3.zero;
             }
             return pos;
+        }
+
+        /// <summary>
+        /// Nearest level geometry along <paramref name="d"/> from <paramref name="from"/>. Infected are ignored: the horde
+        /// streams between the camera and the lure all the time, and treating them as walls yanked the camera in and out.
+        /// </summary>
+        private static bool WorldCast(Vector3 from, float radius, Vector3 d, out float distance)
+        {
+            distance = float.MaxValue;
+            float len = d.magnitude;
+            if (len < 0.01f) return false;
+            int n = Physics.SphereCastNonAlloc(from, radius, d / len, CastHits, len, Mask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                Collider c = CastHits[i].collider;
+                if (c == null || c.GetComponentInParent<Enemy>() != null) continue;
+                // A cast that starts overlapping something reports distance 0; that's the floor or a wall we're
+                // already against, which the clamps handle, so skip it rather than collapsing onto the lure.
+                if (CastHits[i].distance <= 0f) continue;
+                if (CastHits[i].distance < distance) distance = CastHits[i].distance;
+            }
+            return distance < float.MaxValue;
         }
 
         /// <summary>The invisible thing the horde chases: a target every enemy prefers over the (far away) player.</summary>
