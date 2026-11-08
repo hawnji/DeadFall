@@ -44,7 +44,7 @@ namespace Deadfall.Game
         private readonly List<float> _cumulative = new List<float>(32);
         private float _routeLength;
         private int _next;
-        private readonly NavMeshPath _path = new NavMeshPath();
+        private NavMeshPath _path; // created in Awake: Unity forbids NavMeshPath in field initializers
         private readonly List<Vector3> _corners = new List<Vector3>(16);
         private int _corner;
         private double _doorUntil;
@@ -64,6 +64,7 @@ namespace Deadfall.Game
         private void Awake()
         {
             Current = this;
+            _path = new NavMeshPath();
             _session = SessionService.Instance;
             _session.RegisterHandler(MsgState, OnState);
         }
@@ -340,6 +341,7 @@ namespace Deadfall.Game
         {
             _corners.Clear();
             _corner = 0;
+            if (_path == null) _path = new NavMeshPath();
             if (NavMesh.CalculatePath(from, to, NavMesh.AllAreas, _path) && _path.status != NavMeshPathStatus.PathInvalid)
             {
                 Vector3[] cs = _path.corners;
