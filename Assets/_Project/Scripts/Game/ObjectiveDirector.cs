@@ -787,17 +787,26 @@ namespace Deadfall.Game
             return SpotInRoom(room);
         }
 
+        /// <summary>
+        /// A reachable floor point inside the room itself. Shaped rooms' bounds also cover their notch cells, where
+        /// breach closets sit, so a point is only taken when it lands on one of the room's own cells.
+        /// </summary>
         private Vector3 SpotInRoom(int room)
         {
-            Bounds b = _map.Map.RoomBounds[room];
-            for (int attempt = 0; attempt < 10; attempt++)
+            Deadfall.World.BuiltMap map = _map.Map;
+            Bounds b = map.RoomBounds[room];
+            for (int attempt = 0; attempt < 16; attempt++)
             {
                 var guess = new Vector3(
                     _rng.Range(b.min.x + 1.5f, b.max.x - 1.5f), b.min.y + 0.5f,
                     _rng.Range(b.min.z + 1.5f, b.max.z - 1.5f));
-                if (NavMesh.SamplePosition(guess, out NavMeshHit hit, 2f, NavMesh.AllAreas)) return hit.position;
+                if (map.RoomAt(guess) != room) continue;
+                if (NavMesh.SamplePosition(guess, out NavMeshHit hit, 2f, NavMesh.AllAreas) && map.RoomAt(hit.position) == room)
+                    return hit.position;
             }
-            return FloorPoint(b.center);
+            // The centre cell is always one of the room's own.
+            Vector3 c = map.RoomCenter(room);
+            return NavMesh.SamplePosition(c, out NavMeshHit ch, 2f, NavMesh.AllAreas) && map.RoomAt(ch.position) == room ? ch.position : c;
         }
 
         private static Vector3 FloorPoint(Vector3 p) =>

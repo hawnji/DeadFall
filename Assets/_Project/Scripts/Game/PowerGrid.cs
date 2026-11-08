@@ -190,6 +190,7 @@ namespace Deadfall.Game
                 if (!NavMesh.SamplePosition(p, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) continue;
                 p = hit.position;
                 if (p.x < bounds.min.x || p.x > bounds.max.x || p.z < bounds.min.z || p.z > bounds.max.z) continue;
+                if (map.RoomAt(p) != room) continue; // a notch cell of a shaped room (breach closets sit there)
                 if (WallPlacement.NearAny(p, Doorways, 3.6f)) continue;
                 if (!haveFallback) { fallback = p; fallbackYaw = y; haveFallback = true; }
                 // Footprint (1.9 x 1.2 skid) plus a walkway around it must be free of walls and props.
