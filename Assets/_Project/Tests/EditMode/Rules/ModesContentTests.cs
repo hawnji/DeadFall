@@ -33,6 +33,27 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void MercyValeSeedsProduceValidLayouts()
+        {
+            RoomKit kit = MercyValeKit.Create();
+            GraphTemplate g = MercyValeKit.SurvivalGraph();
+            int fallbacks = 0;
+            for (ulong seed = 1; seed <= 1000; seed++)
+            {
+                Layout l = LayoutGenerator.Generate(kit, g, seed);
+                Assert.IsNotNull(l, $"seed {seed}");
+                List<string> errors = LayoutValidator.Validate(l);
+                Assert.IsEmpty(errors, $"seed {seed}: {string.Join("; ", errors)}");
+                if (l.UsedFallback) fallbacks++;
+                Assert.IsNotNull(l.FirstWithRole(RoomRole.Boss));
+                Assert.IsNotNull(l.FirstWithRole(RoomRole.Objective));
+            }
+            Assert.Less(fallbacks, 10);
+            Assert.AreEqual(MercyValeKit.Id, EnvironmentCatalog.ForSeed(EnvironmentCatalog.Encode(77UL, 2)).Id);
+            Assert.AreEqual(ObjectiveRules.Quarantine, ObjectiveRules.MissionById(EnvironmentCatalog.All[2].MissionId));
+        }
+
+        [Test]
         public void EveryEnvironmentSocketSitsOnTheEdgeItFaces()
         {
             foreach (EnvironmentDef env in EnvironmentCatalog.All)

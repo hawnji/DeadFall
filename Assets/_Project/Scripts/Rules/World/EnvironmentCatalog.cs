@@ -8,6 +8,8 @@ namespace Deadfall.Rules.World
         public int Index;
         public string Id;
         public string DisplayName;
+        /// <summary>Upper-case short name for the HUD ("CINDER RIDGE").</summary>
+        public string ShortName;
         public string Blurb;
         public Func<RoomKit> CreateKit;
         public Func<GraphTemplate> CreateGraph;
@@ -32,17 +34,25 @@ namespace Deadfall.Rules.World
         {
             new EnvironmentDef
             {
-                Index = 0, Id = CinderRidgeKit.Id, DisplayName = "Cinder Ridge Research Complex",
+                Index = 0, Id = CinderRidgeKit.Id, DisplayName = "Cinder Ridge Research Complex", ShortName = "CINDER RIDGE",
                 Blurb = "A mountain research site: labs, server halls, cold storage and the reactor.",
                 CreateKit = CinderRidgeKit.Create, CreateGraph = CinderRidgeKit.SurvivalGraph,
                 BossId = "enemy.specimen_zero", MissionId = "mission.cold_start",
             },
             new EnvironmentDef
             {
-                Index = 1, Id = HarrowLineKit.Id, DisplayName = "Harrow Line Transit Depot",
+                Index = 1, Id = HarrowLineKit.Id, DisplayName = "Harrow Line Transit Depot", ShortName = "HARROW LINE",
                 Blurb = "An abandoned metro depot: platform halls, a ticket concourse, pump rooms and a flooded turntable.",
                 CreateKit = HarrowLineKit.Create, CreateGraph = HarrowLineKit.SurvivalGraph,
                 BossId = "enemy.broodmother", MissionId = "mission.last_train",
+            },
+            new EnvironmentDef
+            {
+                Index = 2, Id = MercyValeKit.Id, DisplayName = "Mercy Vale General Hospital", ShortName = "MERCY VALE",
+                Blurb = "A hospital overrun on the night of the outbreak: wards, operating theatres, the morgue and a sealed isolation wing.",
+                CreateKit = MercyValeKit.Create, CreateGraph = MercyValeKit.SurvivalGraph,
+                // Its own boss comes in a later step; until then surges bring any Specimen.
+                BossId = null, MissionId = "mission.quarantine",
             },
         };
 
