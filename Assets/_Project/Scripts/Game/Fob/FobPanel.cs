@@ -200,6 +200,10 @@ namespace Deadfall.Game
             long best = p.Stat(StatKeys.EndlessBest);
             Mission("Endless", "No final surge. From surge 21 a new escalation stacks every 5 surges (Armored, Swarming, Frenzied, Elite Tide, Relentless). Rewards keep growing." +
                     (best > 0 ? $" Your best: surge {best}." : string.Empty), () => Deploy(DeployMode.Endless));
+            long gBest = p.Stat(GauntletRecords.BestKey(_environment));
+            Mission("Gauntlet", $"A short, hard map, the same every time. One fixed loadout (Halberd AR with a Red Dot, Breacher 12, Ranger 9, Saber-7), no shops, free doors and extra ammo crates. " +
+                    $"{GauntletRules.Surges} surges ending in a Specimen, against the clock. Par {GauntletRules.Clock(GauntletRules.ParSeconds)}." +
+                    (gBest > 0 ? $" Your best here: {GauntletRules.Clock(gBest / 1000.0)}." : string.Empty), () => Deploy(DeployMode.Gauntlet));
             GUI.enabled = true;
             if (client) GUILayout.Label("Waiting for the host to deploy.", _small);
 
@@ -230,7 +234,7 @@ namespace Deadfall.Game
             GUILayout.EndVertical();
         }
 
-        private enum DeployMode { Operation, Survival, Endless }
+        private enum DeployMode { Operation, Survival, Endless, Gauntlet }
         private int _environment;
         /// <summary>The Operation picked in the deploy list (null = the environment's own).</summary>
         private string _missionId;
@@ -241,7 +245,8 @@ namespace Deadfall.Game
         private void Deploy(DeployMode mode)
         {
             if (!ulong.TryParse(_seedText, out ulong seed) || seed == 0) seed = (ulong)Random.Range(1, int.MaxValue);
-            seed = EnvironmentCatalog.Encode(seed, _environment);
+            // The Gauntlet always runs on the same map, so times compare fairly; the seed box doesn't apply.
+            seed = mode == DeployMode.Gauntlet ? EnvironmentCatalog.GauntletSeed(_environment, GauntletRules.MapSeed) : EnvironmentCatalog.Encode(seed, _environment);
             Close();
             if (WorldControl.EnterMap == null || !WorldControl.EnterMap(seed)) { RunToasts.Show("Deployment failed: the map would not generate.", new Color(1f, 0.5f, 0.4f)); return; }
             if (mode == DeployMode.Operation)
@@ -252,6 +257,7 @@ namespace Deadfall.Game
             else if (WaveManager.Current != null)
             {
                 if (mode == DeployMode.Endless) WaveManager.Current.StartEndless();
+                else if (mode == DeployMode.Gauntlet) WaveManager.Current.StartGauntlet();
                 else WaveManager.Current.StartRun();
             }
         }
@@ -573,6 +579,21 @@ namespace Deadfall.Game
             GUILayout.Label($"Runs: {p.Stat(StatKeys.RunsStarted)} started, {p.Stat(StatKeys.RunsWon)} won ({p.Stat(StatKeys.OperationsWon)} Operations), {p.Stat(StatKeys.RunsFailed)} failed. " +
                             $"Kills: {p.Stat(StatKeys.Kills)} ({p.Stat(StatKeys.CritKills)} critical, {p.Stat(StatKeys.MeleeKills)} melee). Surges cleared: {p.Stat(StatKeys.SurgesCleared)}. " +
                             $"Objectives: {p.Stat(StatKeys.Objectives)}. Specimens: {p.Stat(StatKeys.Specimens)}. Structures: {p.Stat(StatKeys.StructuresBuilt)}.", _small);
+            GUILayout.Space(4f);
+            GUILayout.Label("GAUNTLET BEST TIMES", Section());
+            foreach (EnvironmentDef env in EnvironmentCatalog.All)
+            {
+                long ms = p.Stat(GauntletRecords.BestKey(env.Index));
+                GUILayout.BeginHorizontal(GUI.skin.box);
+                GUILayout.Label(env.DisplayName, _bold, GUILayout.Width(300f));
+                GUILayout.FlexibleSpace();
+                bool underPar = ms > 0 && ms <= GauntletRules.ParSeconds * 1000f;
+                GUI.color = ms <= 0 ? new Color(0.7f, 0.7f, 0.7f) : underPar ? new Color(1f, 0.9f, 0.5f) : Color.white;
+                GUILayout.Label(ms > 0 ? $"{GauntletRules.Clock(ms / 1000.0)}{(underPar ? "  ★ under par" : string.Empty)}" : "not cleared yet", _right);
+                GUI.color = Color.white;
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.Label($"Par {GauntletRules.Clock(GauntletRules.ParSeconds)}. Gauntlets cleared: {p.Stat(StatKeys.GauntletsWon)}.", _small);
             GUILayout.Space(4f);
             GUILayout.Label("CHALLENGES", Section());
             foreach (ChallengeDef c in ProfileService.Challenges)

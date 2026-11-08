@@ -405,7 +405,7 @@ namespace Deadfall.Rules.World
             private void AssignLoot()
             {
                 var used = new HashSet<long>();
-                for (int s = 0; s < Layout.SectorCount; s++)
+                for (int s = 0; _g.SupplyCaches && s < Layout.SectorCount; s++)
                 {
                     var slots = new List<long>();
                     foreach (PlacedRoom r in Layout.Rooms)
@@ -427,8 +427,8 @@ namespace Deadfall.Rules.World
                             if (i == 0) Layout.Loot.Add(new LootPlacement { Room = r.Index, Slot = i, Kind = LootKind.SecretStash });
                             continue;
                         }
-                        if (_rng.NextFloat() >= 0.35f) continue;
-                        Layout.Loot.Add(new LootPlacement { Room = r.Index, Slot = i, Kind = _rng.NextFloat() < 0.65f ? LootKind.AmmoCrate : LootKind.Medkit });
+                        if (_rng.NextFloat() >= _g.LootChance) continue;
+                        Layout.Loot.Add(new LootPlacement { Room = r.Index, Slot = i, Kind = _rng.NextFloat() < _g.AmmoShare ? LootKind.AmmoCrate : LootKind.Medkit });
                     }
                 }
             }

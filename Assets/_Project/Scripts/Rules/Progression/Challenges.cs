@@ -23,7 +23,19 @@ namespace Deadfall.Rules.Progression
         public const string OperatorLevel = "operator.level";
         /// <summary>Deepest surge cleared in an Endless run (a maximum, not a count).</summary>
         public const string EndlessBest = "endless.best";
+        /// <summary>Gauntlet runs cleared (any environment).</summary>
+        public const string GauntletsWon = "gauntlets.won";
         public static string KillsOf(string enemyId) => "kills." + enemyId;
+    }
+
+    /// <summary>Gauntlet best times: one profile stat per environment, in milliseconds (lower is better).</summary>
+    public static class GauntletRecords
+    {
+        /// <summary>Profile stat for the best clear time on an environment; 0 means none yet.</summary>
+        public static string BestKey(int environment) => "gauntlet.best." + System.Math.Max(0, environment);
+
+        /// <summary>True if <paramref name="ms"/> beats <paramref name="bestMs"/> (0 = no best yet).</summary>
+        public static bool IsNewBest(long ms, long bestMs) => ms > 0 && (bestMs <= 0 || ms < bestMs);
     }
 
     public enum ChallengeKind : byte

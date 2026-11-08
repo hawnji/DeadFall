@@ -114,6 +114,7 @@ namespace Deadfall.Game
             _builtFor = map;
             AmmoStationDirector stations = AmmoStationDirector.Current;
             if (stations != null) _positions.AddRange(stations.EnsureBuilt(map));
+            if (EnvironmentCatalog.IsGauntlet(map.Layout.Seed)) return _positions; // Gauntlet: no perks, forge or Mod Bench
             var rng = new DeterministicRandom(map.Layout.Seed ^ 0x9E7C0DE5UL);
             Transform parent = map.Root != null ? map.Root : transform;
             int sectors = Mathf.Max(1, map.Layout.SectorCount);

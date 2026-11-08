@@ -58,6 +58,7 @@ namespace Deadfall.DebugTools
             ui.AddComponent<SandboxEnemySpawner>().Bind(player);
             ui.AddComponent<WaveHud>();
             ui.AddComponent<CompassHud>();
+            ui.AddComponent<GauntletClock>();
             // M4: classes. Pick one on the pause screen; Q uses the ability.
             ui.AddComponent<SandboxClassPanel>().Bind(player);
             ui.AddComponent<ClassHud>().Bind(player);

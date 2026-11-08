@@ -156,7 +156,7 @@ namespace Deadfall.Rules.World
                 if (!lootKeys.Add(((long)l.Room << 8) | (uint)l.Slot)) errors.Add($"Two loot items share room {l.Room} slot {l.Slot}.");
                 if (l.Kind == LootKind.SupplyCache && rooms[l.Room].Sector == 0) cacheInSpawnSector = true;
             }
-            if (!cacheInSpawnSector) errors.Add("No Supply Cache in the spawn sector (D-05).");
+            if (g.SupplyCaches && !cacheInSpawnSector) errors.Add("No Supply Cache in the spawn sector (D-05).");
             return errors;
         }
 

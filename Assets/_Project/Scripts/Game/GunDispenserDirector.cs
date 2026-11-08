@@ -109,7 +109,7 @@ namespace Deadfall.Game
         private void BeginRun()
         {
             Hide();
-            if (_waves == null || _waves.IsOperation || _map == null || !_map.HasMap) return;
+            if (_waves == null || _waves.IsOperation || _waves.IsGauntlet || _map == null || !_map.HasMap) return;
             BuildSpots();
             if (_spots.Count == 0) return;
             _rng = new DeterministicRandom(_waves.Seed ^ 0x47554E44UL);

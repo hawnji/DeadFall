@@ -243,6 +243,7 @@ namespace Deadfall.Game
             if (!IsAuthority || e.Definition == null) return;
             WaveManager waves = Waves;
             if (waves == null || !waves.IsRunning) return; // drops only in runs (sandbox spawns stay clean)
+            if (waves.IsGauntlet) return; // one fixed loadout: no weapon drops
             // A Specimen always drops a Prototype weapon (GAME_DESIGN §7 boss reward); everything else rolls.
             bool boss = e.Definition.IsBoss;
             if (!boss && _dropRng.NextFloat() >= LootRules.DropChance(e.Definition.ThreatCost) * EventDropMultiplier) return;

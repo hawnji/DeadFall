@@ -46,6 +46,35 @@ namespace Deadfall.Rules.World
             },
         };
 
+        /// <summary>Bit 55 marks a Gauntlet map: the short graph with extra ammo and no Supply Caches (every peer builds it from the seed).</summary>
+        private const ulong GauntletFlag = 1UL << 55;
+
+        public static bool IsGauntlet(ulong seed) => (seed & Marker) != 0 && (seed & GauntletFlag) != 0;
+
+        /// <summary>The fixed Gauntlet map of an environment.</summary>
+        public static ulong GauntletSeed(int index, ulong mapSeed) => Encode((mapSeed & (GauntletFlag - 1UL)) | GauntletFlag, index);
+
+        /// <summary>The graph a seed builds: the environment's own, or the short Gauntlet shape.</summary>
+        public static GraphTemplate GraphFor(ulong seed)
+        {
+            GraphTemplate g = ForSeed(seed).CreateGraph();
+            if (!IsGauntlet(seed)) return g;
+            g.Id = "gauntlet";
+            g.CriticalRoomsMin = 5; g.CriticalRoomsMax = 6;
+            g.BranchesMin = 3; g.BranchesMax = 5;
+            g.NestedBranchChance = 0f;
+            g.Secrets = 0;
+            g.BossRoom = true;
+            g.Sectors = 3;
+            g.FirstSectorRooms = 2;
+            g.MinSpawnsPerSector = 2;
+            g.SupplyCaches = false;
+            // Slightly more ammo to make up for having no shops: about half the slots get loot, mostly ammo.
+            g.LootChance = 0.5f;
+            g.AmmoShare = 0.72f;
+            return g;
+        }
+
         public static EnvironmentDef At(int index) => index >= 0 && index < All.Length ? All[index] : All[0];
 
         public static int IndexOf(ulong seed)
