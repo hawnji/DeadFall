@@ -790,6 +790,9 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Leave the title screen up for a couple of minutes. The chase camera stays smoothly behind the lure as the horde streams past, and it no longer jerks in towards the lure whenever an infected crosses between them.
 - [ ] When the lure stops, the camera slowly orbits. When it sets off again, the camera eases back behind it rather than snapping round.
 - [ ] In narrow halls and tunnels it still stays inside the walls and under the ceiling.
+
+### 3.75 Objectives never spawn in breach closets
+- [ ] Over several runs on all three maps, every objective prop (generators, terminals, data cores, keycards, lockers, cryo containers, valves, nests, hives, consoles) and every power-grid generator spawns on the open floor of a room. None end up inside a dark breach closet.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map
