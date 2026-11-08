@@ -25,7 +25,7 @@ namespace Deadfall.Rules.Common
         DoorOpening,
         LowHealthHeartbeat,
         PurchaseDoor,
-        /// <summary>The Broodmother's skittering legs, in place of <see cref="EnemyWalk"/>.</summary>
+        /// <summary>Creepers' and the Broodmother's skittering legs, in place of <see cref="EnemyWalk"/>.</summary>
         SpiderWalk,
     }
 
@@ -222,7 +222,7 @@ namespace Deadfall.Rules.Common
                 case SfxId.NailBoard: i.MaxVoices = 6; i.MaxDistance = 30f; i.Volume = 0.8f; i.PitchJitter = 0.06f; break;
                 case SfxId.PlayerJump: i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.55f; i.PitchJitter = 0.06f; break;
                 case SfxId.EnemyWalk: i.MaxVoices = 6; i.MaxDistance = 20f; i.Volume = 0.5f; i.PitchJitter = 0.12f; break;
-                case SfxId.SpiderWalk: i.MaxVoices = 4; i.MaxDistance = 28f; i.Volume = 0.7f; i.PitchJitter = 0.1f; break;
+                case SfxId.SpiderWalk: i.MaxVoices = 6; i.MaxDistance = 28f; i.Volume = 0.7f; i.PitchJitter = 0.1f; break;
                 case SfxId.DoorOpening: i.MaxVoices = 3; i.MaxDistance = 35f; i.Volume = 0.9f; i.PitchJitter = 0.03f; break;
                 case SfxId.LowHealthHeartbeat: i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.7f; i.PitchJitter = 0f; break;
                 case SfxId.PurchaseDoor: i.MaxVoices = 2; i.MaxDistance = 30f; i.Volume = 0.85f; i.PitchJitter = 0f; break;
