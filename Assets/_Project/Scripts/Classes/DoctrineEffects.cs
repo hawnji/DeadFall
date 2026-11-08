@@ -8,7 +8,7 @@ namespace Deadfall.Classes
     /// <summary>
     /// Host-side Squad Doctrine effects that touch damage (GAME_DESIGN §5.1):
     /// Covering Fire (Gunner + Tank): enemies the Gunner hit recently deal less damage to the Tank.
-    /// Overwatch (Gunner + Engineer): enemies a sentry hit recently take bonus damage from the Gunner.
+    /// Overwatch (Gunner + Engineer): enemies a sentry (ability or scrap-built) or drone hit recently take bonus damage from the Gunner.
     /// Runs wherever damage is applied for real (host or offline); mirrors never apply damage.
     /// </summary>
     public static class DoctrineEffects
@@ -78,7 +78,8 @@ namespace Deadfall.Classes
             if (attacker != null && victim == null)
             {
                 // A player (or their sentry) hitting an enemy.
-                bool sentry = info.WeaponId == SentryTurret.WeaponId;
+                // Any of the Engineer's automation marks: the Deploy Sentry turret, scrap-built sentries and repair drones.
+                bool sentry = info.WeaponId == SentryTurret.WeaponId || info.WeaponId == "structure.sentry" || info.WeaponId == "structure.drone";
                 string cls = ClassRoster.ClassOf(attacker.ClientId);
                 if (sentry)
                 {

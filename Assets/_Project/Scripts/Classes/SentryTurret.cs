@@ -11,7 +11,7 @@ namespace Deadfall.Classes
     /// Enemies can attack it (it is a combat target, not a taunt). Lasts a fixed time. The host's copy deals the
     /// damage; client copies aim and show tracers only. Scrap upgrades arrive with Engineering (M9).
     /// </summary>
-    public sealed class SentryTurret : MonoBehaviour, ICombatTarget, IDamageable, IAbilitySpawn
+    public sealed class SentryTurret : MonoBehaviour, ICombatTarget, IDamageable, IAbilitySpawn, IAbilityHealth
     {
         public const string WeaponId = "ability.deploy_sentry";
         private const int IgnoreRaycastLayer = 2;
@@ -170,9 +170,29 @@ namespace Deadfall.Classes
         public float ApplyDamage(in DamageInfo info)
         {
             if (_mirror || _health <= 0f || info.Amount <= 0f) return 0f;
-            float applied = Mathf.Min(_health, info.Amount);
-            _health -= applied;
+            return Damage(info.Amount);
+        }
+
+        public float Health01 => _maxHealth > 0f ? Mathf.Clamp01(_health / _maxHealth) : 0f;
+
+        /// <summary>Clients: the host's health (the panels redden the same way).</summary>
+        public void SetMirrorHealth01(float value)
+        {
+            if (!_mirror) return;
+            _health = Mathf.Max(0.01f, Mathf.Clamp01(value) * _maxHealth);
+            Tint();
+        }
+
+        private void Tint()
+        {
             if (_bodyMat != null) RuntimeMaterials.SetColor(_bodyMat, Color.Lerp(new Color(0.55f, 0.2f, 0.2f), new Color(0.4f, 0.8f, 0.5f), _health / _maxHealth));
+        }
+
+        private float Damage(float amount)
+        {
+            float applied = Mathf.Min(_health, amount);
+            _health -= applied;
+            Tint();
             if (_health <= 0f) Destroy(gameObject);
             return applied;
         }

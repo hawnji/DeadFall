@@ -18,6 +18,14 @@ namespace Deadfall.Classes
         ulong OwnerClientId { get; }
     }
 
+    /// <summary>An ability spawn with health (shield, sentry): the host syncs it so clients' mirrors show the damage.</summary>
+    public interface IAbilityHealth
+    {
+        float Health01 { get; }
+        /// <summary>Clients: health from the host (mirrors only).</summary>
+        void SetMirrorHealth01(float value);
+    }
+
     /// <summary>
     /// Which class every player in the session plays, keyed by client id (0 offline and for the host). Kept in step
     /// by <see cref="ClassNetwork"/>; used for doctrines, remote player labels and host-side class effects.

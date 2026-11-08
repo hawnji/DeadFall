@@ -13,7 +13,7 @@ namespace Deadfall.Classes
     /// Look: an energy barrier (translucent hex field) between two emitter posts. It pulses when hit, shifts from
     /// blue to red as it weakens, flickers near the end of its life or health, and bursts into sparks when it breaks.
     /// </summary>
-    public sealed class ShieldWall : MonoBehaviour, IAggroTarget, IDamageable, IAbilitySpawn
+    public sealed class ShieldWall : MonoBehaviour, IAggroTarget, IDamageable, IAbilitySpawn, IAbilityHealth
     {
         private const int IgnoreRaycastLayer = 2;
         private static readonly Color Full = new Color(0.35f, 0.7f, 1f);
@@ -197,9 +197,9 @@ namespace Deadfall.Classes
             float grow = Mathf.Clamp01((float)(now - _spawnedAt) / GrowSeconds);
             if (_fieldRoot != null) _fieldRoot.localScale = new Vector3(1f, Mathf.SmoothStep(0.02f, 1f, grow), 1f);
             _hitFlash = Mathf.Max(0f, _hitFlash - dt * 3.5f);
-            Color c = Color.Lerp(Low, Full, _mirror ? 1f : Health01);
+            Color c = Color.Lerp(Low, Full, Health01);
             float left = (float)(_expiresAt - now);
-            bool flicker = (!_mirror && Health01 < 0.3f) || left < 3f;
+            bool flicker = Health01 < 0.3f || left < 3f;
             float pulse = 0.85f + 0.15f * Mathf.Sin((float)now * 4f);
             float alpha = FieldAlpha * pulse + _hitFlash * 0.45f;
             if (flicker && Mathf.PerlinNoise((float)now * 14f, 0.3f) < 0.35f) alpha *= 0.25f;
@@ -209,7 +209,7 @@ namespace Deadfall.Classes
             _fieldMaterial.mainTextureOffset = new Vector2(0f, (float)(now * 0.12 % 1.0));
             if (_edgeMaterial != null)
             {
-                Color e = Color.Lerp(Low, Full, _mirror ? 1f : Health01) * (1f + _hitFlash);
+                Color e = Color.Lerp(Low, Full, Health01) * (1f + _hitFlash);
                 RuntimeMaterials.SetColor(_edgeMaterial, e);
             }
         }
@@ -240,6 +240,22 @@ namespace Deadfall.Classes
                 Vector3 p = transform.TransformPoint(new Vector3(UnityEngine.Random.Range(-0.5f, 0.5f) * _width, UnityEngine.Random.Range(0.1f, 1.9f), 0f));
                 FxParticles.Emit(FxParticles.Kind.Spark, p, UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(2f, 6f), 0.05f, UnityEngine.Random.Range(0.3f, 0.7f), Full);
             }
+        }
+
+        /// <summary>Clients: the host's health, with the same hit flash and tint a real hit gives.</summary>
+        public void SetMirrorHealth01(float value)
+        {
+            if (!_mirror) return;
+            float h = Mathf.Clamp01(value) * _maxHealth;
+            if (h < _health - 0.5f)
+            {
+                _hitFlash = 1f;
+                for (int i = 0; i < 3; i++)
+                    FxParticles.Emit(FxParticles.Kind.Spark, transform.TransformPoint(new Vector3(UnityEngine.Random.Range(-0.4f, 0.4f) * _width, UnityEngine.Random.Range(0.3f, 1.6f), 0f)),
+                        UnityEngine.Random.onUnitSphere * 3f, 0.04f, 0.25f, Color.Lerp(Low, Full, Mathf.Clamp01(value)));
+            }
+            _health = Mathf.Max(0.01f, h);
+            if (_material != null) RuntimeMaterials.SetColor(_material, Color.Lerp(Low, Full, Health01));
         }
 
         public float ApplyDamage(in DamageInfo info)
