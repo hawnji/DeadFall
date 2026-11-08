@@ -85,7 +85,7 @@ namespace Deadfall.Game
             HudKit.Backdrop(0.7f);
             float sw = HudKit.W, sh = HudKit.H;
             var classes = PrototypeClasses.All;
-            const float cardW = 300f, cardH = 360f, gap = 22f;
+            const float cardW = 300f, cardH = 470f, gap = 22f;
             float total = classes.Count * cardW + (classes.Count - 1) * gap;
             float scale = Mathf.Min(1f, (sw - 60f) / total);
             float cw = cardW * scale, g = gap * scale;
@@ -111,16 +111,25 @@ namespace Deadfall.Game
                 {
                     HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, 18f), "ABILITY", 11, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
                     ty += 18f;
-                    HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, 70f), c.Ability.DisplayName + ": " + c.Ability.Description, 13, HudKit.Text, TextAnchor.UpperLeft, wrap: true);
-                    ty += 76f;
+                    string ab = c.Ability.DisplayName + ": " + c.Ability.Description;
+                    float abH = WrappedHeight(ab, 13, r.width - 36f);
+                    HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, abH), ab, 13, HudKit.Text, TextAnchor.UpperLeft, wrap: true);
+                    ty += abH + 10f;
                 }
                 HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, 18f), "PASSIVES", 11, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
                 ty += 18f;
                 foreach (PassiveDefinition pd in c.Passives)
                 {
-                    if (ty > r.yMax - 70f) break;
-                    HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, 20f), "· " + pd.DisplayName, 13, HudKit.Text, TextAnchor.MiddleLeft);
-                    ty += 20f;
+                    if (ty > r.yMax - 90f) break;
+                    HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, 20f), pd.DisplayName, 13, unlocked ? c.Color : HudKit.Text, TextAnchor.MiddleLeft, head: true);
+                    ty += 19f;
+                    if (!string.IsNullOrEmpty(pd.Description))
+                    {
+                        float dh = WrappedHeight(pd.Description, 12, r.width - 36f);
+                        HudKit.Label(new Rect(r.x + 18f, ty, r.width - 36f, dh), pd.Description, 12, HudKit.TextDim, TextAnchor.UpperLeft, wrap: true);
+                        ty += dh;
+                    }
+                    ty += 8f;
                 }
                 var pick = new Rect(r.x + 18f, r.yMax - 52f, r.width - 36f, 36f);
                 string label = !unlocked ? $"OPERATOR LEVEL {OperatorLevels.ClassUnlockLevel(c.ContentId)}" : current ? "KEEP " + c.DisplayName.ToUpperInvariant() : "PLAY " + c.DisplayName.ToUpperInvariant();
@@ -135,5 +144,8 @@ namespace Deadfall.Game
             }
             HudKit.End();
         }
+
+        private static float WrappedHeight(string text, int size, float width) =>
+            Mathf.Ceil(HudKit.Style(size, TextAnchor.UpperLeft, wrap: true).CalcHeight(new GUIContent(text), width));
     }
 }

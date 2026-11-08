@@ -768,6 +768,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Co-op (host + client): a Tank on either machine raises Bulwark Shield and the infected hit it. On the other machine the shield's hex field shifts from blue towards red, flashes and sparks on hits, and flickers below 30%, the same as on the host. It breaks on both at the same moment.
 - [ ] Same for the Engineer's Deploy Sentry: its panels redden on the client as it takes damage.
 - [ ] Overwatch (Gunner + Engineer): enemies hit by a scrap-built sentry or a repair drone (not only the Deploy Sentry turret) take +20% from the Gunner for 5 s.
+
+### 3.71 Passive descriptions and live passive chips
+- [ ] FOB class picker: each class card lists its passives with the name in the class colour and the description underneath (for example Guard: "30% damage reduction while above 50% health."). Nothing overlaps the ability text or the PLAY button.
+- [ ] Run HUD class card: passives show as chips under the ability bar. Always-on passives (Deep Pockets, Shove, Salvager, Handy, Bandolier, Blast Padding) read plain white.
+- [ ] Conditional passives sit dim until they apply, then light up in the class colour with a value: Guard "-30% dmg" above half health (goes dim below), Steady Hands "-N% recoil" while holding fire, Bloodlust "+5 hp" for about 1.5 s after a melee kill, Combo "cleave ready" when the third hit is armed.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map
