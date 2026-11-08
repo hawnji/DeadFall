@@ -426,7 +426,14 @@ namespace Deadfall.Encounters
                 if (_players.Contains(LocalId)) LocalCreditsEarned?.Invoke(bonus, "Surge cleared");
             }
             if ((e & SurgeRunEvents.LullStarted) != 0) _ready.Clear();
-            if ((e & SurgeRunEvents.RunFailed) != 0) _director.Stop();
+            if ((e & SurgeRunEvents.RunFailed) != 0)
+            {
+                // Squad wiped: clear the horde as FailRun does. Left alive, it kept killing a player who got back up
+                // after the results (the hub's auto-respawn), over and over, most noticeably at the end of Endless.
+                _director.Stop();
+                _director.KillAll();
+                EnemyManager.Current?.DespawnAll();
+            }
             _stateDirty = true;
         }
 
