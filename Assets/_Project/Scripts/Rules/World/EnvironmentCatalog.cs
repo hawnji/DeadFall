@@ -51,8 +51,7 @@ namespace Deadfall.Rules.World
                 Index = 2, Id = MercyValeKit.Id, DisplayName = "Mercy Vale General Hospital", ShortName = "MERCY VALE",
                 Blurb = "A hospital overrun on the night of the outbreak: wards, operating theatres, the morgue and a sealed isolation wing.",
                 CreateKit = MercyValeKit.Create, CreateGraph = MercyValeKit.SurvivalGraph,
-                // Its own boss comes in a later step; until then surges bring any Specimen.
-                BossId = null, MissionId = "mission.quarantine",
+                BossId = "enemy.orderly", MissionId = "mission.quarantine",
             },
         };
 

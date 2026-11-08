@@ -115,6 +115,25 @@ namespace Deadfall.Tests.EditMode.Rules
         }
 
         [Test]
+        public void OrderlyChargesEveryPhaseSummonsFromRampageAndRegeneratesExposed()
+        {
+            var stats = new EnemyStats { MaxHealth = 6400f, DamageReduction = 0.3f, ChargeCooldownSeconds = 6f, ChaseSpeed = 3.6f };
+            var copy = new EnemyStats();
+            Assert.IsFalse(SpecimenRules.SummonsIn(SpecimenPhase.Stalk, SpecimenKind.Orderly));
+            Assert.IsTrue(SpecimenRules.SummonsIn(SpecimenPhase.Rampage, SpecimenKind.Orderly));
+            Assert.IsTrue(SpecimenRules.SummonsIn(SpecimenPhase.ExposedCore, SpecimenKind.Orderly));
+            foreach (SpecimenPhase p in new[] { SpecimenPhase.Stalk, SpecimenPhase.Rampage, SpecimenPhase.ExposedCore })
+            {
+                SpecimenRules.ApplyPhase(stats, copy, p, SpecimenModifiers.None, SpecimenKind.Orderly);
+                Assert.IsTrue(copy.CanCharge, p.ToString());
+                Assert.IsFalse(copy.CanShoot, p.ToString());
+                Assert.AreEqual(p == SpecimenPhase.ExposedCore, copy.RegenPerSecond > 0f, p.ToString());
+            }
+            SpecimenRules.ApplyPhase(stats, copy, SpecimenPhase.Rampage, SpecimenModifiers.None, SpecimenKind.Orderly);
+            Assert.Less(copy.ChargeCooldownSeconds, stats.ChargeCooldownSeconds);
+        }
+
+        [Test]
         public void BroodmotherSummonsInEveryPhaseAndNeverCharges()
         {
             foreach (SpecimenPhase p in new[] { SpecimenPhase.Stalk, SpecimenPhase.Rampage, SpecimenPhase.ExposedCore })

@@ -73,6 +73,8 @@ namespace Deadfall.Enemies
         public bool IsBoss => _role == EnemyRole.Boss;
         /// <summary>The Broodmother's boss rules (summons in every phase, spits instead of charging).</summary>
         public bool IsBrood => _bodyType == EnemyBodyType.Brood;
+        /// <summary>Which boss rules apply (only meaningful for bosses).</summary>
+        public SpecimenKind BossKind => IsBrood ? SpecimenKind.Brood : _contentId == PrototypeEnemies.OrderlyId ? SpecimenKind.Orderly : SpecimenKind.Specimen;
         public EnemyBodyType BodyType => _bodyType;
         public float Height => _height;
         public float Radius => _radius;

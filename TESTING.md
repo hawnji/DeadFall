@@ -778,7 +778,13 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] FOB deployment board shows a third environment button, Mercy Vale General Hospital, with its blurb. Its default Operation is Quarantine.
 - [ ] Survival on Mercy Vale builds a hospital: Ambulance Bay spawn, pale mint halls, wards with bed rows, reception, operating theatres, pharmacy, morgue (dim blue), radiology, the Isolation Wing objective room and a red-lit Quarantine Atrium boss room. The haze is a cold blue-grey.
 - [ ] The map HUD reads MERCY VALE. Gauntlet and Escort both build on it, and its Gauntlet best time shows in the Trophy Room.
-- [ ] Known gap: Mercy Vale has no boss of its own yet, so Specimen surges bring any Specimen.
+
+### 3.73 Mercy Vale boss: The Orderly
+- [ ] Specimen surges on Mercy Vale bring The Orderly (banner: "the Orderly is making its rounds"). It is the Specimen body tinted pale grey-green, and the boss bar names it.
+- [ ] Stalk (above 66%): it charges on sight, about every 6 s, and has no ranged attack.
+- [ ] Rampage: it charges roughly twice as often and calls Husks, plus a Pyre in every four, about every 8 s.
+- [ ] Exposed core (below 33%): it is slower and still charges and summons. If nobody hits it for a few seconds, its health bar climbs back up (about 0.8% a second). Keep shooting to stop it.
+- [ ] Specimen Zero on Cinder Ridge and the Broodmother on Harrow Line behave the same as before.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map
