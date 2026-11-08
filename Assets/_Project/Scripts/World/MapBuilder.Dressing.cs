@@ -62,6 +62,13 @@ namespace Deadfall.World
                 th.Floor = new Color(0.24f, 0.25f, 0.25f); th.FloorAlt = new Color(0.21f, 0.22f, 0.22f);
                 th.Light = new Color(1f, 0.78f, 0.5f); th.LightScale = 0.85f; th.Pipes = true; th.Tunnel = true;
             }
+            else if (t.Role == RoomRole.Corridor && t.HasTag("hall"))
+            {
+                // Mercy Vale halls: pale mint walls over a teal dado, scuffed grey linoleum, cold fluorescents.
+                th.Wall = new Color(0.6f, 0.66f, 0.62f); th.Panel = new Color(0.22f, 0.4f, 0.4f);
+                th.Floor = new Color(0.4f, 0.42f, 0.42f); th.FloorAlt = new Color(0.33f, 0.36f, 0.37f);
+                th.Light = new Color(0.86f, 0.95f, 1f); th.LightScale = 0.9f;
+            }
             else if (t.Role == RoomRole.Corridor) { th.Pipes = true; th.Floor = new Color(0.27f, 0.28f, 0.3f); th.FloorAlt = new Color(0.25f, 0.26f, 0.28f); }
             else if (t.HasTag("platform"))
             {
@@ -116,6 +123,69 @@ namespace Deadfall.World
                 th.Floor = new Color(0.18f, 0.22f, 0.21f); th.FloorAlt = new Color(0.15f, 0.19f, 0.18f);
                 th.Light = new Color(0.8f, 1f, 0.7f); th.LightScale = 1.1f; th.Pipes = true;
                 th.Furniture = new[] { "prop_generator", "barrels", "prop_tank", "barrels" };
+            }
+            else if (t.HasTag("ward"))
+            {
+                // Beds in rows (tables stand in), privacy-curtain green, bright clinical light.
+                th.Wall = new Color(0.66f, 0.68f, 0.64f); th.Panel = new Color(0.3f, 0.46f, 0.4f);
+                th.Floor = new Color(0.44f, 0.45f, 0.44f); th.FloorAlt = new Color(0.38f, 0.4f, 0.4f);
+                th.Light = new Color(0.92f, 0.97f, 1f);
+                th.Furniture = new[] { "prop_table", "prop_table", "prop_locker", "prop_table", "prop_table" };
+            }
+            else if (t.HasTag("reception"))
+            {
+                th.Wall = new Color(0.62f, 0.6f, 0.56f); th.Panel = new Color(0.25f, 0.35f, 0.48f);
+                th.Floor = new Color(0.46f, 0.45f, 0.43f); th.FloorAlt = new Color(0.34f, 0.35f, 0.37f);
+                th.Light = new Color(1f, 0.96f, 0.88f);
+                th.Furniture = new[] { "prop_desk", "prop_planter", "prop_desk", "prop_table", "prop_planter" };
+            }
+            else if (t.HasTag("surgery"))
+            {
+                th.Wall = new Color(0.5f, 0.62f, 0.6f); th.Panel = new Color(0.2f, 0.42f, 0.42f);
+                th.Floor = new Color(0.36f, 0.42f, 0.42f); th.FloorAlt = new Color(0.3f, 0.36f, 0.36f);
+                th.Light = new Color(0.9f, 1f, 1f); th.LightScale = 1.15f;
+                th.Furniture = new[] { "prop_lab_bench", "prop_tank", "prop_server_rack", "prop_lab_bench" };
+            }
+            else if (t.HasTag("pharmacy"))
+            {
+                th.Wall = new Color(0.6f, 0.6f, 0.58f); th.Panel = new Color(0.45f, 0.28f, 0.26f);
+                th.Light = new Color(1f, 0.95f, 0.9f);
+                th.Furniture = new[] { "prop_shelf", "prop_shelf", "prop_desk", "prop_shelf" };
+            }
+            else if (t.HasTag("morgue"))
+            {
+                // Steel cold-store walls (lockers stand in for the drawers), dim blue light.
+                th.Wall = new Color(0.42f, 0.46f, 0.5f); th.Panel = new Color(0.3f, 0.34f, 0.4f);
+                th.Floor = new Color(0.3f, 0.32f, 0.35f); th.FloorAlt = new Color(0.26f, 0.28f, 0.31f);
+                th.Light = new Color(0.7f, 0.85f, 1f); th.LightScale = 0.8f; th.Pipes = true;
+                th.Furniture = new[] { "prop_locker", "prop_table", "prop_locker", "prop_table", "prop_locker" };
+            }
+            else if (t.HasTag("radiology"))
+            {
+                th.Wall = new Color(0.4f, 0.42f, 0.46f); th.Panel = new Color(0.32f, 0.3f, 0.4f);
+                th.Light = new Color(0.8f, 0.85f, 1f); th.LightScale = 0.9f;
+                th.Furniture = new[] { "prop_generator", "prop_desk", "prop_server_rack" };
+            }
+            else if (t.HasTag("isolation"))
+            {
+                th.Wall = new Color(0.56f, 0.6f, 0.56f); th.Panel = new Color(0.55f, 0.42f, 0.12f);
+                th.Floor = new Color(0.38f, 0.4f, 0.38f); th.FloorAlt = new Color(0.33f, 0.35f, 0.33f);
+                th.Light = new Color(0.85f, 1f, 0.85f); th.Pipes = true;
+                th.Furniture = new[] { "prop_tank", "prop_desk", "prop_tank", "prop_server_rack", "prop_table" };
+            }
+            else if (t.HasTag("quarantine"))
+            {
+                // Plastic-sheeted atrium under red emergency lighting.
+                th.Wall = new Color(0.46f, 0.44f, 0.42f); th.Panel = new Color(0.4f, 0.16f, 0.14f);
+                th.Floor = new Color(0.34f, 0.32f, 0.31f); th.FloorAlt = new Color(0.29f, 0.27f, 0.26f);
+                th.Light = new Color(1f, 0.58f, 0.52f); th.LightScale = 1.1f;
+                th.Furniture = new[] { "prop_table", "prop_planter", "prop_tank", "prop_table", "prop_planter" };
+            }
+            else if (t.HasTag("bay"))
+            {
+                th.Wall = new Color(0.46f, 0.47f, 0.48f); th.Panel = new Color(0.6f, 0.16f, 0.14f);
+                th.Floor = new Color(0.3f, 0.31f, 0.32f); th.FloorAlt = new Color(0.55f, 0.48f, 0.18f);
+                th.Light = new Color(0.95f, 0.98f, 1f);
             }
             else if (t.Role == RoomRole.Spawn)
             {

@@ -773,6 +773,12 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] FOB class picker: each class card lists its passives with the name in the class colour and the description underneath (for example Guard: "30% damage reduction while above 50% health."). Nothing overlaps the ability text or the PLAY button.
 - [ ] Run HUD class card: passives show as chips under the ability bar. Always-on passives (Deep Pockets, Shove, Salvager, Handy, Bandolier, Blast Padding) read plain white.
 - [ ] Conditional passives sit dim until they apply, then light up in the class colour with a value: Guard "-30% dmg" above half health (goes dim below), Steady Hands "-N% recoil" while holding fire, Bloodlust "+5 hp" for about 1.5 s after a melee kill, Combo "cleave ready" when the third hit is armed.
+
+### 3.72 Third environment: Mercy Vale General Hospital (map kit)
+- [ ] FOB deployment board shows a third environment button, Mercy Vale General Hospital, with its blurb. Its default Operation is Quarantine.
+- [ ] Survival on Mercy Vale builds a hospital: Ambulance Bay spawn, pale mint halls, wards with bed rows, reception, operating theatres, pharmacy, morgue (dim blue), radiology, the Isolation Wing objective room and a red-lit Quarantine Atrium boss room. The haze is a cold blue-grey.
+- [ ] The map HUD reads MERCY VALE. Gauntlet and Escort both build on it, and its Gauntlet best time shows in the Trophy Room.
+- [ ] Known gap: Mercy Vale has no boss of its own yet, so Specimen surges bring any Specimen.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map

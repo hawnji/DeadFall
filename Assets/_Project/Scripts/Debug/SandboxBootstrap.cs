@@ -323,6 +323,13 @@ namespace Deadfall.DebugTools
                 RenderSettings.fogDensity = 0.03f;
                 RenderSettings.fogColor = new Color(0.04f, 0.06f, 0.055f);
             }
+            else if (map && environment == 2)
+            {
+                // Mercy Vale: cold, clinical blue-grey haze, a touch brighter than the depot.
+                RenderSettings.ambientLight = new Color(0.19f, 0.21f, 0.25f);
+                RenderSettings.fogDensity = 0.026f;
+                RenderSettings.fogColor = new Color(0.055f, 0.065f, 0.08f);
+            }
         }
 
         private void EnsureLight()

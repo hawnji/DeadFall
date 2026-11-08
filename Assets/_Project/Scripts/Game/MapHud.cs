@@ -76,7 +76,7 @@ namespace Deadfall.Game
         private static string MapShortName()
         {
             MapSession m = MapSession.Current;
-            return m != null && m.Environment != null && m.Environment.Index == 1 ? "HARROW LINE" : "CINDER RIDGE";
+            return m != null && m.Environment != null && !string.IsNullOrEmpty(m.Environment.ShortName) ? m.Environment.ShortName : "CINDER RIDGE";
         }
     }
 }
