@@ -55,6 +55,13 @@ namespace Deadfall.Classes
 
         /// <summary>False for passives whose system doesn't exist yet (Scrap, grenades); the HUD says so.</summary>
         public virtual bool Implemented => true;
+        /// <summary>True when the effect only applies under a condition (Guard, Steady Hands); the HUD dims it while idle.</summary>
+        public virtual bool Conditional => false;
+        /// <summary>For conditional passives: whether the effect is working right now (the HUD lights it up).</summary>
+        public virtual bool InEffect => true;
+        /// <summary>Short live value for the HUD while in effect (e.g. "-30%"), or null.</summary>
+        public virtual string Readout => null;
+        public PassiveDefinition Definition => Def;
         public virtual void Attach() { }
         public virtual void Detach() { }
         public virtual void Tick(double now) { }
@@ -256,6 +263,11 @@ namespace Deadfall.Classes
     /// <summary>Gunner. Magnitude: recoil reduction per second of sustained fire. Secondary: lowest recoil multiplier.</summary>
     public sealed class SteadyHandsPassive : PassiveBehaviour
     {
+        private float Multiplier => Ctx.Weapons != null ? ClassRules.SustainedRecoil(Ctx.Weapons.SustainedFireSeconds, Def.Magnitude, Def.Secondary) : 1f;
+        public override bool Conditional => true;
+        public override bool InEffect => Multiplier < 0.995f;
+        public override string Readout => $"-{(1f - Multiplier) * 100f:0}% recoil";
+
         public override void ModifyHandling(WeaponDefinition weapon, bool preferred, ref WeaponHandling h) =>
             h.Recoil *= ClassRules.SustainedRecoil(Ctx.Weapons.SustainedFireSeconds, Def.Magnitude, Def.Secondary);
     }
@@ -263,6 +275,11 @@ namespace Deadfall.Classes
     /// <summary>Tank. Magnitude: damage reduction. Secondary: health fraction it applies above.</summary>
     public sealed class GuardPassive : PassiveBehaviour
     {
+        private float Reduction => Ctx.Health != null && Ctx.Health.IsAlive ? ClassRules.GuardReduction(Ctx.Health.Normalized, Def.Secondary, Def.Magnitude) : 0f;
+        public override bool Conditional => true;
+        public override bool InEffect => Reduction > 0f;
+        public override string Readout => $"-{Reduction * 100f:0}% dmg";
+
         public override void Tick(double now)
         {
             if (Ctx.Health != null)
@@ -278,13 +295,21 @@ namespace Deadfall.Classes
     /// <summary>Warrior. Magnitude: health restored per melee kill.</summary>
     public sealed class BloodlustPassive : PassiveBehaviour
     {
+        private double _flashUntil = double.NegativeInfinity;
+        public override bool Conditional => true;
+        public override bool InEffect => Time.timeAsDouble < _flashUntil;
+        public override string Readout => $"+{Def.Magnitude:0} hp";
+
         public override void Attach() => EventBus<HitConfirmed>.Subscribe(OnHit);
         public override void Detach() => EventBus<HitConfirmed>.Unsubscribe(OnHit);
 
         private void OnHit(HitConfirmed e)
         {
             if (e.Attacker == Ctx.Player && e.Killed && e.IsMelee && Ctx.Health != null && Ctx.Health.IsAlive)
+            {
                 Ctx.Health.Heal(Def.Magnitude);
+                _flashUntil = Time.timeAsDouble + 1.5;
+            }
         }
     }
 
@@ -312,6 +337,10 @@ namespace Deadfall.Classes
 
         /// <summary>Hits in the current chain, for the HUD.</summary>
         public int ChainCount => _combo?.Count ?? 0;
+
+        public override bool Conditional => true;
+        public override bool InEffect => Time.timeAsDouble <= _finisherUntil && Ctx.Weapons.HasMeleeBonus;
+        public override string Readout => "cleave ready";
 
         private void OnMelee(int hits)
         {

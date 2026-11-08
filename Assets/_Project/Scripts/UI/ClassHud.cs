@@ -69,14 +69,40 @@ namespace Deadfall.UI
             HudKit.Label(new Rect(bar.x + 8f, bar.y, bar.width - 16f, bar.height), right, 12, Color.white, TextAnchor.MiddleRight, head: true);
             HudKit.KeyChip(bar.xMax + 8f, bar.y - 3f, "Q", 24f, ready);
 
-            // Passives on one line under the bar.
-            string passives = string.Empty;
-            for (int i = 0; i < c.Passives.Count; i++)
+            // Passives as chips under the bar. Always-on passives read plain; conditional ones sit dim until their
+            // condition holds, then light up in the class colour with a live value (Guard "-30% dmg").
+            float px = card.x + 16f, py = card.y + 59f, maxX = card.xMax - 16f;
+            for (int i = 0; i < _class.Passives.Count; i++)
             {
-                bool live = i < _class.Passives.Count && _class.Passives[i].Implemented;
-                passives += (passives.Length > 0 ? "  ·  " : string.Empty) + c.Passives[i].DisplayName + (live ? string.Empty : " (soon)");
+                PassiveBehaviour pb = _class.Passives[i];
+                PassiveDefinition pd = pb.Definition ?? (i < c.Passives.Count ? c.Passives[i] : null);
+                if (pd == null) continue;
+                bool lit = pb.Implemented && pb.Conditional && pb.InEffect;
+                string text = pd.DisplayName + (!pb.Implemented ? " (soon)" : lit && pb.Readout != null ? "  " + pb.Readout : string.Empty);
+                float w = HudKit.TextWidth(text, 12, head: lit) + 14f;
+                if (px + w > maxX) w = Mathf.Max(0f, maxX - px);
+                if (w <= 14f) break;
+                var chip = new Rect(px, py, w, 18f);
+                Color tc;
+                if (lit)
+                {
+                    float pulse = 0.8f + 0.2f * Mathf.Sin(Time.time * 6f);
+                    HudKit.Round(chip, new Color(c.Color.r, c.Color.g, c.Color.b, 0.28f * pulse), true);
+                    HudKit.Fill(new Rect(chip.x, chip.y + 2f, 2f, chip.height - 4f), c.Color);
+                    tc = Color.Lerp(c.Color, Color.white, 0.35f);
+                }
+                else if (!pb.Implemented || pb.Conditional)
+                {
+                    tc = new Color(HudKit.TextDim.r, HudKit.TextDim.g, HudKit.TextDim.b, 0.6f);
+                }
+                else
+                {
+                    HudKit.Round(chip, new Color(1f, 1f, 1f, 0.06f), true);
+                    tc = HudKit.Text;
+                }
+                HudKit.Label(new Rect(chip.x + 7f, chip.y, chip.width - 9f, chip.height), text, 12, tc, TextAnchor.MiddleLeft, head: lit);
+                px += w + 6f;
             }
-            HudKit.Label(new Rect(card.x + 16f, card.y + 58f, card.width - 32f, 20f), passives, 12, HudKit.TextDim, TextAnchor.MiddleLeft);
 
             // Squad doctrines, right of the class name.
             if (_class.ActiveDoctrines.Count > 0)
