@@ -793,6 +793,9 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 
 ### 3.75 Objectives never spawn in breach closets
 - [ ] Over several runs on all three maps, every objective prop (generators, terminals, data cores, keycards, lockers, cryo containers, valves, nests, hives, consoles) and every power-grid generator spawns on the open floor of a room. None end up inside a dark breach closet.
+
+### 3.76 Squad wipe clears the horde
+- [ ] Solo Endless (and Survival): go down with no self-revive kits and bleed out. SQUAD WIPED shows, every infected on the map disappears, and a few seconds later you're back on your feet, safe, and can return to the hub. You no longer get killed over and over.
 - [ ] Regression: explosions still don't hurt through walls; Covering Fire, Demolition Crew, Salvager, Handy, Bandolier and Blast Padding behave as before.
 
 ## 4. Regression map
