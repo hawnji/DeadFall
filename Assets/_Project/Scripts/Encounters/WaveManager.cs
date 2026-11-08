@@ -86,6 +86,9 @@ namespace Deadfall.Encounters
         /// <summary>Gauntlet run (<see cref="GauntletRules"/>): six hard surges, fixed lulls, no shops. Synced to clients.</summary>
         public bool IsGauntlet => _gauntlet;
         private bool _gauntlet;
+        /// <summary>Escort run (<see cref="EscortRules"/>): surges until the cart is delivered or destroyed. Synced to clients.</summary>
+        public bool IsEscort => _escort;
+        private bool _escort;
         /// <summary>The environment's boss for Specimen surges (set when a map is built; null for any boss).</summary>
         public string PreferredBossId { get => _planner != null ? _planner.PreferredBossId : null; set { if (_planner != null) _planner.PreferredBossId = value; } }
         public float TimeLeft => Mathf.Max(0f, (float)(_phaseEndsAt - Time.timeAsDouble));
@@ -243,6 +246,18 @@ namespace Deadfall.Encounters
             return true;
         }
 
+        /// <summary>Host/offline: starts an Escort run: no final surge, short lulls; the escort director ends it.</summary>
+        public bool StartEscort(ulong seed = 0)
+        {
+            if (!StartRun(seed)) return false;
+            _escort = true;
+            _runSettings.FinalSurge = 0;
+            _runSettings.LullSeconds = EscortRules.LullSeconds;
+            _stateDirty = true;
+            GameLog.Info("Waves", "Escort run: surges continue until the cart is delivered or destroyed.");
+            return true;
+        }
+
         /// <summary>Host/offline: lull length for the rest of the run (extraction pressure).</summary>
         public void SetLullSeconds(float seconds)
         {
@@ -284,6 +299,7 @@ namespace Deadfall.Encounters
             _operation = false;
             _endless = false;
             _gauntlet = false;
+            _escort = false;
             _planner.Endless = false;
             _completeSubtitle = null;
             _failSubtitle = null;
@@ -308,6 +324,7 @@ namespace Deadfall.Encounters
             _run.Abort();
             _operation = false;
             _gauntlet = false;
+            _escort = false;
             _runSettings.FinalSurge = _defaultFinalSurge;
             _runSettings.LullSeconds = _defaultLullSeconds;
             _plan = null;
@@ -381,6 +398,7 @@ namespace Deadfall.Encounters
                 _plan = _planner.Plan(_gauntlet ? GauntletRules.PlannedSurge(_run.Surge) : _run.Surge, Mathf.Max(1, _players.Count), _seed);
                 // Endless "Relentless": shorter lulls after this surge.
                 if (_gauntlet) _runSettings.LullSeconds = GauntletRules.LullSeconds;
+                else if (_escort) _runSettings.LullSeconds = EscortRules.LullSeconds;
                 else if (!_operation)
                 {
                     // Next lull: a random 10-25 s from the run seed (Endless "Relentless" still trims it).
@@ -568,10 +586,10 @@ namespace Deadfall.Encounters
                 case RunPhase.Lull:
                     // Between surges there's no pop-up; only the start of a run (and Operations' objective lulls) say so.
                     if (_surge == 1) _incomingCalled = 0;
-                    if (_surge == 1) title = _operation ? "OPERATION STARTED" : _gauntlet ? "GAUNTLET" : "DEPLOYMENT STARTED";
+                    if (_surge == 1) title = _operation ? "OPERATION STARTED" : _gauntlet ? "GAUNTLET" : _escort ? "ESCORT" : "DEPLOYMENT STARTED";
                     else if (_operation) title = "LULL";
                     if (title != null)
-                        subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives" : _gauntlet ? $"{GauntletRules.Surges} surges · the clock starts with the first" : "Get ready";
+                        subtitle = _operation ? $"Surge {_surge} in {Mathf.CeilToInt(TimeLeft)} s · work the objectives" : _gauntlet ? $"{GauntletRules.Surges} surges · the clock starts with the first" : _escort ? "Push the reactor cart to the far end of the map" : "Get ready";
                     break;
                 case RunPhase.Surge:
                     // Called once, just before the surge (see Update); a surge that starts without that call says it now.
@@ -600,7 +618,7 @@ namespace Deadfall.Encounters
                     subtitle = $"+{_run.ClearBonus(_surge)} Field Credits";
                     break;
                 case RunPhase.Complete:
-                    title = _completeSubtitle != null ? "OPERATION COMPLETE" : "DEPLOYMENT COMPLETE";
+                    title = _escort ? "CART DELIVERED" : _completeSubtitle != null ? "OPERATION COMPLETE" : "DEPLOYMENT COMPLETE";
                     subtitle = _completeSubtitle ?? $"All {_surge} surges cleared";
                     break;
                 case RunPhase.Failed:
@@ -669,7 +687,7 @@ namespace Deadfall.Encounters
                     w.WriteValueSafe(kv.Key);
                     w.WriteValueSafe(kv.Value);
                 }
-                w.WriteValueSafe((byte)((_endless ? 1 : 0) | (_failSubtitle != null ? 2 : 0) | (_completeSubtitle != null ? 4 : 0) | (_gauntlet ? 8 : 0)));
+                w.WriteValueSafe((byte)((_endless ? 1 : 0) | (_failSubtitle != null ? 2 : 0) | (_completeSubtitle != null ? 4 : 0) | (_gauntlet ? 8 : 0) | (_escort ? 16 : 0)));
                 if (onlyTo == ulong.MaxValue) _session.SendToRemoteClients(MsgState, w, NetworkDelivery.ReliableSequenced);
                 else _session.SendToClient(MsgState, onlyTo, w, NetworkDelivery.ReliableSequenced);
             }
@@ -698,11 +716,12 @@ namespace Deadfall.Encounters
             r.ReadValueSafe(out byte flags);
             _endless = (flags & 1) != 0;
             _gauntlet = (flags & 8) != 0;
+            _escort = (flags & 16) != 0;
             // Clients don't get the host's wording, but the end screen title should still say how the run ended.
             if ((flags & 2) == 0) _failSubtitle = null;
-            else if (_failSubtitle == null) _failSubtitle = "A required objective failed";
+            else if (_failSubtitle == null) _failSubtitle = _escort ? "The cart was destroyed" : "A required objective failed";
             if ((flags & 4) == 0) _completeSubtitle = null;
-            else if (_completeSubtitle == null) _completeSubtitle = "Extraction held";
+            else if (_completeSubtitle == null) _completeSubtitle = _escort ? "The cart made it through" : "Extraction held";
             if (phase > (byte)RunPhase.Failed || type > (byte)SurgeType.Specimen) return;
             int gained = _credits.Get(me) - before;
             if (gained > 0) LocalCreditsEarned?.Invoke(gained, null);

@@ -51,13 +51,33 @@ namespace Deadfall.Rules.World
 
         public static bool IsGauntlet(ulong seed) => (seed & Marker) != 0 && (seed & GauntletFlag) != 0;
 
+        /// <summary>Bit 54 marks an Escort map: a medium route from spawn to the far room for the cart.</summary>
+        private const ulong EscortFlag = 1UL << 54;
+
+        public static bool IsEscort(ulong seed) => (seed & Marker) != 0 && (seed & EscortFlag) != 0 && (seed & GauntletFlag) == 0;
+
+        /// <summary>An Escort map of an environment from any seed.</summary>
+        public static ulong EscortSeed(ulong seed, int index) => EncodeRaw((seed & (EscortFlag - 1UL)) | EscortFlag, index);
+
         /// <summary>The fixed Gauntlet map of an environment.</summary>
-        public static ulong GauntletSeed(int index, ulong mapSeed) => Encode((mapSeed & (GauntletFlag - 1UL)) | GauntletFlag, index);
+        public static ulong GauntletSeed(int index, ulong mapSeed) => EncodeRaw((mapSeed & (GauntletFlag - 1UL)) | GauntletFlag, index);
 
         /// <summary>The graph a seed builds: the environment's own, or the short Gauntlet shape.</summary>
         public static GraphTemplate GraphFor(ulong seed)
         {
             GraphTemplate g = ForSeed(seed).CreateGraph();
+            if (IsEscort(seed))
+            {
+                // A route the cart can cover in a run: medium length, four sectors, a boss room at the end.
+                g.Id = "escort";
+                g.CriticalRoomsMin = 7; g.CriticalRoomsMax = 9;
+                g.BranchesMin = 8; g.BranchesMax = 12;
+                g.NestedBranchChance = 0.2f;
+                g.Secrets = 1;
+                g.BossRoom = true;
+                g.Sectors = 4;
+                return g;
+            }
             if (!IsGauntlet(seed)) return g;
             g.Id = "gauntlet";
             g.CriticalRoomsMin = 5; g.CriticalRoomsMax = 6;
@@ -87,7 +107,10 @@ namespace Deadfall.Rules.World
         public static EnvironmentDef ForSeed(ulong seed) => At(IndexOf(seed));
 
         /// <summary>The seed with <paramref name="index"/> folded into its top byte. Never returns 0 (0 means "no map").</summary>
-        public static ulong Encode(ulong seed, int index)
+        public static ulong Encode(ulong seed, int index) => EncodeRaw(seed & ~(GauntletFlag | EscortFlag), index);
+
+        /// <summary><see cref="Encode"/> without clearing the mode bits (Gauntlet, Escort).</summary>
+        private static ulong EncodeRaw(ulong seed, int index)
         {
             index = Math.Max(0, Math.Min(index, All.Length - 1));
             ulong low = seed & LowMask;

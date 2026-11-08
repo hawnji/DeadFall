@@ -51,6 +51,11 @@ Prices (`ModBenchRules.Price`): Red Dot 350, Holo 500, Sniper Scope 900, Compens
 - Loadout: Halberd AR + Red Dot, Breacher 12, Ranger 9, Saber-7. No dispenser, perks, Mod Bench, forge, ammo stations or weapon drops. Field Mod picks between surges stay.
 - Par 8:00 is a guess; set it from real clear times. Rewards are a normal won run.
 
+## Escort (first pass, 2026-11-08)
+- Cart health 4000 x (1 + 0.35 per extra player), worn down by infected hits; +20% at each sector door it forces (`EscortRules`).
+- Speed 1.0 m/s with one pusher, +0.2 per extra (max 1.6) within a 6 m ring. It stops when the infected within 3 m outnumber the pushers.
+- Map: 7-9 main rooms, 8-12 side rooms, 4 sectors, boss room at the end. 12 s lulls, surges keep coming until the cart arrives. Shops work as in Survival.
+
 ## Scrap and structures
 
 Scrap comes from kills (3 per threat point, ×1.5 for Engineers) plus 20 per surge and 40 per objective. That is roughly 200 a surge at surge 10. A sentry costs 120 (54 DPS, 300 rounds, refilling costs 30) and an Arc Fence costs 90. **Verdict: unchanged.** The drone is weak in attack mode (12–24 DPS), but it follows you and repairs things, so that's acceptable for now.

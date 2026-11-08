@@ -52,6 +52,8 @@ namespace Deadfall.Rules.Progression
         public int SurgesCleared;
         /// <summary>Gauntlet run: the environment it ran on and the clear time (ms, 0 if not cleared).</summary>
         public bool Gauntlet;
+        /// <summary>Escort run (the cart was pushed to the end when <see cref="Won"/>).</summary>
+        public bool Escort;
         public int GauntletEnvironment;
         public long GauntletMs;
         public int Kills;
@@ -166,6 +168,7 @@ namespace Deadfall.Rules.Progression
                 if (result.Won) p.AddStat(StatKeys.GauntletsWon);
             }
             if (result.Won && result.Operation) p.AddStat(StatKeys.OperationsWon);
+            if (result.Won && result.Escort) p.AddStat(StatKeys.EscortsWon);
             s.OperatorLevelAfter = p.OperatorLevel;
             s.RankAfter = p.RankOf(classId);
             s.Completed = EvaluateChallenges(p, challenges);

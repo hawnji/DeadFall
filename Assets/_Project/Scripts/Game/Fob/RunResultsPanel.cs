@@ -63,7 +63,7 @@ namespace Deadfall.Game
             HudKit.Begin();
             GUI.depth = -30;
             bool gauntlet = _result.Gauntlet;
-            string head = _result.Won ? (_result.Operation ? "OPERATION COMPLETE" : gauntlet ? "GAUNTLET CLEARED" : "DEPLOYMENT COMPLETE") : _aborted ? "DEPLOYMENT ABORTED" : "SQUAD WIPED";
+            string head = _result.Won ? (_result.Operation ? "OPERATION COMPLETE" : gauntlet ? "GAUNTLET CLEARED" : _result.Escort ? "CART DELIVERED" : "DEPLOYMENT COMPLETE") : _aborted ? "DEPLOYMENT ABORTED" : "SQUAD WIPED";
             Color hc = _result.Won ? HudKit.Good : HudKit.Bad;
             RunStatsDirector stats = RunStatsDirector.Current;
             int statRows = stats != null ? stats.RowCount : 0;

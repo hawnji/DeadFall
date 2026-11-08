@@ -25,6 +25,8 @@ namespace Deadfall.Rules.Progression
         public const string EndlessBest = "endless.best";
         /// <summary>Gauntlet runs cleared (any environment).</summary>
         public const string GauntletsWon = "gauntlets.won";
+        /// <summary>Escort runs won (cart delivered).</summary>
+        public const string EscortsWon = "escorts.won";
         public static string KillsOf(string enemyId) => "kills." + enemyId;
     }
 
