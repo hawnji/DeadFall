@@ -119,6 +119,13 @@ namespace Deadfall.Enemies
         private float _maxHealth = 1f;
         private Vector3 _knockDirection;
         private float _knockRemaining;
+        // Sidestep when shot (standard Husks only, DodgeRules).
+        private Vector3 _dodgeDirection;
+        private float _dodgeRemaining, _dodgeLean;
+        private double _nextDodgeRollAt, _nextDodgeAt;
+
+        /// <summary>The current surge (set by the wave manager), for the dodge chance ramp.</summary>
+        public static int DodgeSurge;
         private const float KnockSpeed = 14f;
         private double _diedAt;
         private bool _mirrored;
@@ -549,6 +556,8 @@ namespace Deadfall.Enemies
             _moving = false;
             _health = _maxHealth;
             _knockRemaining = 0f;
+            _dodgeRemaining = _dodgeLean = 0f;
+            _nextDodgeRollAt = _nextDodgeAt = 0.0;
             _target = null;
             HomeBlocker = null;
             _targetDistance = 0f;
@@ -669,7 +678,34 @@ namespace Deadfall.Enemies
                 }
             }
             if (_health <= 0f) Die(info.Source, now, info.Zone == HitZone.Head);
+            else TryDodge(info, now);
             return applied;
+        }
+
+        /// <summary>Host: a standard Husk that's shot may sidestep left or right (DodgeRules), to a clear spot on the NavMesh.</summary>
+        private void TryDodge(in DamageInfo info, double now)
+        {
+            if (!DodgeRules.CanDodge(_definition.ContentId) || !DodgeRules.IsGunfire(info.WeaponId, info.IsMelee)) return;
+            if (now < _nextDodgeRollAt || now < _nextDodgeAt || _dodgeRemaining > 0f || _knockRemaining > 0f || InVent) return;
+            if (!_agent.enabled || !_agent.isOnNavMesh || _brain.State == EnemyState.Stagger) return;
+            _nextDodgeRollAt = now + DodgeRules.RollCooldown;
+            if (Random.value >= DodgeRules.Chance(DodgeSurge)) return;
+            Vector3 shot = Flat(info.Direction);
+            if (shot.sqrMagnitude < 0.0001f) shot = transform.forward;
+            Vector3 side = Vector3.Cross(Vector3.up, shot.normalized);
+            if (Random.value < 0.5f) side = -side;
+            // Take the side with room; if neither has room, stand and take it.
+            for (int i = 0; i < 2; i++, side = -side)
+            {
+                Vector3 to = transform.position + side * DodgeRules.Distance;
+                if (NavMesh.Raycast(transform.position, to, out NavMeshHit _, _agent.areaMask)) continue;
+                _dodgeDirection = side;
+                _dodgeRemaining = DodgeRules.Distance;
+                _nextDodgeAt = now + DodgeRules.DodgeCooldown;
+                // Lean into the step: positive rolls to the enemy's right.
+                _dodgeLean = Vector3.Dot(side, transform.right) >= 0f ? -1f : 1f;
+                return;
+            }
         }
 
         /// <summary>Host: slows movement by <paramref name="fraction"/> (0..0.9) for a moment (Arc Fence).</summary>
@@ -884,6 +920,14 @@ namespace Deadfall.Enemies
                 _agent.Move(_knockDirection * step);
             }
             else _knockRemaining = 0f;
+
+            if (_dodgeRemaining > 0f && _agent.enabled && _agent.isOnNavMesh)
+            {
+                float step = Mathf.Min(_dodgeRemaining, DodgeRules.Speed * dt);
+                _dodgeRemaining -= step;
+                _agent.Move(_dodgeDirection * step);
+            }
+            else _dodgeRemaining = 0f;
 
             BrainOutput o = _brain.Tick(new BrainInput
             {
@@ -1107,6 +1151,7 @@ namespace Deadfall.Enemies
                     break;
             }
             if (_rig != null && _rig.HandlesPose) rot = Quaternion.identity; // the clips act it out
+            if (_dodgeRemaining > 0f) rot *= Quaternion.Euler(0f, 0f, 18f * _dodgeLean * Mathf.Clamp01(_dodgeRemaining / (DodgeRules.Distance * 0.5f)));
             _visual.localRotation = rot;
             _visual.localScale = scale;
             _rig?.Tick(transform.position, _brain.State, p, true, (float)now, Time.deltaTime, Viewer);

@@ -17,6 +17,8 @@ namespace Deadfall.Combat
         public bool ForceStagger;
         /// <summary>Metres to push the target away along <see cref="Direction"/> (Tank Shove, explosions).</summary>
         public float Knockback;
+        /// <summary>A melee strike rather than a shot (enemies only dodge shots).</summary>
+        public bool IsMelee;
     }
 
     /// <summary>Anything that can take damage: players, enemies, structures, training dummies.</summary>

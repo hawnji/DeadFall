@@ -18,6 +18,7 @@ namespace Deadfall.Enemies
         private Vector3 _last;
         private float _travelled;
         private float _stride, _pitch, _volume;
+        private SfxId _sound = SfxId.EnemyWalk;
         private static Transform _listener;
 
         private void Awake()
@@ -27,6 +28,14 @@ namespace Deadfall.Enemies
             _stride = Mathf.Clamp(0.9f + r * 2.2f, 1f, 3.2f);
             _pitch = Mathf.Clamp(1.25f - r * 0.6f, 0.65f, 1.15f);
             _volume = Mathf.Clamp(0.55f + r * 0.6f, 0.6f, 1.2f);
+            if (_enemy.Definition != null && _enemy.Definition.IsBrood)
+            {
+                // Spiders skitter: the spider walk sound at its own pitch, every short step of her six legs.
+                _sound = SfxId.SpiderWalk;
+                _stride = 1.4f;
+                _pitch = 1f;
+                _volume = 1f;
+            }
         }
 
         private void OnEnable()
@@ -53,7 +62,7 @@ namespace Deadfall.Enemies
                 _listener = l != null ? l.transform : null;
             }
             if (_listener != null && (_listener.position - p).sqrMagnitude > HearRange * HearRange) return;
-            GameAudio.Play(SfxId.EnemyWalk, p + Vector3.up * 0.1f, _volume, _pitch);
+            GameAudio.Play(_sound, p + Vector3.up * 0.1f, _volume, _pitch);
         }
 
         private static AudioListener FindListener()

@@ -91,6 +91,7 @@ namespace Deadfall.Combat
                 WeaponId = claim.WeaponId,
                 ForceStagger = claim.ForceStagger,
                 Knockback = claim.Knockback,
+                IsMelee = claim.IsMelee,
             };
             float applied = claim.Target.ApplyDamage(info);
             if (applied <= 0f) return default;

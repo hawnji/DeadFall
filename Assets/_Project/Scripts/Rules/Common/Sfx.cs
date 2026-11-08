@@ -25,6 +25,8 @@ namespace Deadfall.Rules.Common
         DoorOpening,
         LowHealthHeartbeat,
         PurchaseDoor,
+        /// <summary>The Broodmother's skittering legs, in place of <see cref="EnemyWalk"/>.</summary>
+        SpiderWalk,
     }
 
     public enum SfxBus : byte { Effects, Interface, Ambience }
@@ -220,6 +222,7 @@ namespace Deadfall.Rules.Common
                 case SfxId.NailBoard: i.MaxVoices = 6; i.MaxDistance = 30f; i.Volume = 0.8f; i.PitchJitter = 0.06f; break;
                 case SfxId.PlayerJump: i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.55f; i.PitchJitter = 0.06f; break;
                 case SfxId.EnemyWalk: i.MaxVoices = 6; i.MaxDistance = 20f; i.Volume = 0.5f; i.PitchJitter = 0.12f; break;
+                case SfxId.SpiderWalk: i.MaxVoices = 4; i.MaxDistance = 28f; i.Volume = 0.7f; i.PitchJitter = 0.1f; break;
                 case SfxId.DoorOpening: i.MaxVoices = 3; i.MaxDistance = 35f; i.Volume = 0.9f; i.PitchJitter = 0.03f; break;
                 case SfxId.LowHealthHeartbeat: i.Spatial = false; i.MaxVoices = 1; i.Volume = 0.7f; i.PitchJitter = 0f; break;
                 case SfxId.PurchaseDoor: i.MaxVoices = 2; i.MaxDistance = 30f; i.Volume = 0.85f; i.PitchJitter = 0f; break;
@@ -313,6 +316,7 @@ namespace Deadfall.Rules.Common
                 case SfxId.Footstep: return new[] { SfxLayer.Noise(0.09f, 0.025f, 0.9f, 900f, 300f), SfxLayer.Tone(SfxWave.Sine, 0.07f, 110f, 70f, 0.02f, 0.5f) };
                 case SfxId.NailBoard: return new[] { SfxLayer.Noise(0.06f, 0.02f, 0.9f, 3200f, 1200f), SfxLayer.Tone(SfxWave.Triangle, 0.12f, 420f, 260f, 0.03f, 0.6f, 0.01f) };
                 case SfxId.PlayerJump: return new[] { SfxLayer.Noise(0.12f, 0.04f, 0.6f, 1400f, 500f), SfxLayer.Tone(SfxWave.Sine, 0.1f, 140f, 200f, 0.04f, 0.4f) };
+                case SfxId.SpiderWalk: return new[] { SfxLayer.Noise(0.05f, 0.01f, 0.9f, 2600f, 900f), SfxLayer.Noise(0.05f, 0.01f, 0.7f, 2200f, 800f, 0.07f) };
                 case SfxId.EnemyWalk: return new[] { SfxLayer.Noise(0.1f, 0.03f, 0.8f, 700f, 250f), SfxLayer.Tone(SfxWave.Sine, 0.08f, 90f, 60f, 0.03f, 0.5f) };
                 case SfxId.DoorOpening: return new[] { SfxLayer.Noise(1.1f, 0.6f, 0.5f, 900f, 400f), SfxLayer.Tone(SfxWave.Saw, 1f, 70f, 110f, 0.6f, 0.25f, 0f, 600f) };
                 case SfxId.LowHealthHeartbeat: return new[] { SfxLayer.Tone(SfxWave.Sine, 0.12f, 60f, 45f, 0.05f, 0.9f), SfxLayer.Tone(SfxWave.Sine, 0.12f, 55f, 40f, 0.05f, 0.7f, 0.18f) };
