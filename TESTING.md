@@ -923,3 +923,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.88 Engineer drone powers down while its owner is down
 - [ ] As the Engineer with a drone out, go down: the drone sinks to hover low beside you and stops shooting (and stops repairing in Repair mode).
 - [ ] Get revived: it rises back up and resumes. Same while eliminated or disconnected. Teammates see the same thing in co-op.
+
+### 3.89 Double Credits covers barricade repair, x2 on the credits counter
+- [ ] With Double Credits active, repairing a breach barricade pays 20 credits instead of 10.
+- [ ] While it's active, the credits counter shows a pulsing green "x2" badge and the number turns green; both go back to normal when it runs out. Co-op clients see it too.
