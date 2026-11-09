@@ -22,7 +22,13 @@ namespace Deadfall.World
         /// <paramref name="layerMask"/> (players, enemies) are ignored. Uses agent type 0 (Humanoid) settings
         /// with a smaller radius so narrow sandbox corridors stay walkable.
         /// </summary>
-        public bool Build(Bounds bounds, int layerMask, float agentRadius = 0.35f, float agentClimb = 0.4f, float maxSlope = 45f)
+        /// <summary>
+        /// Clearance the bake needs. Below the 1.45 m secret vents and the 1.6 m crawlspace ceilings, so the infected can follow
+        /// a player into a secret room instead of piling up at the entrance (the project default of 2 m left them unreachable).
+        /// </summary>
+        public const float AgentHeight = 1.4f;
+
+        public bool Build(Bounds bounds, int layerMask, float agentRadius = 0.35f, float agentClimb = 0.4f, float maxSlope = 45f, float agentHeight = AgentHeight)
         {
             Clear();
             var sources = new List<NavMeshBuildSource>();
@@ -37,6 +43,7 @@ namespace Deadfall.World
             NavMeshBuildSettings settings = NavMesh.GetSettingsByID(0);
             settings.agentRadius = agentRadius;
             settings.agentClimb = agentClimb;
+            settings.agentHeight = agentHeight;
             settings.agentSlope = maxSlope;
 
             float started = Time.realtimeSinceStartup;

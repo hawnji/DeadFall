@@ -1,6 +1,7 @@
 using System;
 using Deadfall.Combat;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Deadfall.World
 {
@@ -13,6 +14,7 @@ namespace Deadfall.World
         public const float MaxHealth = 40f;
         private float _health = MaxHealth;
         private int _connection;
+        private NavMeshObstacle _obstacle;
 
         public int ConnectionIndex
         {
@@ -38,7 +40,16 @@ namespace Deadfall.World
             go.transform.position = center;
             go.transform.localScale = alongX ? new Vector3(width, height, 0.12f) : new Vector3(0.12f, height, width);
             go.GetComponent<Renderer>().sharedMaterial = material;
-            return go.AddComponent<SecretPanel>();
+            var panel = go.AddComponent<SecretPanel>();
+            // Closed, it blocks paths into the secret room (it's built after the bake, so it carves); broken, it's gone.
+            panel._obstacle = go.AddComponent<NavMeshObstacle>();
+            panel._obstacle.shape = NavMeshObstacleShape.Box;
+            panel._obstacle.center = Vector3.zero;
+            // Local space of the scaled cube: the full opening, and 5 × the 0.12 m thickness = 0.6 m deep. Breaking hides the panel, which drops it.
+            panel._obstacle.size = alongX ? new Vector3(1f, 1f, 5f) : new Vector3(5f, 1f, 1f);
+            panel._obstacle.carving = true;
+            panel._obstacle.carveOnlyStationary = true;
+            return panel;
         }
 
         public float ApplyDamage(in DamageInfo info)

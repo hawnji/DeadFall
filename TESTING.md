@@ -909,3 +909,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.85 Label range 15 m and Escort cart clearance
 - [ ] Station tags, the Gun Dispenser tag and the FOB console plates only show within 15 m (fading over the last 4 m).
 - [ ] Escort: the cart rounds corners and goes through doorways without its body clipping into walls or door frames, and turns into bends instead of sliding sideways.
+
+### 3.86 Infected follow into secret rooms
+- [ ] Break a secret vent panel and crouch into the secret room during a surge: the infected follow you in through the vent instead of piling up outside it.
+- [ ] Before the panel is broken, nothing paths into the secret room or presses against the panel.
+- [ ] Elsewhere, pathing is unchanged (no infected walking on top of props or getting into places they shouldn't). NavMesh bake time is about the same.
