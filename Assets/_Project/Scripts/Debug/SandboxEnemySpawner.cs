@@ -13,7 +13,7 @@ namespace Deadfall.DebugTools
     /// Sandbox hotkeys for the M2 enemies: F5 Husk, F6 Bolter, F7 Bulwark, F8 a mixed group of 12, F11 kill all,
     /// [ and ] lower/raise the alive cap in steps of 24 for stress tests. Enemies appear on the NavMesh
     /// 18-35 m from the player in a random direction.
-    /// M3: N starts (or stops) a survival run on the host, G toggles ready during a lull.
+    /// M3: G toggles ready during a lull. Runs start from Command Center (the old N key is gone).
     /// M7: F12 spawns the next advanced enemy (Creeper, Pyre, Retcher, Alpha, Goliath, Stalker, Specimen Zero);
     /// hold Ctrl for a random mutation variant.
     /// </summary>
@@ -26,7 +26,7 @@ namespace Deadfall.DebugTools
 
         private Transform _player;
         private InputActionMap _map;
-        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _run, _advanced, _ctrl;
+        private InputAction _husk, _bolter, _bulwark, _horde, _clear, _capDown, _capUp, _advanced, _ctrl;
         private int _advancedIndex;
         private static readonly EnemyTraits[] DebugTraits =
             { EnemyTraits.Regenerating, EnemyTraits.Splitting, EnemyTraits.Hardened, EnemyTraits.Swift };
@@ -48,7 +48,6 @@ namespace Deadfall.DebugTools
             _clear = _map.AddAction("KillAll", InputActionType.Button, "<Keyboard>/f11");
             _capDown = _map.AddAction("CapDown", InputActionType.Button, "<Keyboard>/leftBracket");
             _capUp = _map.AddAction("CapUp", InputActionType.Button, "<Keyboard>/rightBracket");
-            _run = _map.AddAction("SurvivalRun", InputActionType.Button, "<Keyboard>/n");
             _map.Enable();
         }
 
@@ -59,7 +58,6 @@ namespace Deadfall.DebugTools
         {
             if (Time.time > _messageUntil) LastMessage = string.Empty;
             if (_player == null) return;
-            UpdateWaveKeys();
             if (!BuildInfo.DevTools) return;
 
             bool any = _husk.WasPressedThisFrame() || _bolter.WasPressedThisFrame() || _bulwark.WasPressedThisFrame()
@@ -85,21 +83,6 @@ namespace Deadfall.DebugTools
 
             if (_capUp.WasPressedThisFrame()) SetCap(m, Mathf.Min(240, m.MaxAlive + 24));
             if (_capDown.WasPressedThisFrame()) SetCap(m, Mathf.Max(24, m.MaxAlive - 24));
-        }
-
-        private void UpdateWaveKeys()
-        {
-            WaveManager waves = WaveManager.Current;
-            if (waves == null) return;
-            if (!BuildInfo.DevTools || !_run.WasPressedThisFrame()) return;
-            // During a run N does nothing (it used to stop the run, too easy to hit by accident): leave from the Esc menu.
-            if (waves.IsRunning) return;
-            if (!waves.IsAuthority)
-            {
-                Say("The host starts and stops runs.");
-                return;
-            }
-            waves.StartRun();
         }
 
         private void SetCap(EnemyManager m, int cap)

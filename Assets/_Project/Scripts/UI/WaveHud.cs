@@ -190,7 +190,7 @@ namespace Deadfall.UI
                 case RunPhase.Surge: return "infected left";
                 case RunPhase.Reward: return "Next lull starting";
                 case RunPhase.Complete:
-                case RunPhase.Failed: return _waves.IsAuthority ? "N to start a new run" : "Waiting for the host";
+                case RunPhase.Failed: return _waves.IsAuthority ? "Return to the FOB to deploy again" : "Waiting for the host";
                 default: return string.Empty;
             }
         }

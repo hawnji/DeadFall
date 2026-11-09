@@ -138,7 +138,7 @@ namespace Deadfall.DebugTools
             net.AddComponent<ReconnectDirector>().Bind(player);
             net.AddComponent<AudioCues>().Bind(player);
 
-            // M3: survival waves. Press N to start a run.
+            // M3: survival waves. Runs start from Command Center.
             _waves = new GameObject("[Waves]").AddComponent<WaveManager>();
             AddPerimeterSpawnPoints(_waves);
 
