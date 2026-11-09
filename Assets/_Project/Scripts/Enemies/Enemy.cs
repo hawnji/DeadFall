@@ -370,6 +370,71 @@ namespace Deadfall.Enemies
                 foreach (PhasePart p in _phaseParts) if (p.Go != null && r.transform.IsChildOf(p.Go.transform)) return true;
                 return false;
             });
+            if (_rig is ZombieAnimator) FitHeadToModel(model, zm);
+        }
+
+        /// <summary>
+        /// The rigged models' head (Tools/Blender/build_models.py Zombie.head): built height, hunch and head size per model.
+        /// The centre sits at (0, 1.657k, (0.10 + hunch)k) with k = height / 1.8.
+        /// </summary>
+        private static bool HeadOf(string zm, out float height, out float hunch, out Vector3 size)
+        {
+            switch (zm)
+            {
+                case "zm_standard": height = 1.8f; hunch = 0f; size = new Vector3(0.24f, 0.28f, 0.26f); return true;
+                case "zm_lean": height = 1.65f; hunch = 0.12f; size = new Vector3(0.23f, 0.26f, 0.26f); return true;
+                case "zm_plated": height = 2.3f; hunch = 0.02f; size = new Vector3(0.24f, 0.24f, 0.26f); return true;
+                case "zm_bloated": height = 1.75f; hunch = 0f; size = new Vector3(0.24f, 0.25f, 0.25f); return true;
+                case "zm_spitter": height = 1.7f; hunch = 0.07f; size = new Vector3(0.24f, 0.26f, 0.29f); return true;
+                case "zm_alpha": height = 2.15f; hunch = 0.03f; size = new Vector3(0.25f, 0.27f, 0.27f); return true;
+                case "zm_specimen": height = 3.4f; hunch = 0.12f; size = new Vector3(0.27f, 0.26f, 0.3f); return true;
+                case "zm_orderly": height = 3.4f; hunch = 0.1f; size = new Vector3(0.26f, 0.27f, 0.28f); return true;
+                default: height = hunch = 0f; size = Vector3.zero; return false;
+            }
+        }
+
+        /// <summary>
+        /// Moves the Head hurtbox onto the rigged model's head: centred on the modelled head, sized to cover it, and
+        /// parented to the Head bone so it follows the animation (the game-built sphere sat behind and below big heads, so
+        /// half of the Specimen's head took body shots). The offset comes from the skin's bind pose, so it doesn't
+        /// matter which pose the animator is in right now.
+        /// </summary>
+        private void FitHeadToModel(GameObject model, string zm)
+        {
+            if (!HeadOf(zm, out float h0, out float hunch, out Vector3 size)) return;
+            Transform head = _visual.Find("Head");
+            if (head == null || head.GetComponent<Hurtbox>() == null) return;
+            SkinnedMeshRenderer skin = null;
+            int bone = -1;
+            foreach (SkinnedMeshRenderer smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                Transform[] bones = smr.bones;
+                for (int i = 0; i < bones.Length; i++)
+                    if (bones[i] != null && bones[i].name == "Head") { skin = smr; bone = i; break; }
+                if (skin != null) break;
+            }
+            if (skin == null || skin.sharedMesh == null || bone >= skin.sharedMesh.bindposes.Length) return;
+            Transform headBone = skin.bones[bone];
+
+            float k = h0 / 1.8f;
+            var centreModel = new Vector3(0f, 1.657f * k, (0.10f + hunch) * k);
+            // Model space -> the skin's mesh space (both fixed under the model) -> the Head bone's rest space.
+            Vector3 meshPoint = skin.transform.InverseTransformPoint(model.transform.TransformPoint(centreModel));
+            Vector3 boneLocal = skin.sharedMesh.bindposes[bone].MultiplyPoint3x4(meshPoint);
+
+            // World diameter: the head's largest extent, scaled like the model, with a little margin for the jaw.
+            Vector3 ms = model.transform.lossyScale;
+            float diameter = Mathf.Max(size.x * k * Mathf.Abs(ms.x), size.y * k * Mathf.Abs(ms.y), size.z * k * Mathf.Abs(ms.z)) * 1.1f;
+
+            head.SetParent(headBone, false);
+            head.localPosition = boneLocal;
+            head.localRotation = Quaternion.identity;
+            Vector3 bs = headBone.lossyScale;
+            float boneScale = Mathf.Max(Mathf.Abs(bs.x), Mathf.Abs(bs.y), Mathf.Abs(bs.z));
+            head.localScale = Vector3.one * (diameter / Mathf.Max(0.0001f, boneScale));
+            // HideExcept skipped it (it was outside the model then); it's a hurtbox, not art.
+            Renderer r = head.GetComponent<Renderer>();
+            if (r != null) r.enabled = false;
         }
 
         /// <summary>The rigged zm_* model with animation clips for a body type (built at the same nominal size as

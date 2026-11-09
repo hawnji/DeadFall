@@ -914,3 +914,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Break a secret vent panel and crouch into the secret room during a surge: the infected follow you in through the vent instead of piling up outside it.
 - [ ] Before the panel is broken, nothing paths into the secret room or presses against the panel.
 - [ ] Elsewhere, pathing is unchanged (no infected walking on top of props or getting into places they shouldn't). NavMesh bake time is about the same.
+
+### 3.87 Head hitboxes follow the model's head
+- [ ] Specimen Zero, the Broodmother's minions, the Orderly: shots anywhere on the head (front, top, face) count as headshots (crit hit marker), not just the back/lower half.
+- [ ] Regular infected (Husk, lean, plated, bloated, spitter, alpha): headshots land on the visible head while they walk, lunge and attack, and body shots just under the jaw don't count as headshots.
+- [ ] Dead infected don't block shots (hitboxes still turn off on death).
