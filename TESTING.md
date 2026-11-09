@@ -874,3 +874,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 
 ### 3.78 Vesper DMR aims clear
 - [ ] Aim the Vesper DMR without an optic: the view over the receiver is clear (the stock's cheek riser no longer blocks it) and shots land on the centre dot. With a Red Dot, Holo or Sniper Scope it aims as before.
+
+### 3.79 No attachments at the Armory
+- [ ] FOB Armory: the loadout rows only pick weapons. The Optic / Muzzle / Underbarrel / Magazine / Stock buttons are gone.
+- [ ] Start any run (including with an old save that had attachments fitted at the Armory): every gun starts bare. Attachments still come from loot drops, the Gun Dispenser and the Mod Bench, and the Gauntlet's fixed Halberd still has its Red Dot.

@@ -41,12 +41,11 @@ namespace Deadfall.Game
             return list;
         }
 
-        /// <summary>The attachments fitted to this weapon at the Armory (firearms only), or null.</summary>
-        public static Deadfall.Rules.Combat.WeaponMods ArmoryMods(ProfileService profile, WeaponDefinition w)
-        {
-            if (profile == null || w == null || w.Kind != WeaponKind.Firearm) return null;
-            return profile.Data.Attachments.TryGetValue(w.ContentId, out string[] ids) ? Deadfall.Rules.Combat.ArmoryAttachments.Build(ids, w.ContentId, w.Category) : null;
-        }
+        /// <summary>
+        /// Attachments from the Armory. Always none now: attachments are run-only add-ons (loot, Gun Dispenser,
+        /// Mod Bench), so every run starts with bare guns. Attachments saved by older builds are ignored.
+        /// </summary>
+        public static Deadfall.Rules.Combat.WeaponMods ArmoryMods(ProfileService profile, WeaponDefinition w) => null;
 
         /// <summary>Content ids of the class default, in slot order.</summary>
         public static string[] DefaultIds(string classId)
