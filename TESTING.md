@@ -895,3 +895,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Deploy in Escort mode on each map: the reactor cart appears near the spawn with its ring, the "Escort the reactor cart" toast shows, and standing in the ring pushes it.
 - [ ] The first break in Escort is the short Escort break, not the normal one.
 - [ ] Gauntlet and Operations: no Gun Dispenser appears (it's Survival and Endless only). Survival and Endless still get one.
+
+### 3.83 FOB booth info boards
+- [ ] Each booth's big screen shows the facility name, a one-line description and three status lines, readable from the console and not mirrored.
+- [ ] Command Center: operator level, XP to the next level, and what the next level unlocks. Armory: class and rank, classes unlocked and the next one. Training Range: rank, XP to next rank, skill points. Research Lab / Workshop / Intelligence: research done, projects ready, the next project and its cost or requirement. Trophy Room: runs won, achievements, best Gauntlet time.
+- [ ] A locked booth says LOCKED and the level it opens at. Boards update within a second after a run or after researching.
