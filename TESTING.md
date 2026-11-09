@@ -931,3 +931,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.90 Infected pushed out of their spawn closet
 - [ ] Once a breach barricade is down, any infected still standing in that closet without moving for 3 s pops out onto the room side of the opening and carries on, instead of waiting there until the straggler cull removes it.
 - [ ] While boards are up, infected queue in the closet as before (none get pushed through the barricade).
+
+### 3.91 Straggler regroup, boss-safe cull, Pyre blasts spare the horde
+- [ ] A Pyre exploding next to other infected doesn't hurt them (players, decoys and structures still take the blast).
+- [ ] Leave the last few infected of a surge stuck somewhere for 40 s with no kills: they reappear 12-22 m from a player, somewhere that can reach the squad, and come at you. The log says "moved N of M stragglers near the squad".
+- [ ] If none of them dies in the next 40 s, the leftovers are removed as before, but a boss is never removed: its fight carries on.

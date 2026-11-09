@@ -428,10 +428,15 @@ namespace Deadfall.Encounters
                 GameLog.Info("Waves", $"Surge {_plan.Surge} ({_plan.Type}): {_plan.Spawns.Count} enemies, budget {_plan.Budget:0.#}, " +
                                       $"concurrency {_plan.Concurrency}, directions {_director.ActiveGroups.Count}, health x{_plan.HealthScale:0.00}, speed x{_plan.SpeedScale:0.00}.");
             }
+            if ((e & SurgeRunEvents.RegroupStragglers) != 0)
+            {
+                int moved = _director.RegroupStragglers();
+                GameLog.Info("Waves", $"No kills for {_runSettings.StragglerTimeoutSeconds:0} s: moved {moved} of {_director.Alive} stragglers near the squad.");
+            }
             if ((e & SurgeRunEvents.CullStragglers) != 0)
             {
-                GameLog.Info("Waves", $"No kills for {_runSettings.StragglerTimeoutSeconds:0} s: removing {_director.Alive} stuck enemies.");
-                _director.KillAll();
+                GameLog.Info("Waves", $"Stragglers still stuck after the regroup: removing them ({_director.Alive} left, bosses kept).");
+                _director.KillStragglers();
             }
             if ((e & SurgeRunEvents.SurgeCleared) != 0)
             {

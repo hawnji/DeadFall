@@ -147,6 +147,64 @@ namespace Deadfall.Encounters
             _cullBuffer.Clear();
         }
 
+        /// <summary>Kills this surge's leftovers except bosses (last-resort straggler cull). No credits are paid.</summary>
+        public void KillStragglers()
+        {
+            _cullBuffer.Clear();
+            _cullBuffer.AddRange(_alive);
+            foreach (Enemy e in _cullBuffer)
+            {
+                if (e == null || !e.IsAlive) { _alive.Remove(e); continue; }
+                if (e.Definition != null && e.Definition.IsBoss) continue;
+                _alive.Remove(e);
+                e.Kill();
+            }
+            _cullBuffer.Clear();
+        }
+
+        private static readonly List<Vector3> Anchors = new List<Vector3>(4);
+
+        /// <summary>
+        /// Moves this surge's leftovers (bosses excepted) to reachable NavMesh spots 12-22 m from a random living player, so a
+        /// stuck straggler comes to the squad instead of being culled. Returns how many moved.
+        /// </summary>
+        public int RegroupStragglers()
+        {
+            Anchors.Clear();
+            IReadOnlyList<ISquadMember> squad = SquadMembers.All;
+            for (int i = 0; i < squad.Count; i++)
+            {
+                ISquadMember m = squad[i];
+                if (m != null && m.Body != null && !m.Disconnected && m.Life == LifeState.Alive) Anchors.Add(m.Body.position);
+            }
+            if (Anchors.Count == 0) return 0;
+            var path = new UnityEngine.AI.NavMeshPath();
+            int moved = 0;
+            _cullBuffer.Clear();
+            _cullBuffer.AddRange(_alive);
+            foreach (Enemy e in _cullBuffer)
+            {
+                if (e == null || !e.IsAlive || (e.Definition != null && e.Definition.IsBoss)) continue;
+                Vector3 anchor = Anchors[Random.Range(0, Anchors.Count)];
+                for (int t = 0; t < 10; t++)
+                {
+                    float a = Random.value * Mathf.PI * 2f, d = Random.Range(12f, 22f);
+                    Vector3 p = anchor + new Vector3(Mathf.Cos(a) * d, 0f, Mathf.Sin(a) * d);
+                    if (!UnityEngine.AI.NavMesh.SamplePosition(p, out UnityEngine.AI.NavMeshHit hit, 2.5f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                    if (Mathf.Abs(hit.position.y - anchor.y) > 3f) continue; // same floor
+                    bool tooClose = false;
+                    foreach (Vector3 q in Anchors) if ((q - hit.position).sqrMagnitude < 9f * 9f) { tooClose = true; break; }
+                    if (tooClose) continue;
+                    // Must be able to walk to the squad from there (not another sealed closet or a closed sector).
+                    if (!UnityEngine.AI.NavMesh.CalculatePath(hit.position, anchor, UnityEngine.AI.NavMesh.AllAreas, path)
+                        || path.status != UnityEngine.AI.NavMeshPathStatus.PathComplete) continue;
+                    if (e.Relocate(hit.position)) { moved++; break; }
+                }
+            }
+            _cullBuffer.Clear();
+            return moved;
+        }
+
         public void Tick(double now)
         {
             if (_plan == null || AllSpawned || now < _nextSpawnAt) return;

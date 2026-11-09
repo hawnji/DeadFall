@@ -27,7 +27,7 @@ namespace Deadfall.Combat
 
         /// <summary>Returns how many targets took damage.</summary>
         public static int Detonate(Vector3 center, float radius, float damage, GameObject source, string weaponId,
-            float selfDamageMultiplier = 1f, float knockback = 0f)
+            float selfDamageMultiplier = 1f, float knockback = 0f, bool spareHostiles = false)
         {
             Seen.Clear();
             int hits = 0;
@@ -38,6 +38,7 @@ namespace Deadfall.Combat
                 if (!Hurtbox.TryResolve(Overlap[i], out IDamageable target, out _, out _)) continue;
                 if (target == null || !target.IsAlive || !Seen.Add(target)) continue;
                 if (target is Component c && PlayerIdentity.Of(c.gameObject) != null) continue; // players handled below
+                if (spareHostiles && target is IHostile) continue; // an infected's own blast (Pyre) spares the horde
                 Vector3 point = Overlap[i].ClosestPoint(center);
                 if (!HasLineOfSight(center, Overlap[i].bounds.center, Overlap[i])) continue;
                 if (Apply(target, center, point, radius, damage, source, weaponId, knockback, attacker)) hits++;

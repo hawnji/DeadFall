@@ -57,7 +57,7 @@ namespace Deadfall.Enemies
         public static void Blast(Enemy source, Vector3 center, float radius, float damage, GameObject credit)
         {
             string id = source != null ? source.Definition.ContentId : "enemy";
-            Explosions.Detonate(center, radius, damage, credit, id, 0f, 4f);
+            Explosions.Detonate(center, radius, damage, credit, id, 0f, 4f, spareHostiles: true);
             HurtTargets(center, radius, damage, true, id, source != null ? source.gameObject : null);
             ExplosionFx.Spawn(center, radius);
             FxPlayed?.Invoke(EnemyFxKind.Blast, center, center, radius, 0f);
