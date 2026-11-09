@@ -53,7 +53,22 @@ namespace Deadfall.Enemies
         /// The barricade of the breach closet this enemy spawned in (set by the spawn director). While it stands and
         /// the enemy is still on the closet side, the enemy breaks it however far away the players are.
         /// </summary>
-        public IBlocker HomeBlocker { get; set; }
+        public IBlocker HomeBlocker
+        {
+            get => _homeBlocker;
+            set
+            {
+                _homeBlocker = value;
+                if (value != null) { _closet = value; _closetStuckSince = -1.0; }
+            }
+        }
+        private IBlocker _homeBlocker;
+        /// <summary>The breach closet this enemy spawned in, until it's out (kept after <see cref="HomeBlocker"/> lets go).</summary>
+        private IBlocker _closet;
+        private double _closetStuckSince = -1.0;
+        private Vector3 _closetStuckAt;
+        /// <summary>Seconds an enemy may sit in its spawn closet without getting anywhere before it's pushed out into the room.</summary>
+        private const double ClosetStuckSeconds = 3.0;
         private double _slowUntil;
         private float _slow;
         private bool _exploded;
@@ -371,6 +386,39 @@ namespace Deadfall.Enemies
                 return false;
             });
             if (_rig is ZombieAnimator) FitHeadToModel(model, zm);
+        }
+
+        /// <summary>
+        /// Some spawns wedge in their breach closet (behind a prop, a corner of the NavMesh, a crowd at the opening) and used
+        /// to sit there until the straggler cull killed them. If one stays on the closet side for <see cref="ClosetStuckSeconds"/>
+        /// without moving once its barricade is down, it's put on the room side of the opening instead.
+        /// </summary>
+        private void UnstickFromCloset(double now)
+        {
+            if (_closet == null) return;
+            Transform frame = _closet.TargetTransform;
+            Vector3 pos = transform.position;
+            if (frame == null || !_closet.BreakableFrom(pos) || _closet.DistanceFrom(pos) > SealedBlockerRange)
+            {
+                _closet = null; // out (or the closet is gone)
+                return;
+            }
+            // While boards stand, waiting in the closet is the point (the crowd queues behind whoever's tearing at them).
+            bool boarded = _closet.IsTargetable;
+            if (boarded || _closetStuckSince < 0.0 || (pos - _closetStuckAt).sqrMagnitude > 0.35f * 0.35f)
+            {
+                _closetStuckSince = now;
+                _closetStuckAt = pos;
+                return;
+            }
+            if (now - _closetStuckSince < ClosetStuckSeconds) return;
+            // The room side is the barricade's -z (see BreachBarricade.BreakableFrom).
+            Vector3 outside = frame.position - frame.forward * 1.8f;
+            if (!_agent.enabled || !NavMesh.SamplePosition(outside, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) { _closetStuckSince = now; return; }
+            _agent.Warp(hit.position);
+            _closet = null;
+            _homeBlocker = null;
+            _closetStuckSince = -1.0;
         }
 
         /// <summary>
@@ -947,6 +995,7 @@ namespace Deadfall.Enemies
                 _target = HomeBlocker;
                 _blockerUntil = now + 2.5;
             }
+            UnstickFromCloset(now);
             // A barricade has cut the path to the player: tear down the nearest blocker instead (never stuck for good).
             if (perceive && Blockers.Count > 0 && _target != null && !(_target is IBlocker) && _agent.enabled && _agent.isOnNavMesh
                 && !_agent.pathPending && ((_agent.hasPath && _agent.pathStatus == NavMeshPathStatus.PathPartial) || _agent.pathStatus == NavMeshPathStatus.PathInvalid))
