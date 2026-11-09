@@ -95,6 +95,8 @@ namespace Deadfall.Game
             // Blender model (T-58): one piece for the whole booth; the boxes above keep their colliders.
             GameObject model = ModelLibrary.Spawn(wide ? "fob_booth_wide" : "fob_booth", booth, slot => ModelLibrary.SlotFromAccent(slot, c));
             if (model != null) ModelLibrary.HideExcept(booth, model.transform);
+            // Info board over the booth's big screen (just in front of it).
+            FacilityBoard.Build(booth, facility, new Vector3(0f, 2.2f, -1.95f), w * 0.5f, 1.4f);
             var t = desk.AddComponent<FobTerminal>();
             t.Facility = facility;
             InteractGlow.Add(model != null ? model : desk, InteractGlow.Objectives);
