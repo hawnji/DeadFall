@@ -279,9 +279,50 @@ namespace Deadfall.Game
             HudKit.Label(new Rect(me.x - 12f, me.y - 13f, 24f, 26f), "▲", 20, HudKit.Accent, TextAnchor.MiddleCenter);
             GUI.matrix = m0;
 
+            DrawLegend(grid != null && grid.Generators.Count > 0, dispenser != null && dispenser.State != GunDispenser.Mode.Hidden);
+
             HudKit.Label(new Rect(_fullRect.x, _fullRect.y - 26f, _fullRect.width, 22f), "MAP", 16, Color.white, TextAnchor.MiddleLeft, head: true);
             HudKit.Label(new Rect(_fullRect.x, _fullRect.y - 26f, _fullRect.width, 22f), "M  close", 12, HudKit.TextDim, TextAnchor.MiddleRight, head: true);
             HudKit.End();
+        }
+
+        private static readonly List<(string label, Color color, bool arrow)> LegendRows = new List<(string, Color, bool)>(10);
+
+        /// <summary>Key to the full map's marks, in its bottom-left corner. Generator rows only on maps with a power grid.</summary>
+        private void DrawLegend(bool generators, bool dispenser)
+        {
+            LegendRows.Clear();
+            LegendRows.Add(("You", HudKit.Accent, true));
+            LegendRows.Add(("Teammate", Color.white, false));
+            LegendRows.Add(("Objective", InteractGlow.Objectives, false));
+            LegendRows.Add(("Locked door", new Color(1f, 0.6f, 0.15f), false));
+            LegendRows.Add((dispenser ? "Gun Dispenser / Supply Cache" : "Supply Cache", InteractGlow.Guns, false));
+            if (generators)
+            {
+                LegendRows.Add(("Generator (online)", new Color(0.4f, 0.75f, 1f), false));
+                LegendRows.Add(("Generator (offline)", new Color(1f, 0.3f, 0.25f), false));
+            }
+            const float rowH = 18f, pad = 10f;
+            float w = 0f;
+            foreach (var row in LegendRows) w = Mathf.Max(w, HudKit.TextWidth(row.label, 12));
+            w += 34f + pad;
+            float h = LegendRows.Count * rowH + pad * 2f + 16f;
+            var box = new Rect(_fullRect.x + 8f, _fullRect.yMax - h - 8f, w, h);
+            HudKit.Panel(box, 0.85f);
+            HudKit.Label(new Rect(box.x + pad, box.y + 6f, box.width - pad * 2f, 16f), "LEGEND", 11, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
+            float y = box.y + pad + 16f;
+            foreach (var row in LegendRows)
+            {
+                var swatch = new Rect(box.x + pad + 2f, y + rowH * 0.5f - 4.5f, 9f, 9f);
+                if (row.arrow) HudKit.Label(new Rect(swatch.x - 4f, y, 17f, rowH), "▲", 13, row.color, TextAnchor.MiddleCenter);
+                else
+                {
+                    HudKit.Fill(new Rect(swatch.x - 1f, swatch.y - 1f, swatch.width + 2f, swatch.height + 2f), new Color(0f, 0f, 0f, 0.8f));
+                    HudKit.Fill(swatch, row.color);
+                }
+                HudKit.Label(new Rect(box.x + pad + 20f, y, box.width - pad - 24f, rowH), row.label, 12, HudKit.Text, TextAnchor.MiddleLeft);
+                y += rowH;
+            }
         }
 
         /// <summary>World point to a point on the full map (north up; texture row 0 is the south edge).</summary>
