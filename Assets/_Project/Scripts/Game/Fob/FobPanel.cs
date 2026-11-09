@@ -304,7 +304,6 @@ namespace Deadfall.Game
             GUILayout.Label($"{cls.Class.DisplayName.ToUpperInvariant()} LOADOUT  ·  TWO PRIMARIES, SIDEARM, MELEE", Section());
             bool changed = false;
             int touched = -1;
-            bool attachmentsChanged = false;
             string[] slotNames = { "Primary", "Primary", "Sidearm", "Melee" };
             for (int i = 0; i < LoadoutRules.Size; i++)
             {
@@ -318,7 +317,6 @@ namespace Deadfall.Game
                 GUI.enabled = true;
                 GUILayout.FlexibleSpace();
                 GUILayout.EndHorizontal();
-                if (wd != null && wd.Kind == WeaponKind.Firearm && AttachmentRow(p, wd, !running)) { attachmentsChanged = true; touched = i; }
             }
             var locked = new List<string>();
             foreach (LoadoutOption o in options)
@@ -327,7 +325,7 @@ namespace Deadfall.Game
             GUI.enabled = !running;
             if (GUILayout.Button("Reset to class default", GUILayout.Width(200f))) { p.Loadouts.Remove(classId); changed = true; }
             GUI.enabled = true;
-            if (changed || attachmentsChanged)
+            if (changed)
             {
                 if (changed && LoadoutRules.IsValid(current, options, def, svc.WeaponResearched)) p.Loadouts[classId] = current;
                 svc.MarkDirty();
@@ -335,50 +333,10 @@ namespace Deadfall.Game
                 if (weapons != null && !running)
                 {
                     weapons.ResetLoadout(RunLoadouts.For(classId));
-                    // Hand over the weapon just picked (or just re-fitted) so it can be tried straight away.
+                    // Hand over the weapon just picked so it can be tried straight away.
                     if (touched >= 0) weapons.Equip(touched);
                 }
             }
-        }
-
-        /// <summary>
-        /// One button per attachment slot under a firearm's row ("Optic: Red Dot"); clicking cycles through none and
-        /// each option, right-click goes back. Returns true when something changed.
-        /// </summary>
-        private bool AttachmentRow(PlayerProfile p, WeaponDefinition wd, bool enabled)
-        {
-            p.Attachments.TryGetValue(wd.ContentId, out string[] ids);
-            ids = ids ?? System.Array.Empty<string>();
-            bool changed = false;
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(78f);
-            int fitted = 0;
-            foreach (string id in ids) if (AttachmentCatalog.ById(id) != null) fitted++;
-            foreach (AttachmentSlot slot in ArmoryAttachments.Slots)
-            {
-                if (slot == AttachmentSlot.Optic && !WeaponSights.CanFitOptic(wd)) continue;
-                if (AttachmentFit.For(wd.ContentId, wd.Category, slot).Count == 0) continue; // this gun takes nothing here
-                string name = "none";
-                foreach (string id in ids)
-                {
-                    AttachmentDef a = AttachmentCatalog.ById(id);
-                    if (a != null && a.Slot == slot) name = a.DisplayName;
-                }
-                GUI.enabled = enabled;
-                GUI.color = name == "none" ? new Color(1f, 1f, 1f, 0.7f) : new Color(0.75f, 1f, 0.8f);
-                if (GUILayout.Button($"{slot}\n{name}", _small, GUILayout.Width(104f), GUILayout.Height(34f)))
-                {
-                    int dir = Event.current.button == 1 ? -1 : 1;
-                    p.Attachments[wd.ContentId] = ArmoryAttachments.Cycle(ids, slot, dir, wd.ContentId, wd.Category);
-                    changed = true;
-                }
-                GUI.color = Color.white;
-            }
-            GUI.enabled = true;
-            GUILayout.Label($"{fitted}/{ArmoryAttachments.MaxFitted}", _small, GUILayout.Width(40f));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            return changed;
         }
 
         private static bool Cycle(string[] loadout, int slot, int dir, List<LoadoutOption> options, string[] def, ProfileService svc)

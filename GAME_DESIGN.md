@@ -215,7 +215,7 @@ Weighted, at most one active major event, cooldown between events.
 
 ## 13. FOB Halcyon (home base)
 
-Walkable hub with: Command Center (missions), Armory (loadouts, attachments), Research Lab, Engineering Workshop, Intelligence Center (enemy and Specimen dossiers, mission intel), Training Range (class ranks, practice), Trophy Room. Co-op players appear in the FOB together; the host launches from Command Center once everyone is ready at the deployment board.
+Walkable hub with: Command Center (missions), Armory (loadouts; attachments are run-only add-ons from loot, the Gun Dispenser and the Mod Bench), Research Lab, Engineering Workshop, Intelligence Center (enemy and Specimen dossiers, mission intel), Training Range (class ranks, practice), Trophy Room. Co-op players appear in the FOB together; the host launches from Command Center once everyone is ready at the deployment board.
 
 Intel matters: dossiers reveal enemy compositions and armor so players can pick AP ammo, explosives, or a Tank.
 
