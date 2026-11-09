@@ -261,10 +261,26 @@ namespace Deadfall.Tests.EditMode.Rules
             run.Tick(In(10));
             run.NotifyKill(20);
             Assert.AreEqual(SurgeRunEvents.None, run.Tick(In(59, true, 2)));
-            Assert.AreEqual(SurgeRunEvents.CullStragglers, run.Tick(In(60, true, 2)));
-            // Asked once; the engine removes them, then the surge clears normally.
-            Assert.AreEqual(SurgeRunEvents.None, run.Tick(In(61, true, 2)));
-            Assert.AreEqual(SurgeRunEvents.SurgeCleared, run.Tick(In(62, true, 0)));
+            // First stall: regroup them near the squad, and the timeout starts again.
+            Assert.AreEqual(SurgeRunEvents.RegroupStragglers, run.Tick(In(60, true, 2)));
+            Assert.AreEqual(SurgeRunEvents.None, run.Tick(In(99, true, 2)));
+            // Still no kill: last resort, asked once; the engine removes them, then the surge clears normally.
+            Assert.AreEqual(SurgeRunEvents.CullStragglers, run.Tick(In(100, true, 2)));
+            Assert.AreEqual(SurgeRunEvents.None, run.Tick(In(101, true, 2)));
+            Assert.AreEqual(SurgeRunEvents.SurgeCleared, run.Tick(In(102, true, 0)));
+        }
+
+        [Test]
+        public void AKillAfterTheRegroupResetsTheCullTimer()
+        {
+            SurgeRun run = NewRun();
+            run.Start(0);
+            run.Tick(In(10));
+            run.NotifyKill(20);
+            Assert.AreEqual(SurgeRunEvents.RegroupStragglers, run.Tick(In(60, true, 3)));
+            run.NotifyKill(90);
+            Assert.AreEqual(SurgeRunEvents.None, run.Tick(In(120, true, 2)));
+            Assert.AreEqual(SurgeRunEvents.CullStragglers, run.Tick(In(130, true, 2)));
         }
 
         [Test]

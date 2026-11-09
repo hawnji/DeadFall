@@ -25,8 +25,10 @@ namespace Deadfall.Rules.Encounters
         SurgeCleared = 1 << 2,
         RunCompleted = 1 << 3,
         RunFailed = 1 << 4,
-        /// <summary>Stragglers have gone too long without a kill: the engine should remove the rest of this surge.</summary>
+        /// <summary>Stragglers are still alive after the regroup and another timeout: the engine should remove the rest (bosses excepted).</summary>
         CullStragglers = 1 << 5,
+        /// <summary>Stragglers have gone too long without a kill: the engine should move them near the squad (bosses excepted).</summary>
+        RegroupStragglers = 1 << 6,
     }
 
     [Serializable]
@@ -77,6 +79,7 @@ namespace Deadfall.Rules.Encounters
         private double _lastKill;
         private double _surgeStarted;
         private bool _culled;
+        private bool _regrouped;
 
         public SurgeRun(SurgeRunSettings settings) => _s = settings ?? new SurgeRunSettings();
 
@@ -157,6 +160,7 @@ namespace Deadfall.Rules.Encounters
                     _surgeStarted = now;
                     _lastKill = now;
                     _culled = false;
+                    _regrouped = false;
                     return SurgeRunEvents.SurgeStarted;
 
                 case RunPhase.Surge:
@@ -167,8 +171,16 @@ namespace Deadfall.Rules.Encounters
                     {
                         bool stalled = input.AllSpawned && now - _lastKill >= _s.StragglerTimeoutSeconds;
                         bool tooLong = now - _surgeStarted >= _s.MaxSurgeSeconds;
-                        if (stalled || tooLong)
+                        if (stalled && !_regrouped && !tooLong)
                         {
+                            // First stall: bring them to the squad and give it another timeout to kill them.
+                            _regrouped = true;
+                            _lastKill = now;
+                            events |= SurgeRunEvents.RegroupStragglers;
+                        }
+                        else if (stalled || tooLong)
+                        {
+                            // Still stuck after the regroup (or the surge ran far too long): last resort.
                             _culled = true;
                             events |= SurgeRunEvents.CullStragglers;
                         }

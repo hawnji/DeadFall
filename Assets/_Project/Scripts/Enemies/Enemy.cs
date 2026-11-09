@@ -846,6 +846,19 @@ namespace Deadfall.Enemies
         }
 
         /// <summary>Kills instantly (debug and scripted events).</summary>
+        /// <summary>Host: moves a living enemy to <paramref name="position"/> (on the NavMesh) and drops what it was doing (straggler regroup).</summary>
+        public bool Relocate(Vector3 position)
+        {
+            if (!IsAlive || _mirrored || !_agent.enabled || _ventStage != 0) return false;
+            if (!_agent.Warp(position)) return false;
+            _closet = null;
+            _homeBlocker = null;
+            _target = null;
+            _knockRemaining = 0f;
+            _dodgeRemaining = 0f;
+            return true;
+        }
+
         public void Kill(GameObject killer = null)
         {
             if (!IsAlive || _mirrored) return;
