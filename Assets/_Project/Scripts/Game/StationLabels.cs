@@ -13,7 +13,7 @@ namespace Deadfall.Game
     /// </summary>
     public sealed class StationLabels : MonoBehaviour
     {
-        public const float Range = 50f;
+        public const float Range = 15f;
         private const float Near = 3f;
 
         private struct Entry
@@ -57,7 +57,7 @@ namespace Deadfall.Game
                 if (string.IsNullOrEmpty(name)) continue;
                 if (!begun) { HudKit.Begin(); begun = true; }
                 Vector2 s = HudKit.FromScreen(cam.WorldToScreenPoint(world));
-                float fade = Mathf.Clamp01((Range - dist) / 10f);
+                float fade = Mathf.Clamp01((Range - dist) / 4f);
                 string label = $"{name.ToUpperInvariant()}  {dist:0} m";
                 float w = HudKit.TextWidth(label, 12, head: true) + 20f;
                 var rect = new Rect(s.x - w * 0.5f, s.y - 12f, w, 22f);

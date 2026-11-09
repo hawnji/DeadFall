@@ -390,7 +390,7 @@ namespace Deadfall.Game
             if (dist > MarkerRange || dist < 3f || Vector3.Dot(to, cam.transform.forward) <= 0f) return;
             HudKit.Begin();
             Vector2 s = HudKit.FromScreen(cam.WorldToScreenPoint(world));
-            float fade = Mathf.Clamp01((MarkerRange - dist) / 15f);
+            float fade = Mathf.Clamp01((MarkerRange - dist) / 4f);
             string label = $"GUN DISPENSER  {dist:0} m";
             float w = HudKit.TextWidth(label, 12, head: true) + 20f;
             var rect = new Rect(s.x - w * 0.5f, s.y - 12f, w, 22f);
