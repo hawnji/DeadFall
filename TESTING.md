@@ -927,3 +927,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.89 Double Credits covers barricade repair, x2 on the credits counter
 - [ ] With Double Credits active, repairing a breach barricade pays 20 credits instead of 10.
 - [ ] While it's active, the credits counter shows a pulsing green "x2" badge and the number turns green; both go back to normal when it runs out. Co-op clients see it too.
+
+### 3.90 Infected pushed out of their spawn closet
+- [ ] Once a breach barricade is down, any infected still standing in that closet without moving for 3 s pops out onto the room side of the opening and carries on, instead of waiting there until the straggler cull removes it.
+- [ ] While boards are up, infected queue in the closet as before (none get pushed through the barricade).
