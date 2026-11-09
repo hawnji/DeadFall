@@ -878,3 +878,9 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.79 No attachments at the Armory
 - [ ] FOB Armory: the loadout rows only pick weapons. The Optic / Muzzle / Underbarrel / Magazine / Stock buttons are gone.
 - [ ] Start any run (including with an old save that had attachments fitted at the Armory): every gun starts bare. Attachments still come from loot drops, the Gun Dispenser and the Mod Bench, and the Gauntlet's fixed Halberd still has its Red Dot.
+
+### 3.80 FOB clean-up and last-run screen
+- [ ] FOB: the two crates near the spawn and the long yellow floor lane are gone.
+- [ ] On the wall opposite Command Center (between Training Range and Trophy Room) there's a TV screen. With no runs yet it says NO DEPLOYMENTS YET.
+- [ ] Finish or wipe a run and go back: the screen shows the result (green or red), the map and mode, Surges / Kills / Objectives (Time in Gauntlet) / Specimens, the XP earned, your headshots, revives and downs, and the MVP in co-op. It still shows after restarting the game.
+- [ ] The text is sharp, fits inside the screen, reads left to right, and doesn't show through the wall from the booths.

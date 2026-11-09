@@ -231,6 +231,7 @@ namespace Deadfall.Game
             RunSummary s = _profile.BankRun(_runClass ?? ClassId, _run);
             if (s.Duplicate) return; // already paid (never happens twice for one run)
             Toast(s.Completed);
+            LastRunBoard.RecordRun(_run, s, aborted);
             RunResultsPanel.Show(_run, s, aborted: aborted);
         }
 
