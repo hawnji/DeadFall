@@ -531,9 +531,13 @@ namespace Deadfall.Enemies
 
         // ---------------------------------------------------------------- pooling
 
+        /// <summary>Never picks a target and idles where it stands (title screen backdrop). Cleared on every spawn.</summary>
+        public bool Dormant { get; set; }
+
         internal void Activate(Vector3 position, float yaw, double now, float healthScale = 1f,
             EnemyTraits traits = EnemyTraits.None, SpecimenModifiers bossMods = SpecimenModifiers.None)
         {
+            Dormant = false;
             _stats.CopyFrom(_definition.Stats);
             _traits = _definition.IsBoss ? EnemyTraits.None : traits;
             _bossMods = _definition.IsBoss ? bossMods : SpecimenModifiers.None;
@@ -894,6 +898,7 @@ namespace Deadfall.Enemies
                     _blockerUntil = now + 2.5; // keep at it a while before checking for a way round again
                 }
             }
+            if (Dormant) _target = null; // title-screen extras: never notice anyone
             bool hasTarget = _target != null && _target.IsTargetable;
             Vector3 targetPos = hasTarget ? _target.TargetTransform.position : transform.position;
             if (hasTarget) _targetDistance = _target is IBlocker blk ? blk.DistanceFrom(transform.position) : Vector3.Distance(transform.position, targetPos);

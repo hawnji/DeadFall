@@ -786,10 +786,11 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 - [ ] Exposed core (below 33%): it is slower and still charges and summons. If nobody hits it for a few seconds, its health bar climbs back up (about 0.8% a second). Keep shooting to stop it.
 - [ ] Specimen Zero on Cinder Ridge and the Broodmother on Harrow Line behave the same as before.
 
-### 3.74 Title screen camera
-- [ ] Leave the title screen up for a couple of minutes. The chase camera stays smoothly behind the lure as the horde streams past, and it no longer jerks in towards the lure whenever an infected crosses between them.
-- [ ] When the lure stops, the camera slowly orbits. When it sets off again, the camera eases back behind it rather than snapping round.
-- [ ] In narrow halls and tunnels it still stays inside the walls and under the ceiling.
+### 3.74 Title screen fly-through
+- [ ] The title screen shows a random map from any of the three environments, always the full Survival layout, with every door open.
+- [ ] The camera glides at walking pace at eye height, room to room through the open doorways, rounding corners smoothly. It never stops, jumps, resets or clips through walls. Leave it running for 5+ minutes; when it finishes the tour it carries straight on round again with no visible cut.
+- [ ] About 40 infected stand idle (idle animation, no chasing) around the rooms, never right in the camera's path. None of them react to anything.
+- [ ] Picking Play / Host / Join tears it all down, and you arrive at the FOB as normal.
 
 ### 3.75 Objectives never spawn in breach closets
 - [ ] Over several runs on all three maps, every objective prop (generators, terminals, data cores, keycards, lockers, cryo containers, valves, nests, hives, consoles) and every power-grid generator spawns on the open floor of a room. None end up inside a dark breach closet.
