@@ -19,6 +19,7 @@ namespace Deadfall.Game
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(floor, Quaternion.Euler(0f, yaw, 0f));
             var f = root.AddComponent<WeaponForge>();
+            StationLabels.Add(root.transform, "Weapon Forge", new Color(1f, 0.6f, 0.3f), 2.3f);
             Color steel = new Color(0.22f, 0.23f, 0.25f), dark = new Color(0.1f, 0.1f, 0.11f), copper = new Color(0.72f, 0.42f, 0.2f);
             PerkMachine.Part(root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(1.5f, 0.9f, 0.7f), steel, true);              // bench (solid)
             PerkMachine.Part(root.transform, new Vector3(0f, 0.93f, 0.02f), new Vector3(1.56f, 0.06f, 0.76f), dark, false);         // top

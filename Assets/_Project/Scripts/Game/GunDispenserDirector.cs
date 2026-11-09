@@ -26,7 +26,7 @@ namespace Deadfall.Game
     {
         private const string MsgState = "df.gund";
         private const string MsgUse = "df.gunduse";
-        private const float MarkerRange = 80f;
+        private const float MarkerRange = StationLabels.Range;
 
         private struct Spot
         {

@@ -19,6 +19,7 @@ namespace Deadfall.Game
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(floor, Quaternion.Euler(0f, yaw, 0f));
             var s = root.AddComponent<AmmoStation>();
+            StationLabels.Add(root.transform, "Ammo & Syringes", new Color(1f, 0.8f, 0.3f), 2.5f);
             s.Index = index;
             Color steel = new Color(0.2f, 0.22f, 0.24f), olive = new Color(0.3f, 0.34f, 0.2f), brass = new Color(0.8f, 0.6f, 0.25f);
             Part(root.transform, new Vector3(0f, 1.5f, -0.14f), new Vector3(1.0f, 1.4f, 0.06f), steel, false);                // wall plate
