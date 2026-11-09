@@ -936,3 +936,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] A Pyre exploding next to other infected doesn't hurt them (players, decoys and structures still take the blast).
 - [ ] Leave the last few infected of a surge stuck somewhere for 40 s with no kills: they reappear 12-22 m from a player, somewhere that can reach the squad, and come at you. The log says "moved N of M stragglers near the squad".
 - [ ] If none of them dies in the next 40 s, the leftovers are removed as before, but a boss is never removed: its fight carries on.
+
+### 3.92 N no longer ends a run
+- [ ] Dev build, during a run: pressing N does nothing. Leaving the run works from the Esc menu.
+- [ ] Outside a run, N still starts a Survival run in dev builds.
