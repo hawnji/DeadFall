@@ -900,3 +900,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Each booth's big screen shows the facility name, a one-line description and three status lines, readable from the console and not mirrored.
 - [ ] Command Center: operator level, XP to the next level, and what the next level unlocks. Armory: class and rank, classes unlocked and the next one. Training Range: rank, XP to next rank, skill points. Research Lab / Workshop / Intelligence: research done, projects ready, the next project and its cost or requirement. Trophy Room: runs won, achievements, best Gauntlet time.
 - [ ] A locked booth says LOCKED and the level it opens at. Boards update within a second after a run or after researching.
+
+### 3.84 Floating station labels
+- [ ] On a map, perk machines (perk name in its colour), ammo stations ("Ammo & Syringes"), the Weapon Forge, the Mod Bench and Supply Caches show a floating name tag with the distance, like the Gun Dispenser's.
+- [ ] Tags fade out towards 50 m and are gone past it, hide within 3 m (the use prompt shows instead), and don't show on the title screen or with a menu open.
+- [ ] The Gun Dispenser tag now also hides past 50 m (was 80), and the FOB console name plates show up to 50 m (was 30).

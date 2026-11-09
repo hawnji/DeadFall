@@ -81,6 +81,7 @@ namespace Deadfall.Game
             var m = root.AddComponent<PerkMachine>();
             m.Index = index;
             m.Perk = perk;
+            StationLabels.Add(root.transform, NameOf(perk), ColorOf(perk), 2.7f);
             Color tint = ColorOf(perk);
             Color body = Color.Lerp(tint, new Color(0.12f, 0.12f, 0.13f), 0.55f);
             Color trim = new Color(0.16f, 0.17f, 0.18f);

@@ -88,6 +88,7 @@ namespace Deadfall.DebugTools
             // M10: FOB screens, end-of-run results, and the profile fed from play.
             ui.AddComponent<FobPanel>();
             ui.AddComponent<FobLabels>();
+            ui.AddComponent<StationLabels>();
             ui.AddComponent<RunResultsPanel>();
             ui.AddComponent<ProgressionTracker>().Bind(player);
             // M11: downs, revives, kits, spectating, the squad roster, and drop/rejoin handling.

@@ -33,11 +33,11 @@ namespace Deadfall.Game
                 Vector3 world = t.transform.position + Vector3.up * 2.6f;
                 Vector3 to = world - cam.transform.position;
                 float dist = to.magnitude;
-                if (dist > 30f || Vector3.Dot(to, cam.transform.forward) <= 0f) continue;
+                if (dist > StationLabels.Range || Vector3.Dot(to, cam.transform.forward) <= 0f) continue;
                 Vector2 s = HudKit.FromScreen(cam.WorldToScreenPoint(world));
                 bool open = Facilities.IsOpen(t.Facility, level);
                 Color c = open ? FobBuilder.ColorOf(t.Facility) : new Color(0.6f, 0.6f, 0.6f);
-                float fade = Mathf.Clamp01((30f - dist) / 8f);
+                float fade = Mathf.Clamp01((StationLabels.Range - dist) / 10f);
                 string name = Facilities.Name(t.Facility).ToUpperInvariant();
                 string sub = open ? (dist < 6f ? "Press F at the console" : null) : $"Operator level {Facilities.UnlockLevel(t.Facility)}";
                 float w = Mathf.Max(HudKit.TextWidth(name, 16, head: true), sub != null ? HudKit.TextWidth(sub, 12) : 0f) + 36f;

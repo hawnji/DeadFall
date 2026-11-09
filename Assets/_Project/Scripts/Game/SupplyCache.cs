@@ -37,6 +37,7 @@ namespace Deadfall.Game
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             var c = root.AddComponent<SupplyCache>();
+            StationLabels.Add(root.transform, "Supply Cache", new Color(0.55f, 0.85f, 1f), 1.8f);
             c.Id = id;
             c.Sector = sector;
             c.Part(new Vector3(0f, 0.45f, 0f), new Vector3(1.6f, 0.9f, 0.8f), new Color(0.22f, 0.36f, 0.26f));
