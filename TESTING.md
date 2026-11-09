@@ -943,3 +943,10 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 
 ### 3.93 Full-map legend
 - [ ] Open the full map (M) on a run: a LEGEND panel sits in its bottom-left corner listing You (arrow), Teammate, Objective, Locked door and Supply Cache (plus Gun Dispenser while it's out), and the two Generator states on maps with a power grid. Colours match the marks on the map.
+
+### 3.94 Squad wipe goes to the end screen, then the FOB
+- [ ] Solo Operation with no syringes: go down. The run fails at once (SQUAD WIPED) and the end-of-run screen opens with your stats. Its only button is RETURN TO FOB, and Esc does the same. Either one takes you to the FOB, standing up.
+- [ ] Same, but die while the Supply Cache or a Field Mod pick is open: the end screen still takes over.
+- [ ] Solo with a bought syringe: going down doesn't end the run (hold F to self-revive). Bleeding out ends it as above.
+- [ ] Hosted run wipe: the host gets RETURN TO FOB only; clients still see CONTINUE (HOST RETURNS THE SQUAD).
+- [ ] A won run still offers RETURN TO FOB and CONTINUE.

@@ -16,6 +16,9 @@ namespace Deadfall.Core
             return true;
         }
 
+        /// <summary>Takes the cursor from whatever menu holds it (the end-of-run screen after a squad wipe must always show).</summary>
+        public static void Take(string owner) => Owner = owner;
+
         public static void Close(string owner)
         {
             if (Owner == owner) Owner = null;

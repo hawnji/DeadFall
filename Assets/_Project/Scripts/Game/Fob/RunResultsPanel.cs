@@ -21,6 +21,12 @@ namespace Deadfall.Game
 
         public static bool IsOpen => _show;
 
+        /// <summary>
+        /// A wiped squad on a map has nothing left to do there: the screen's only way out is back to the FOB (host or solo),
+        /// and Esc does the same.
+        /// </summary>
+        private static bool WipedOnMap => _show && !_result.Won && !_aborted && !WorldControl.IsAtBase;
+
         public static void Show(RunResult result, RunSummary summary, bool aborted)
         {
             _result = result;
@@ -44,11 +50,13 @@ namespace Deadfall.Game
             if (UiModal.Owner == ModalId)
             {
                 PlayerCursorLock lk = PlayerIdentity.Local != null ? PlayerIdentity.Local.GetComponent<PlayerCursorLock>() : null;
-                if (lk != null && lk.IsLocked) { Hide(); return; }
+                if (lk != null && lk.IsLocked) { if (!Leave()) Hide(); return; }
                 return;
             }
+            // A squad wipe takes the screen even from an open menu (cache, Field Mod pick), so a dead player is never left stuck.
+            if (WipedOnMap) UiModal.Take(ModalId);
             // Wait for any other modal (Field Mod pick, cache) to close, then take the cursor.
-            if (UiModal.Owner != ModalId && UiModal.TryOpen(ModalId))
+            if (UiModal.Owner == ModalId || UiModal.TryOpen(ModalId))
             {
                 PlayerCursorLock c = PlayerIdentity.Local != null ? PlayerIdentity.Local.GetComponent<PlayerCursorLock>() : null;
                 if (c != null) c.SetLocked(false);
@@ -56,6 +64,17 @@ namespace Deadfall.Game
         }
 
         private void OnDisable() { if (_show) Hide(); }
+
+        /// <summary>After a wipe on a map, the host (or a solo player) heads back to the FOB. False when that isn't theirs to do.</summary>
+        private static bool Leave()
+        {
+            SessionService session = SessionService.Current;
+            bool client = session != null && session.Role == SessionRole.Client;
+            if (!WipedOnMap || client || WorldControl.ReturnToFob == null) return false;
+            Hide();
+            WorldControl.ReturnToFob();
+            return true;
+        }
 
         private void OnGUI()
         {
@@ -152,7 +171,11 @@ namespace Deadfall.Game
             var br = new Rect(c.x, c.yMax - 42f, c.width, 42f);
             bool canReturn = !client && WorldControl.ReturnToFob != null && !WorldControl.IsAtBase;
             string cont = client && !WorldControl.IsAtBase ? "CONTINUE (HOST RETURNS THE SQUAD)" : "CONTINUE";
-            if (canReturn)
+            if (canReturn && WipedOnMap)
+            {
+                if (HudKit.Button(br, "RETURN TO FOB", true)) Leave();
+            }
+            else if (canReturn)
             {
                 if (HudKit.Button(new Rect(br.x, br.y, br.width * 0.5f - 6f, br.height), "RETURN TO FOB", true)) { Hide(); WorldControl.ReturnToFob(); }
                 if (HudKit.Button(new Rect(br.x + br.width * 0.5f + 6f, br.y, br.width * 0.5f - 6f, br.height), cont)) Hide();
