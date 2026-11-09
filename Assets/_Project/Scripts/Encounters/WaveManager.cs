@@ -214,10 +214,12 @@ namespace Deadfall.Encounters
         /// </summary>
         public bool StartOperation(ulong seed, float lullSeconds)
         {
-            if (!StartRun(seed)) return false;
-            _operation = true;
-            _runSettings.FinalSurge = 0;
-            _runSettings.LullSeconds = Mathf.Max(3f, lullSeconds);
+            if (!StartRunWith(seed, () =>
+            {
+                _operation = true;
+                _runSettings.FinalSurge = 0;
+                _runSettings.LullSeconds = Mathf.Max(3f, lullSeconds);
+            })) return false;
             GameLog.Info("Waves", "Operations run: surges continue until extraction.");
             return true;
         }
@@ -225,10 +227,12 @@ namespace Deadfall.Encounters
         /// <summary>Host/offline: starts an Endless run (M12, D-15): no final surge, escalation from surge 21.</summary>
         public bool StartEndless(ulong seed = 0)
         {
-            if (!StartRun(seed)) return false;
-            _endless = true;
-            _planner.Endless = true;
-            _runSettings.FinalSurge = 0;
+            if (!StartRunWith(seed, () =>
+            {
+                _endless = true;
+                _planner.Endless = true;
+                _runSettings.FinalSurge = 0;
+            })) return false;
             _stateDirty = true;
             GameLog.Info("Waves", "Endless run: no final surge.");
             return true;
@@ -237,10 +241,12 @@ namespace Deadfall.Encounters
         /// <summary>Host/offline: starts a Gauntlet run (six surges played as 5-10, fixed short lulls).</summary>
         public bool StartGauntlet(ulong seed = 0)
         {
-            if (!StartRun(seed)) return false;
-            _gauntlet = true;
-            _runSettings.FinalSurge = GauntletRules.Surges;
-            _runSettings.LullSeconds = GauntletRules.LullSeconds;
+            if (!StartRunWith(seed, () =>
+            {
+                _gauntlet = true;
+                _runSettings.FinalSurge = GauntletRules.Surges;
+                _runSettings.LullSeconds = GauntletRules.LullSeconds;
+            })) return false;
             _stateDirty = true;
             GameLog.Info("Waves", $"Gauntlet run: {GauntletRules.Surges} surges.");
             return true;
@@ -249,10 +255,12 @@ namespace Deadfall.Encounters
         /// <summary>Host/offline: starts an Escort run: no final surge, short lulls; the escort director ends it.</summary>
         public bool StartEscort(ulong seed = 0)
         {
-            if (!StartRun(seed)) return false;
-            _escort = true;
-            _runSettings.FinalSurge = 0;
-            _runSettings.LullSeconds = EscortRules.LullSeconds;
+            if (!StartRunWith(seed, () =>
+            {
+                _escort = true;
+                _runSettings.FinalSurge = 0;
+                _runSettings.LullSeconds = EscortRules.LullSeconds;
+            })) return false;
             _stateDirty = true;
             GameLog.Info("Waves", "Escort run: surges continue until the cart is delivered or destroyed.");
             return true;
@@ -292,7 +300,13 @@ namespace Deadfall.Encounters
         }
 
         /// <summary>Host/offline: starts a new run (ending any current one). Seed 0 picks a random seed.</summary>
-        public bool StartRun(ulong seed = 0)
+        public bool StartRun(ulong seed = 0) => StartRunWith(seed, null);
+
+        /// <summary>
+        /// Starts a run with its mode set up by <paramref name="configure"/> before the first phase change goes out, so
+        /// listeners (the escort cart, the Gun Dispenser, ...) already see Escort / Gauntlet / Endless / Operation.
+        /// </summary>
+        private bool StartRunWith(ulong seed, Action configure)
         {
             if (!IsAuthority) return false;
             StopRun();
@@ -308,6 +322,7 @@ namespace Deadfall.Encounters
             _seed = seed != 0 ? seed : (ulong)DateTime.UtcNow.Ticks;
             _credits.Clear();
             RefreshPlayers();
+            configure?.Invoke();
             _run.Start(Time.timeAsDouble);
             GameLog.Info("Waves", $"Run started, seed {_seed}, final surge {(_run.IsEndless ? "none" : _runSettings.FinalSurge.ToString())}.");
             SyncFromRun();
