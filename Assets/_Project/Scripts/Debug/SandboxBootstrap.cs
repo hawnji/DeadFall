@@ -229,6 +229,9 @@ namespace Deadfall.DebugTools
                 _waves.ClearSpawnPoints();
                 AddPerimeterSpawnPoints(_waves);
             }
+            // Dead players stay down on the map until the squad leaves; they're back up at the FOB.
+            var health = _player != null ? _player.GetComponent<PlayerHealth>() : null;
+            if (health != null && !health.IsAlive) health.ResetLife();
             GoToFob();
         }
 

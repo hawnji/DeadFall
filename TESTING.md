@@ -884,3 +884,9 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] On the wall opposite Command Center (between Training Range and Trophy Room) there's a TV screen. With no runs yet it says NO DEPLOYMENTS YET.
 - [ ] Finish or wipe a run and go back: the screen shows the result (green or red), the map and mode, Surges / Kills / Objectives (Time in Gauntlet) / Specimens, the XP earned, your headshots, revives and downs, and the MVP in co-op. It still shows after restarting the game.
 - [ ] The text is sharp, fits inside the screen, reads left to right, and doesn't show through the wall from the booths.
+
+### 3.81 No auto revive after dying on a map
+- [ ] Solo Operation (or any mode): die. You stay dead: no getting back up 3–4 seconds later, before or after the results screen.
+- [ ] Return to the FOB from the results: you're alive with full health at the FOB.
+- [ ] Co-op: a dead player still comes back after a surge is cleared or an objective completes (the normal return rules), and nobody auto-revives after a wipe.
+- [ ] At the FOB / Training Range (outside a run), dying still gets you up after 3 seconds.

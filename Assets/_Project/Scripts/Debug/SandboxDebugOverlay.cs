@@ -84,15 +84,14 @@ namespace Deadfall.DebugTools
 
             TickNumbers();
 
-            // Outside a run, get back up a few seconds after going down so testing never stalls. During a run the
-            // squad rules decide (revives, kits, return after the surge: M11).
+            // At base (FOB, Training Range) only, get back up a few seconds after dying so testing never stalls. On a map the
+            // dead stay dead, including after a failed run: they're back up when the squad returns to the FOB.
+            bool atBase = Deadfall.Game.WorldControl.AtBase != null && Deadfall.Game.WorldControl.AtBase();
             bool inRun = Deadfall.Encounters.WaveManager.Current != null && Deadfall.Encounters.WaveManager.Current.IsRunning;
-            if (inRun) _respawnAt = -1f;
+            if (!atBase || inRun) _respawnAt = -1f;
             else if (_health != null && !_health.IsAlive && _respawnAt < 0f) _respawnAt = Time.time + 3f;
             if (_respawnAt > 0f && Time.time >= _respawnAt)
             {
-                // Get up where you fell. This used to teleport to the firing range spawn, which also fired after a
-                // failed run and could pull you off the FOB (or out of a map) onto the original test range.
                 _respawnAt = -1f;
                 if (!_health.IsAlive) _health.Revive();
             }

@@ -29,7 +29,6 @@ namespace Deadfall.Game
         private const string MsgKit = "df.kit";
         private const string MsgKitOk = "df.kitok";
         private const string MsgSquad = "df.squad";
-        private const float FailedReviveDelay = 4f;
 
         public static SquadLife Current { get; private set; }
 
@@ -73,7 +72,6 @@ namespace Deadfall.Game
         private PlayerClass _class;
         private PlayerInputReader _input;
         private float _selfReviveStart = -1f;
-        private float _reviveAfterFail = -1f;
         private bool _kitPending;
 
         /// <summary>Self-revive kits the squad has left this run.</summary>
@@ -161,12 +159,6 @@ namespace Deadfall.Game
 
             _health.BleedOutPaused = _revivingMe.Count > 0;
             UpdateSelfRevive();
-
-            if (_reviveAfterFail > 0f && Time.unscaledTime >= _reviveAfterFail)
-            {
-                _reviveAfterFail = -1f;
-                if (!_health.IsAlive) _health.ResetLife();
-            }
         }
 
         /// <summary>Records each member's state and announces downs, revives and eliminations.</summary>
@@ -417,10 +409,7 @@ namespace Deadfall.Game
                 if (!_health.IsAlive) _health.ResetLife();
                 _revivingMe.Clear();
             }
-            else if (to == RunPhase.Failed)
-            {
-                _reviveAfterFail = Time.unscaledTime + FailedReviveDelay;
-            }
+            // A failed run leaves the dead where they fell (no auto revive); they get up when the squad goes back to the FOB.
         }
 
         private void OnObjectiveSay(string title, string subtitle)
