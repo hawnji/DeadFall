@@ -950,3 +950,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Solo with a bought syringe: going down doesn't end the run (hold F to self-revive). Bleeding out ends it as above.
 - [ ] Hosted run wipe: the host gets RETURN TO FOB only; clients still see CONTINUE (HOST RETURNS THE SQUAD).
 - [ ] A won run still offers RETURN TO FOB and CONTINUE.
+
+### 3.95 N key removed
+- [ ] In any build (dev or not), N does nothing: it doesn't start a run at the FOB, on a map, or after a failed run. Runs start from Command Center (or a map's Operation button in the dev map panel).
+- [ ] After a failed run the HUD hint reads "Return to the FOB to deploy again" (host) or "Waiting for the host" (client).

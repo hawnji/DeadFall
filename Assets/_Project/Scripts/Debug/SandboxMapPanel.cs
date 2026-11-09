@@ -80,7 +80,7 @@ namespace Deadfall.DebugTools
                 if (objectives != null && GUILayout.Button("Start this map's Operation", GUILayout.Height(24f))) objectives.StartOperation();
                 if (GUILayout.Button("Back to sandbox", GUILayout.Height(24f))) boot.EnterSandbox();
             }
-            GUILayout.Label("Press N to start a Survival run (buy doors with credits to open sectors), or start an Operation on a map.", _small);
+            GUILayout.Label("Deploy from Command Center at the FOB, or start this map's Operation here.", _small);
             GUILayout.EndArea();
         }
 
