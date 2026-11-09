@@ -871,3 +871,6 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 
 ### 3.77 Wall switches sit flush
 - [ ] On all three maps (Mercy Vale's wards especially), every security switch and power relay stands with its back flat against the wall and the lever/lamp facing straight out into the room, including in long rooms, corners and L-shaped rooms.
+
+### 3.78 Vesper DMR aims clear
+- [ ] Aim the Vesper DMR without an optic: the view over the receiver is clear (the stock's cheek riser no longer blocks it) and shots land on the centre dot. With a Red Dot, Holo or Sniper Scope it aims as before.

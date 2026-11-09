@@ -36,7 +36,7 @@ namespace Deadfall.Player
                 case "weapon.wasp_smg": return new Sight { LineY = 0.058f, RailY = 0.052f, RailZ = 0.115f };
                 case "weapon.anvil_lmg": return new Sight { LineY = 0.095f, RailY = 0.087f, RailZ = 0.2f };
                 case "weapon.mule_launcher": return new Sight { LineY = 0.115f, RailY = 0.105f, RailZ = 0.12f };
-                case "weapon.vesper_dmr": return new Sight { LineY = 0.06f, RailY = 0.052f, RailZ = 0.15f };
+                case "weapon.vesper_dmr": return new Sight { LineY = 0.074f, RailY = 0.052f, RailZ = 0.15f }; // clears the stock's cheek riser (top 0.066)
                 case "weapon.bulldog_44": return new Sight { LineY = 0.054f, RailY = 0.047f, RailZ = 0.11f };
                 case "weapon.hailstorm": return new Sight { LineY = 0.058f, RailY = 0.05f, RailZ = 0.18f };
                 case "weapon.kestrel_pdw": return new Sight { LineY = 0.072f, RailY = 0.065f, RailZ = 0.12f };
