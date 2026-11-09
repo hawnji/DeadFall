@@ -890,3 +890,8 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Return to the FOB from the results: you're alive with full health at the FOB.
 - [ ] Co-op: a dead player still comes back after a surge is cleared or an objective completes (the normal return rules), and nobody auto-revives after a wipe.
 - [ ] At the FOB / Training Range (outside a run), dying still gets you up after 3 seconds.
+
+### 3.82 Escort cart spawns
+- [ ] Deploy in Escort mode on each map: the reactor cart appears near the spawn with its ring, the "Escort the reactor cart" toast shows, and standing in the ring pushes it.
+- [ ] The first break in Escort is the short Escort break, not the normal one.
+- [ ] Gauntlet and Operations: no Gun Dispenser appears (it's Survival and Endless only). Survival and Endless still get one.
