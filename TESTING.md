@@ -868,3 +868,6 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - M11: Lobby and Relay (join codes over the internet) are not in yet; they need the Unity Gaming Services package and a Unity Cloud project linked in the editor. Direct IP host/join still works. A rejoining player gets a new player number. Reviving uses each player's own reported position, so the 1.5 m slack is the only latency allowance.
 - The networking code compiles here against hand-written stand-ins for Netcode 2.13.3, so the first editor compile is the real check.
 
+
+### 3.77 Wall switches sit flush
+- [ ] On all three maps (Mercy Vale's wards especially), every security switch and power relay stands with its back flat against the wall and the lever/lamp facing straight out into the room, including in long rooms, corners and L-shaped rooms.

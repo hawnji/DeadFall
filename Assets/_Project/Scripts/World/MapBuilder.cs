@@ -229,11 +229,12 @@ namespace Deadfall.World
         {
             if (c.SwitchRoom < 0) return;
             PlacedRoom room = layout.Rooms[c.SwitchRoom];
-            List<Vector3> pts = WallPoints(layout, room, c.Lock == DoorLock.Power ? 0.75f : 0.45f);
+            float inset = c.Lock == DoorLock.Power ? 0.75f : 0.45f;
+            List<Vector3> pts = WallPoints(layout, room, inset);
             Vector3 p = pts.Count > 0 ? pts[(connection * 7 + 3) % pts.Count] : map.RoomCenter(room.Index);
             Vector3 toCenter = map.RoomCenter(room.Index) - p;
             toCenter.y = 0f;
-            float yaw = toCenter.sqrMagnitude > 0.01f ? Mathf.Atan2(toCenter.x, toCenter.z) * Mathf.Rad2Deg : 0f;
+            float yaw = WallFacingYaw(room, p, inset, toCenter);
             Color body = c.Lock == DoorLock.Power ? new Color(0.55f, 0.5f, 0.2f) : new Color(0.3f, 0.35f, 0.45f);
             map.Switches.Add(DoorSwitch.Create(connection, c.Lock, new Vector3(p.x, 0f, p.z), yaw, Mat(body), _root));
         }
@@ -582,6 +583,31 @@ namespace Deadfall.World
         }
 
         /// <summary>Candidate points along the inside of a room's walls, in a fixed order, skipping doorways and breaches.</summary>
+        /// <summary>
+        /// Yaw that puts a wall-mounted prop's back flat against the wall a <see cref="WallPoints"/> point was pushed
+        /// to, facing straight into the room. (Facing the room centre instead turned switches in long or shaped rooms
+        /// nearly side-on to the wall.) In a corner cell, the wall that faces the centre best wins.
+        /// </summary>
+        private float WallFacingYaw(PlacedRoom room, Vector3 p, float inset, Vector3 toCenter)
+        {
+            var cell = new Cell(Mathf.FloorToInt(p.x / _cs), Mathf.FloorToInt(p.z / _cs));
+            float fx = p.x - cell.X * _cs, fz = p.z - cell.Z * _cs, tol = inset + 0.05f;
+            Vector3 best = Vector3.zero;
+            float bestDot = float.MinValue;
+            void Try(bool onWall, Dir wall, Vector3 inward)
+            {
+                if (!onWall || room.Contains(cell.Step(wall))) return;
+                float d = Vector3.Dot(inward, toCenter);
+                if (d > bestDot) { bestDot = d; best = inward; }
+            }
+            Try(fx <= tol, Dir.West, Vector3.right);
+            Try(fx >= _cs - tol, Dir.East, Vector3.left);
+            Try(fz <= tol, Dir.South, Vector3.forward);
+            Try(fz >= _cs - tol, Dir.North, Vector3.back);
+            if (best == Vector3.zero) best = toCenter.sqrMagnitude > 0.01f ? toCenter : Vector3.forward;
+            return Mathf.Atan2(best.x, best.z) * Mathf.Rad2Deg;
+        }
+
         private List<Vector3> WallPoints(Layout layout, PlacedRoom room, float inset)
         {
             var doors = DoorPoints(layout, room);
