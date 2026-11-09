@@ -940,3 +940,6 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.92 N no longer ends a run
 - [ ] Dev build, during a run: pressing N does nothing. Leaving the run works from the Esc menu.
 - [ ] Outside a run, N still starts a Survival run in dev builds.
+
+### 3.93 Full-map legend
+- [ ] Open the full map (M) on a run: a LEGEND panel sits in its bottom-left corner listing You (arrow), Teammate, Objective, Locked door and Supply Cache (plus Gun Dispenser while it's out), and the two Generator states on maps with a power grid. Colours match the marks on the map.
