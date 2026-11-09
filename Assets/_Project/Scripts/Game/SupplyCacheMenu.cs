@@ -65,7 +65,7 @@ namespace Deadfall.Game
             float y = c.y;
             if (waves == null || !waves.IsRunning)
             {
-                HudKit.Label(new Rect(c.x, y, c.width, 20f), "Field Credits come from kills during a run (press N).", 13, HudKit.TextDim);
+                HudKit.Label(new Rect(c.x, y, c.width, 20f), "Field Credits come from kills during a run.", 13, HudKit.TextDim);
                 y += 26f;
             }
 

@@ -92,17 +92,14 @@ namespace Deadfall.DebugTools
             WaveManager waves = WaveManager.Current;
             if (waves == null) return;
             if (!BuildInfo.DevTools || !_run.WasPressedThisFrame()) return;
+            // During a run N does nothing (it used to stop the run, too easy to hit by accident): leave from the Esc menu.
+            if (waves.IsRunning) return;
             if (!waves.IsAuthority)
             {
                 Say("The host starts and stops runs.");
                 return;
             }
-            if (waves.IsRunning)
-            {
-                waves.StopRun();
-                Say("Survival run stopped.");
-            }
-            else waves.StartRun();
+            waves.StartRun();
         }
 
         private void SetCap(EnemyManager m, int cap)
