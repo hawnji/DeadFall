@@ -56,13 +56,9 @@ namespace Deadfall.Game
             // Roof girders.
             for (int i = -2; i <= 2; i++)
                 Box(root, "Girder", new Vector3(i * 6.5f, WallHeight - 0.25f, 0f), new Vector3(0.35f, 0.5f, Depth - 1f), new Color(0.3f, 0.32f, 0.34f), collider: false, surface: Surface.Metal);
-            // Floor markings: the deployment lane to Command Center.
-            Box(root, "Lane", new Vector3(0f, 0.01f, 2f), new Vector3(2.6f, 0.02f, Depth - 8f), new Color(0.7f, 0.6f, 0.2f), collider: false);
-            // Some crates for scale and cover, clear of the booths and the spawn.
-            ModelLibrary.Skin(Box(root, "Crates1", new Vector3(-5.5f, 0.6f, -6.5f), new Vector3(2.4f, 1.2f, 1.2f), new Color(0.35f, 0.4f, 0.28f)), "fob_crates");
-            ModelLibrary.Skin(Box(root, "Crates2", new Vector3(5.5f, 0.9f, -7f), new Vector3(1.6f, 1.8f, 1.6f), new Color(0.35f, 0.4f, 0.28f)), "prop_crate");
-
             Lights(root);
+            // Wall screen opposite Command Center, between the Training Range and Trophy Room booths: the last run's stats.
+            LastRunBoard.Build(root, new Vector3(0f, 2.7f, -Depth * 0.5f + 0.7f), 180f);
 
             var terminals = new List<FobTerminal>(7);
             float hx = Width * 0.5f - 3f, hz = Depth * 0.5f - 3f;

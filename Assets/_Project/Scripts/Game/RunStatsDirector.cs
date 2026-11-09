@@ -246,6 +246,9 @@ namespace Deadfall.Game
 
         public int RowCount => _rows.Count;
 
+        /// <summary>This machine's own row, if it has one.</summary>
+        public bool TryLocalRow(out Row row) => _rows.TryGetValue(LocalId, out row);
+
         private ulong LocalId => _session != null ? _session.LocalClientId : 0UL;
 
         private string NameOf(ulong id) => id == LocalId ? "You" : $"Player {id}";
