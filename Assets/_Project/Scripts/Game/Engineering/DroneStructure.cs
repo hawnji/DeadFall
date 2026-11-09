@@ -54,10 +54,13 @@ namespace Deadfall.Game
         protected override void TickVisual(float dt)
         {
             GameObject owner = OwnerObject;
+            bool idle = OwnerDown();
             if (owner != null)
             {
                 Transform o = owner.transform;
-                Vector3 want = o.position + o.right * 0.9f + Vector3.up * (2.1f + Mathf.Sin(Time.time * 2f + _bob) * 0.08f) - o.forward * 0.3f;
+                // With its owner down it powers down: sinks to hover low beside them and holds fire until they're back up.
+                float height = idle ? 1.1f : 2.1f;
+                Vector3 want = o.position + o.right * 0.9f + Vector3.up * (height + Mathf.Sin(Time.time * 2f + _bob) * 0.08f) - o.forward * 0.3f;
                 transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-6f * dt));
             }
             if (_rotors.Count > 0)
@@ -72,6 +75,13 @@ namespace Deadfall.Game
             else _body.Rotate(0f, 720f * dt, 0f, Space.Self);
 
             double now = Time.timeAsDouble;
+            if (idle)
+            {
+                _target = null;
+                _repairTarget = null;
+                _beam.enabled = false;
+                return;
+            }
             if (now >= _nextRetarget)
             {
                 _nextRetarget = now + 0.25;
@@ -112,6 +122,19 @@ namespace Deadfall.Game
                 WeaponId = WeaponId,
                 Request = new DamageRequest(Stats.Damage / ShotsPerSecond, HitZone.Body, 0f, 1f, 1f, 1f, Stats.Range, Stats.Range + 2f, 1f),
             });
+        }
+
+        /// <summary>The owner is downed, eliminated or dropped (every peer sees the squad's life states).</summary>
+        private bool OwnerDown()
+        {
+            IReadOnlyList<ISquadMember> squad = SquadMembers.All;
+            for (int i = 0; i < squad.Count; i++)
+            {
+                ISquadMember m = squad[i];
+                if (m == null || m.ClientId != OwnerClientId) continue;
+                return m.Disconnected || m.Life != LifeState.Alive;
+            }
+            return false;
         }
 
         private Structure MostDamaged()

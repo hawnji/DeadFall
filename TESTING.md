@@ -919,3 +919,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] Specimen Zero, the Broodmother's minions, the Orderly: shots anywhere on the head (front, top, face) count as headshots (crit hit marker), not just the back/lower half.
 - [ ] Regular infected (Husk, lean, plated, bloated, spitter, alpha): headshots land on the visible head while they walk, lunge and attack, and body shots just under the jaw don't count as headshots.
 - [ ] Dead infected don't block shots (hitboxes still turn off on death).
+
+### 3.88 Engineer drone powers down while its owner is down
+- [ ] As the Engineer with a drone out, go down: the drone sinks to hover low beside you and stops shooting (and stops repairing in Repair mode).
+- [ ] Get revived: it rises back up and resumes. Same while eliminated or disconnected. Teammates see the same thing in co-op.
