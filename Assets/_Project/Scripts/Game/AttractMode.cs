@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Deadfall.Combat;
 using Deadfall.Core;
 using Deadfall.Enemies;
+using Deadfall.Rules.Combat;
 using Deadfall.Rules.World;
 using Deadfall.World;
 using UnityEngine;
@@ -10,34 +10,31 @@ using UnityEngine.AI;
 namespace Deadfall.Game
 {
     /// <summary>
-    /// Title screen attract mode: builds a random map (random seed and environment), opens every sector and lets a
-    /// horde of infected chase an invisible lure from room to room while a chase camera follows behind. Different
-    /// every time the game opens. Everything is torn down when the player picks an option on the title.
+    /// Title screen attract mode: builds a random map (random seed and environment), opens every door and glides a
+    /// camera through it on one continuous route, room to room through the open doorways, past infected standing
+    /// dormant where they were placed. The route is a closed tour of the room tree, so the camera never stops, jumps
+    /// or resets; it just keeps going. Everything is torn down when the player picks an option on the title.
     /// </summary>
     public sealed class AttractMode : MonoBehaviour, ITitleBackdrop
     {
-        private const float LureSpeed = 3.1f;
-        private const int Horde = 16;
-        private const float TopUpEvery = 2.5f;
-        private const float CameraHeight = 3.1f;
-        private const float CameraBack = 6.5f;
-        private const int Mask = ~(1 << 2);
+        private const float Speed = 1.9f;          // metres per second along the route
+        private const float EyeHeight = 1.7f;
+        private const float LookAhead = 6f;        // the camera looks at the route this far ahead
+        private const float Step = 0.5f;           // route resampling
+        private const int Extras = 40;             // dormant infected placed along the tour
+        private const float ClearOfRoute = 2.6f;   // they never stand where the camera passes
 
         private MapSession _map;
         private ulong _seed;
         private bool _running;
-        private Lure _lure;
-        private readonly List<Vector3> _path = new List<Vector3>(32);
-        private int _corner;
-        private float _pauseUntil;
-        private float _nextTopUp;
-        private Vector3 _heading = Vector3.forward;
-        private Vector3 _camVel;
-        private Vector3 _back = Vector3.back;
-        private static readonly RaycastHit[] CastHits = new RaycastHit[24];
-        private float _orbit;
+        private readonly List<Vector3> _route = new List<Vector3>(4096);
+        private float _routeLength;
+        private float _travel;
+        private Quaternion _look = Quaternion.identity;
+        private bool _placedOnce;
         private System.Random _rng;
         private NavMeshPath _navPath;
+        private int _savedCap;
 
         private System.Func<ulong, bool> _enterMap;
         private System.Action _exitMap;
@@ -60,7 +57,9 @@ namespace Deadfall.Game
         {
             if (_map == null || _running || _map.HasMap) return false;
             _rng = new System.Random(System.Environment.TickCount);
-            _seed = ((ulong)(uint)_rng.Next() << 32) | (uint)_rng.Next();
+            // A plain environment seed: the full Survival layout, never the short Gauntlet or Escort shapes.
+            ulong raw = ((ulong)(uint)_rng.Next() << 32) | (uint)_rng.Next();
+            _seed = EnvironmentCatalog.Encode(raw, _rng.Next(EnvironmentCatalog.All.Length));
             try
             {
                 if (_enterMap != null ? !_enterMap(_seed) : _map.Build(_seed) == null) return false;
@@ -71,21 +70,10 @@ namespace Deadfall.Game
             HidePlayer(true);
             _map.OpenAllSectors();
             _navPath = new NavMeshPath();
-
-            // The lure starts in the spawn room and the horde pours out of the closets after it.
-            Vector3 start = built.PlayerSpawns.Count > 0 ? built.PlayerSpawns[0] : built.RoomCenter(0);
-            if (NavMesh.SamplePosition(start, out NavMeshHit hit, 4f, NavMesh.AllAreas)) start = hit.position;
-            var go = new GameObject("[AttractLure]");
-            go.transform.position = start;
-            _lure = go.AddComponent<Lure>();
-            _path.Clear();
-            _corner = 0;
-            _pauseUntil = Time.time + 2.5f;
-            _nextTopUp = 0f;
-            _camVel = Vector3.zero;
-            _orbit = (float)_rng.NextDouble() * 360f;
-            _back = Quaternion.Euler(0f, _orbit, 0f) * Vector3.back;
-            _heading = -_back;
+            BuildRoute(built);
+            _travel = 0f;
+            _placedOnce = false;
+            PlaceExtras(built);
             _running = true;
             return true;
         }
@@ -94,10 +82,13 @@ namespace Deadfall.Game
         {
             if (!_running) return;
             _running = false;
-            if (_lure != null) Destroy(_lure.gameObject);
-            _lure = null;
             EnemyManager em = EnemyManager.Current;
-            if (em != null) em.DespawnAll();
+            if (em != null)
+            {
+                em.DespawnAll();
+                em.CapOverride = _savedCap;
+            }
+            _route.Clear();
             HidePlayer(false);
             // Leave a map that arrived from a host alone (joining a game replaces ours).
             if (_map != null && _map.HasMap && _map.Seed == _seed)
@@ -124,90 +115,157 @@ namespace Deadfall.Game
 
         private void OnDestroy() => End();
 
-        private void Update()
+        // ---------------------------------------------------------------- route
+
+        /// <summary>
+        /// A closed walk over the room tree (depth first, back up through each parent), walked on the NavMesh so it
+        /// goes through the doorways. Resampled evenly and lightly rounded so the camera glides round corners.
+        /// </summary>
+        private void BuildRoute(BuiltMap m)
         {
-            if (!_running || _lure == null || _map == null || !_map.HasMap) return;
-            MoveLure();
-            if (Time.time >= _nextTopUp)
+            _route.Clear();
+            Layout layout = m.Layout;
+            int n = layout.Rooms.Count;
+            var children = new List<int>[n];
+            for (int i = 0; i < n; i++) children[i] = new List<int>();
+            for (int i = 0; i < n; i++)
             {
-                _nextTopUp = Time.time + TopUpEvery;
-                TopUp();
+                int p = layout.Rooms[i].Parent;
+                if (p >= 0 && p < n && layout.Rooms[i].Template.Role != RoomRole.Secret) children[p].Add(i);
+            }
+            // Shuffle the visiting order so every title screen takes a different tour.
+            foreach (List<int> c in children)
+                for (int i = c.Count - 1; i > 0; i--) { int j = _rng.Next(i + 1); (c[i], c[j]) = (c[j], c[i]); }
+
+            var walk = new List<Vector3>(1024);
+            Vector3 start = Floor(m.RoomCenter(0));
+            walk.Add(start);
+            Visit(m, 0, start, children, walk, 0);
+            if (walk.Count < 2)
+            {
+                // Nowhere to go: a slow circle round the spawn room.
+                for (int i = 0; i <= 48; i++)
+                {
+                    float a = i * Mathf.PI * 2f / 48f;
+                    walk.Add(start + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 2.5f);
+                }
+            }
+
+            // Even spacing, then two rounds of corner cutting (small at this spacing: it never leaves the NavMesh corridor).
+            var even = new List<Vector3>(4096);
+            even.Add(walk[0]);
+            float carry = 0f;
+            for (int i = 1; i < walk.Count; i++)
+            {
+                Vector3 a = walk[i - 1], b = walk[i];
+                float len = Vector3.Distance(a, b);
+                float d = Step - carry;
+                while (d <= len)
+                {
+                    even.Add(Vector3.Lerp(a, b, d / len));
+                    d += Step;
+                }
+                carry = len - (d - Step);
+            }
+            List<Vector3> smooth = even;
+            for (int pass = 0; pass < 2; pass++) smooth = Chaikin(smooth);
+            // Lift to eye height.
+            for (int i = 0; i < smooth.Count; i++) _route.Add(smooth[i] + Vector3.up * EyeHeight);
+            _routeLength = 0f;
+            for (int i = 1; i < _route.Count; i++) _routeLength += Vector3.Distance(_route[i - 1], _route[i]);
+            _routeLength += Vector3.Distance(_route[_route.Count - 1], _route[0]);
+        }
+
+        private void Visit(BuiltMap m, int room, Vector3 at, List<int>[] children, List<Vector3> walk, int depth)
+        {
+            if (depth > 64) return;
+            foreach (int child in children[room])
+            {
+                Vector3 there = Floor(m.RoomCenter(child));
+                if (!AppendPath(at, there, walk)) continue;      // unreachable (sealed): skip that branch
+                Visit(m, child, there, children, walk, depth + 1);
+                AppendPath(there, at, walk);                      // and back to this room
             }
         }
 
-        // ---------------------------------------------------------------- lure
-
-        private void MoveLure()
+        private bool AppendPath(Vector3 from, Vector3 to, List<Vector3> walk)
         {
-            if (Time.time < _pauseUntil) return;
-            if (_corner >= _path.Count)
-            {
-                if (!PickDestination()) { _pauseUntil = Time.time + 1f; return; }
-            }
-            Vector3 pos = _lure.transform.position;
-            Vector3 target = _path[_corner];
-            Vector3 to = target - pos;
-            float step = LureSpeed * Time.deltaTime;
-            if (to.magnitude <= step)
-            {
-                _lure.transform.position = target;
-                _corner++;
-                if (_corner >= _path.Count) _pauseUntil = Time.time + 1.5f + (float)_rng.NextDouble() * 2f; // let the horde catch up
-                return;
-            }
-            Vector3 dir = to.normalized;
-            _lure.transform.position = pos + dir * step;
-            Vector3 flat = new Vector3(dir.x, 0f, dir.z);
-            if (flat.sqrMagnitude > 0.01f) _heading = Vector3.Slerp(_heading, flat.normalized, Time.deltaTime * 1.5f).normalized;
+            if (!NavMesh.CalculatePath(from, to, NavMesh.AllAreas, _navPath) || _navPath.status != NavMeshPathStatus.PathComplete) return false;
+            Vector3[] corners = _navPath.corners;
+            for (int i = 1; i < corners.Length; i++) walk.Add(corners[i]);
+            return true;
         }
 
-        /// <summary>A path to a random room the lure can walk to (not secrets, not the room it's in).</summary>
-        private bool PickDestination()
+        private static List<Vector3> Chaikin(List<Vector3> pts)
         {
-            BuiltMap m = _map.Map;
-            int rooms = m.Layout.Rooms.Count;
-            Vector3 from = _lure.transform.position;
-            int here = m.RoomAt(from);
-            for (int attempt = 0; attempt < 10; attempt++)
+            var o = new List<Vector3>(pts.Count * 2);
+            int n = pts.Count;
+            for (int i = 0; i < n; i++)
             {
-                int room = _rng.Next(rooms);
-                if (room == here || m.Layout.Rooms[room].Template.Role == RoomRole.Secret) continue;
-                if (!NavMesh.SamplePosition(m.RoomCenter(room), out NavMeshHit hit, 3f, NavMesh.AllAreas)) continue;
-                if (!NavMesh.CalculatePath(from, hit.position, NavMesh.AllAreas, _navPath) || _navPath.status != NavMeshPathStatus.PathComplete) continue;
-                Vector3[] corners = _navPath.corners;
-                if (corners.Length < 2) continue;
-                _path.Clear();
-                for (int i = 1; i < corners.Length; i++) _path.Add(corners[i]);
-                _corner = 0;
-                return true;
+                Vector3 a = pts[i], b = pts[(i + 1) % n]; // closed loop
+                o.Add(Vector3.Lerp(a, b, 0.25f));
+                o.Add(Vector3.Lerp(a, b, 0.75f));
             }
-            return false;
+            return o;
         }
 
-        // ---------------------------------------------------------------- horde
+        private static Vector3 Floor(Vector3 p) =>
+            NavMesh.SamplePosition(p, out NavMeshHit hit, 3f, NavMesh.AllAreas) ? hit.position : p;
 
-        private void TopUp()
+        /// <summary>Point on the closed route <paramref name="distance"/> metres from its start.</summary>
+        private Vector3 PointAt(float distance)
+        {
+            int n = _route.Count;
+            if (n == 0) return Vector3.zero;
+            if (n == 1 || _routeLength <= 0.01f) return _route[0];
+            // Evenly spaced after resampling, so index by distance directly.
+            float seg = _routeLength / n;
+            float f = Mathf.Repeat(distance, _routeLength) / seg;
+            int i = Mathf.FloorToInt(f) % n;
+            return Vector3.Lerp(_route[i], _route[(i + 1) % n], f - Mathf.Floor(f));
+        }
+
+        // ---------------------------------------------------------------- extras
+
+        /// <summary>Dormant infected spread through the rooms the tour passes, standing clear of the camera's line.</summary>
+        private void PlaceExtras(BuiltMap m)
         {
             EnemyManager em = EnemyManager.Current;
-            BuiltMap m = _map.Map;
-            if (em == null || m.EnemySpawns.Count == 0) return;
-            int want = Horde - em.AliveCount;
-            Vector3 lure = _lure.transform.position;
-            for (int n = 0; n < Mathf.Min(want, 3); n++)
+            if (em == null || _route.Count == 0) return;
+            _savedCap = em.CapOverride;
+            em.CapOverride = Mathf.Max(em.CapOverride, Extras + 4);
+            int rooms = m.Layout.Rooms.Count;
+            int placed = 0;
+            for (int attempt = 0; attempt < Extras * 8 && placed < Extras; attempt++)
             {
-                // A closet near the lure, so the action stays in front of the camera.
-                Vector3 best = m.EnemySpawns[_rng.Next(m.EnemySpawns.Count)].Position;
-                float bestSq = (best - lure).sqrMagnitude;
-                for (int k = 0; k < 4; k++)
-                {
-                    Vector3 p = m.EnemySpawns[_rng.Next(m.EnemySpawns.Count)].Position;
-                    float sq = (p - lure).sqrMagnitude;
-                    if (sq < bestSq) { best = p; bestSq = sq; }
-                }
+                int room = _rng.Next(rooms);
+                if (m.Layout.Rooms[room].Template.Role == RoomRole.Secret) continue;
+                Bounds b = m.RoomBounds[room];
+                var guess = new Vector3(Mathf.Lerp(b.min.x + 1f, b.max.x - 1f, (float)_rng.NextDouble()), b.min.y + 0.5f,
+                                        Mathf.Lerp(b.min.z + 1f, b.max.z - 1f, (float)_rng.NextDouble()));
+                if (m.RoomAt(guess) != room) continue;
+                if (!NavMesh.SamplePosition(guess, out NavMeshHit hit, 1.5f, NavMesh.AllAreas) || m.RoomAt(hit.position) != room) continue;
+                if (NearRoute(hit.position)) continue;
                 double roll = _rng.NextDouble();
-                EnemyDefinition def = roll < 0.75 ? PrototypeEnemies.Husk : roll < 0.93 ? PrototypeEnemies.Bolter : PrototypeEnemies.Bulwark;
-                em.Spawn(def, best, (float)_rng.NextDouble() * 360f);
+                EnemyDefinition def = roll < 0.62 ? PrototypeEnemies.Husk : roll < 0.76 ? PrototypeEnemies.Bolter
+                    : roll < 0.86 ? PrototypeEnemies.Creeper : roll < 0.94 ? PrototypeEnemies.Bulwark : PrototypeEnemies.Pyre;
+                Enemy e = em.Spawn(def, hit.position, (float)_rng.NextDouble() * 360f, 1f, EnemyTraits.None, SpecimenModifiers.None, 1.5f);
+                if (e == null) continue;
+                e.Dormant = true;
+                placed++;
             }
+        }
+
+        private bool NearRoute(Vector3 p)
+        {
+            float sq = ClearOfRoute * ClearOfRoute;
+            for (int i = 0; i < _route.Count; i += 2)
+            {
+                Vector3 r = _route[i];
+                float dx = r.x - p.x, dz = r.z - p.z;
+                if (dx * dx + dz * dz < sq && Mathf.Abs(r.y - EyeHeight - p.y) < 2.5f) return true;
+            }
+            return false;
         }
 
         // ---------------------------------------------------------------- camera
@@ -215,88 +273,20 @@ namespace Deadfall.Game
         public void Place(Camera camera, float dt)
         {
             // Joining a session clears the attract map while the title is still up: nothing to film then.
-            if (camera == null || _lure == null || !_running || _map == null || !_map.HasMap || _map.Map == null) return;
-            Vector3 focus = _lure.transform.position + Vector3.up * 1.1f;
-            bool resting = Time.time < _pauseUntil;
-            // While the lure waits, swing slowly around it to show the horde arriving; moving, settle in behind it.
-            // The direction eases between the two so the camera never whips round when the lure sets off again.
-            if (resting) _orbit += dt * 14f;
-            else _orbit = Quaternion.LookRotation(-_back).eulerAngles.y;
-            Vector3 wantBack = resting ? Quaternion.Euler(0f, _orbit, 0f) * Vector3.back : -_heading;
-            _back = Vector3.Slerp(_back, wantBack, 1f - Mathf.Exp(-dt * 1.6f));
-            _back.y = 0f;
-            _back = _back.sqrMagnitude > 0.001f ? _back.normalized : Vector3.back;
-            Vector3 eye = _lure.transform.position + Vector3.up * 1.6f;
-            Vector3 desired = _lure.transform.position + _back * CameraBack + Vector3.up * CameraHeight;
-            Vector3 d = desired - eye;
-            if (WorldCast(eye, 0.3f, d, out float hitDistance))
-                desired = eye + d.normalized * Mathf.Max(0.8f, hitDistance - 0.2f);
-            Vector3 pos = Vector3.SmoothDamp(camera.transform.position, desired, ref _camVel, 0.6f, 20f, Mathf.Max(0.0001f, dt));
-            if ((camera.transform.position - desired).sqrMagnitude > 40f * 40f) pos = desired; // first frame
-            pos = KeepInside(eye, pos);
-            Quaternion look = Quaternion.LookRotation(focus - pos);
-            camera.transform.SetPositionAndRotation(pos, Quaternion.Slerp(camera.transform.rotation, look, 1f - Mathf.Exp(-dt * 4f)));
-        }
-
-        /// <summary>
-        /// Keeps the camera in the play area: under the ceiling, with a clear line back to the lure (smoothing can drag it
-        /// round a corner and through a wall), and inside a room cell rather than out in the void around the map.
-        /// </summary>
-        private Vector3 KeepInside(Vector3 eye, Vector3 pos)
-        {
-            float floor = _lure.transform.position.y;
-            float ceiling = floor + Mathf.Max(2f, (_map.Kit != null ? _map.Kit.WallHeight : 4f) - 0.6f);
-            pos.y = Mathf.Clamp(pos.y, floor + 1.2f, ceiling);
-            Vector3 d = pos - eye;
-            float len = d.magnitude;
-            if (len > 0.01f && WorldCast(eye, 0.25f, d, out float hitDistance))
-            {
-                pos = eye + d / len * Mathf.Max(0.5f, hitDistance - 0.15f);
-                _camVel = Vector3.zero;
-            }
-            BuiltMap m = _map.Map;
-            for (int i = 0; m != null && i < 8 && m.RoomAt(pos) < 0; i++)
-            {
-                pos = Vector3.Lerp(pos, eye, 0.35f);
-                _camVel = Vector3.zero;
-            }
-            return pos;
-        }
-
-        /// <summary>
-        /// Nearest level geometry along <paramref name="d"/> from <paramref name="from"/>. Infected are ignored: the horde
-        /// streams between the camera and the lure all the time, and treating them as walls yanked the camera in and out.
-        /// </summary>
-        private static bool WorldCast(Vector3 from, float radius, Vector3 d, out float distance)
-        {
-            distance = float.MaxValue;
-            float len = d.magnitude;
-            if (len < 0.01f) return false;
-            int n = Physics.SphereCastNonAlloc(from, radius, d / len, CastHits, len, Mask, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < n; i++)
-            {
-                Collider c = CastHits[i].collider;
-                if (c == null || c.GetComponentInParent<Enemy>() != null) continue;
-                // A cast that starts overlapping something reports distance 0; that's the floor or a wall we're
-                // already against, which the clamps handle, so skip it rather than collapsing onto the lure.
-                if (CastHits[i].distance <= 0f) continue;
-                if (CastHits[i].distance < distance) distance = CastHits[i].distance;
-            }
-            return distance < float.MaxValue;
-        }
-
-        /// <summary>The invisible thing the horde chases: a target every enemy prefers over the (far away) player.</summary>
-        private sealed class Lure : MonoBehaviour, IAggroTarget, IDamageable
-        {
-            public Transform TargetTransform => transform;
-            public bool IsTargetable => true;
-            public IDamageable Damageable => this;
-            public float AggroRadius => 1000f;
-            public bool IsAlive => true;
-            public float DamageReduction => 1f;
-            public float ApplyDamage(in DamageInfo info) => 0f;
-            private void OnEnable() => CombatTargets.Register(this);
-            private void OnDisable() => CombatTargets.Unregister(this);
+            if (camera == null || !_running || _map == null || !_map.HasMap || _map.Map == null || _route.Count == 0) return;
+            dt = Mathf.Clamp(dt, 0f, 0.1f); // a hitch never jumps the camera along the route
+            _travel += Speed * dt;
+            if (_travel > _routeLength) _travel -= _routeLength; // seamless: the tour is a closed loop
+            Vector3 pos = PointAt(_travel);
+            // Look at a point a little ahead (averaged over a few samples so turns ease in), slightly downward.
+            Vector3 ahead = (PointAt(_travel + LookAhead * 0.6f) + PointAt(_travel + LookAhead) + PointAt(_travel + LookAhead * 1.4f)) / 3f;
+            Vector3 dir = ahead - pos;
+            dir.y -= 0.25f;
+            if (dir.sqrMagnitude < 0.01f) dir = camera.transform.forward;
+            Quaternion want = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            _look = _placedOnce ? Quaternion.Slerp(_look, want, 1f - Mathf.Exp(-dt * 2.2f)) : want;
+            _placedOnce = true;
+            camera.transform.SetPositionAndRotation(pos, _look);
         }
     }
 }
