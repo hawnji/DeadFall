@@ -83,12 +83,24 @@ namespace Deadfall.UI
 
                 // Credits counter, bottom centre.
                 string credits = _waves.LocalCredits.ToString("N0");
-                float cw = HudKit.TextWidth(credits, 24, head: true) + 120f;
+                // Double Credits (power-up): an "x2" badge between the label and the number while it lasts.
+                bool doubled = WaveManager.PowerUpCreditMultiplier > 1.01f;
+                string mult = doubled ? $"x{WaveManager.PowerUpCreditMultiplier:0}" : null;
+                float multW = doubled ? HudKit.TextWidth(mult, 16, head: true) + 16f : 0f;
+                float cw = HudKit.TextWidth(credits, 24, head: true) + 120f + (doubled ? multW + 8f : 0f);
                 var pill = new Rect(w * 0.5f - cw * 0.5f, h - 28f - 38f, cw, 38f);
                 HudKit.Panel(pill, 0.9f);
                 HudKit.Hex(new Rect(pill.x + 12f, pill.y + 8f, 20f, 22f), new Color(HudKit.Accent.r, HudKit.Accent.g, HudKit.Accent.b, 0.25f), HudKit.Accent);
                 HudKit.Label(new Rect(pill.x + 40f, pill.y, 90f, pill.height), "CREDITS", 13, HudKit.TextDim, TextAnchor.MiddleLeft, head: true);
-                HudKit.Label(new Rect(pill.x, pill.y, pill.width - 14f, pill.height), credits, 24, HudKit.Accent, TextAnchor.MiddleRight, head: true);
+                if (doubled)
+                {
+                    Color good = new Color(0.35f, 1f, 0.45f);
+                    float pulse = 0.75f + 0.25f * Mathf.Sin(now * 6f);
+                    var badge = new Rect(pill.x + 112f, pill.y + 8f, multW, pill.height - 16f);
+                    HudKit.Fill(badge, new Color(good.r, good.g, good.b, 0.22f * pulse));
+                    HudKit.Label(badge, mult, 16, good, TextAnchor.MiddleCenter, head: true);
+                }
+                HudKit.Label(new Rect(pill.x, pill.y, pill.width - 14f, pill.height), credits, 24, doubled ? new Color(0.35f, 1f, 0.45f) : HudKit.Accent, TextAnchor.MiddleRight, head: true);
             }
 
             // Big announcement: slides in, holds, fades out.

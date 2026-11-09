@@ -484,7 +484,7 @@ namespace Deadfall.Game
                     BreachBarricade b = Map.Breaches[index];
                     if (!b.RepairOne()) return;
                     _repairReady[client] = now + RepairCooldown / RepairSpeed(client);
-                    if (_waves != null && _waves.IsRunning) _waves.AwardCredits(client, RepairCredits, "Barricade repaired");
+                    if (_waves != null && _waves.IsRunning) _waves.AwardCredits(client, Mathf.RoundToInt(RepairCredits * WaveManager.PowerUpCreditMultiplier), "Barricade repaired");
                     MarkBreach(index);
                     break;
                 }
