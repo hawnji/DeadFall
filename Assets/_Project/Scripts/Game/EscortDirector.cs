@@ -328,7 +328,7 @@ namespace Deadfall.Game
             Vector3 move = Flat(pos - _cart.transform.position);
             _cart.transform.position = pos;
             if (move.sqrMagnitude > 0.000001f)
-                _cart.transform.rotation = Quaternion.RotateTowards(_cart.transform.rotation, Quaternion.LookRotation(move), 90f * dt);
+                _cart.transform.rotation = Quaternion.RotateTowards(_cart.transform.rotation, Quaternion.LookRotation(move), 160f * dt);
             if (Flat(wp.Position - pos).magnitude <= 0.6f || (_corner >= _corners.Count && !closedDoor))
             {
                 _next++;
@@ -343,11 +343,63 @@ namespace Deadfall.Game
             _corner = 0;
             if (_path == null) _path = new NavMeshPath();
             if (NavMesh.CalculatePath(from, to, NavMesh.AllAreas, _path) && _path.status != NavMeshPathStatus.PathInvalid)
-            {
-                Vector3[] cs = _path.corners;
-                for (int i = 1; i < cs.Length; i++) _corners.Add(cs[i]);
-            }
+                Widen(_path.corners, _corners);
             if (_corners.Count == 0) _corners.Add(to);
+        }
+
+        /// <summary>NavMesh edge clearance the cart keeps (on top of the bake's agent radius), so its 1.5 m body doesn't clip wall corners.</summary>
+        private const float Clearance = 0.85f;
+        private static readonly List<Vector3> Scratch = new List<Vector3>(128);
+        private static readonly List<Vector3> Scratch2 = new List<Vector3>(256);
+
+        /// <summary>
+        /// Turns a NavMesh path (which hugs corners at the agent radius) into one for the wide cart: samples it every half metre,
+        /// pushes each point away from the nearest NavMesh edge until it has <see cref="Clearance"/> (half steps, so a narrow
+        /// doorway settles in its middle), then rounds the bends. Writes the points after the start into <paramref name="into"/>.
+        /// </summary>
+        private static void Widen(Vector3[] corners, List<Vector3> into)
+        {
+            if (corners == null || corners.Length < 2) { if (corners != null && corners.Length == 1) into.Add(corners[0]); return; }
+            Scratch.Clear();
+            Scratch.Add(corners[0]);
+            for (int i = 1; i < corners.Length; i++)
+            {
+                Vector3 a = corners[i - 1], b = corners[i];
+                int n = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(a, b) / 0.5f));
+                for (int k = 1; k <= n; k++) Scratch.Add(Vector3.Lerp(a, b, (float)k / n));
+            }
+            for (int i = 1; i < Scratch.Count - 1; i++) Scratch[i] = Clear(Scratch[i]);
+            // Two Chaikin passes round the bends; the ends stay put.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                Scratch2.Clear();
+                Scratch2.Add(Scratch[0]);
+                for (int i = 0; i < Scratch.Count - 1; i++)
+                {
+                    Vector3 p = Scratch[i], q = Scratch[i + 1];
+                    if (i > 0) Scratch2.Add(Vector3.Lerp(p, q, 0.25f));
+                    if (i < Scratch.Count - 2) Scratch2.Add(Vector3.Lerp(p, q, 0.75f));
+                }
+                Scratch2.Add(Scratch[Scratch.Count - 1]);
+                Scratch.Clear();
+                Scratch.AddRange(Scratch2);
+            }
+            for (int i = 1; i < Scratch.Count; i++) into.Add(Scratch[i]);
+        }
+
+        private static Vector3 Clear(Vector3 p)
+        {
+            for (int k = 0; k < 4; k++)
+            {
+                if (!NavMesh.FindClosestEdge(p, out NavMeshHit edge, NavMesh.AllAreas) || edge.distance >= Clearance) break;
+                Vector3 away = Flat(p - edge.position);
+                if (away.sqrMagnitude < 0.0001f) away = Flat(edge.normal);
+                if (away.sqrMagnitude < 0.0001f) break;
+                Vector3 moved = p + away.normalized * ((Clearance - edge.distance) * 0.6f);
+                if (!NavMesh.SamplePosition(moved, out NavMeshHit on, 0.6f, NavMesh.AllAreas)) break;
+                p = on.position;
+            }
+            return p;
         }
 
         private void UpdateProgress(Vector3 pos)

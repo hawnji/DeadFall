@@ -905,3 +905,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 - [ ] On a map, perk machines (perk name in its colour), ammo stations ("Ammo & Syringes"), the Weapon Forge, the Mod Bench and Supply Caches show a floating name tag with the distance, like the Gun Dispenser's.
 - [ ] Tags fade out towards 50 m and are gone past it, hide within 3 m (the use prompt shows instead), and don't show on the title screen or with a menu open.
 - [ ] The Gun Dispenser tag now also hides past 50 m (was 80), and the FOB console name plates show up to 50 m (was 30).
+
+### 3.85 Label range 15 m and Escort cart clearance
+- [ ] Station tags, the Gun Dispenser tag and the FOB console plates only show within 15 m (fading over the last 4 m).
+- [ ] Escort: the cart rounds corners and goes through doorways without its body clipping into walls or door frames, and turns into bends instead of sliding sideways.
