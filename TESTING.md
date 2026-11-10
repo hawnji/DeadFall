@@ -957,3 +957,7 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 
 ### 3.96 Bloodlust heals 1 HP
 - [ ] Warrior: a melee kill heals 1 HP (was 5). The class picker reads "Melee kills restore 1 health." and the chip lights "+1 hp".
+
+### 3.97 FOB board text behind held weapons
+- [ ] In the FOB, hold a gun up close to the Last Deployment screen and a booth board: the gun covers the board text (text no longer draws through the weapon). Text still reads normally and doesn't show through walls.
+- [ ] Player build: the board text still renders (the shader ships from Resources/Shaders).
