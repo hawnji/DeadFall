@@ -85,7 +85,7 @@ namespace Deadfall.Classes
                 new[] { WeaponCategory.Melee },
                 AbilityDefinition.CreateRuntime("ability.lunge", "Lunge", "lunge",
                     "Dash 8 m and strike: triple damage, staggers what it hits.", 12f, 0f, 3f, 0f, 8f),
-                PassiveDefinition.CreateRuntime("passive.bloodlust", "Bloodlust", "bloodlust", "Melee kills restore 5 health.", 5f),
+                PassiveDefinition.CreateRuntime("passive.bloodlust", "Bloodlust", "bloodlust", "Melee kills restore 1 health.", 1f),
                 PassiveDefinition.CreateRuntime("passive.combo", "Combo", "combo_cleave",
                     "Every third melee hit in a quick chain cleaves through more enemies.", 1.2f, 2.2f, 3f));
 

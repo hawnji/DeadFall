@@ -85,7 +85,7 @@ All classes can use every weapon. Each class has preferred categories that get a
 |---|---|---|---|---|
 | **Gunner** | Sustained fire, suppression | AR, SMG, LMG | **Overdrive**: 8 s of +40% fire rate and no ammo consumption from reserve on preferred weapons. 45 s cooldown | +25% reserve ammo; sustained fire slowly reduces recoil |
 | **Tank** | Durability, aggro, protection | Shotgun, Heavy | **Bulwark Shield**: deployable front shield (8 s, 600 HP) that draws nearby aggro. 40 s | 30% damage reduction while above 50% HP; melee knocks back |
-| **Warrior** | Melee, mobility, executions | Swords, axes | **Lunge**: dash 8 m, the next melee hit deals triple damage and staggers. 12 s | Melee kills restore 5 HP; combo chain (3rd hit cleaves) |
+| **Warrior** | Melee, mobility, executions | Swords, axes | **Lunge**: dash 8 m, the next melee hit deals triple damage and staggers. 12 s | Melee kills restore 1 HP; combo chain (3rd hit cleaves) |
 | **Engineer** | Construction, automation | SMG, Pistol | **Deploy Sentry**: places a light turret (60 s duration, scrap upgrades it). 35 s | Earns +50% Scrap; repairs structures faster |
 | **Demolitionist** | Explosives, area control | Launchers, Shotgun | **Cluster Charge**: thrown charge that splits into 5 bomblets. 25 s | +2 grenade capacity; 50% self-damage reduction from own explosives |
 
