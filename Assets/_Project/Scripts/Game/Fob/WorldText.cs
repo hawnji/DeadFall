@@ -48,11 +48,14 @@ namespace Deadfall.Game
         {
             Material m = head ? _headMat : _bodyMat;
             if (m != null) return m;
-            Shader sh = Builtin != null && Builtin.material != null ? Builtin.material.shader : f.material != null ? f.material.shader : null;
+            // Our own copy of GUI/Text Shader with a fixed LEqual depth test (Resources/Shaders/WorldText.shader). The built-in
+            // one reads its depth test from unity_GUIZTestMode, which drew board text over held weapons.
+            Shader sh = Resources.Load<Shader>("Shaders/WorldText");
+            if (sh == null || !sh.isSupported)
+                sh = Builtin != null && Builtin.material != null ? Builtin.material.shader : f.material != null ? f.material.shader : null;
             if (sh == null) return f.material;
             m = new Material(sh) { name = head ? "WorldTextHead" : "WorldTextBody" };
             if (f.material != null) m.mainTexture = f.material.mainTexture;
-            // GUI/Text Shader takes its depth test from this; LessEqual keeps text from showing through walls.
             m.SetFloat("unity_GUIZTestMode", (float)UnityEngine.Rendering.CompareFunction.LessEqual);
             if (head) _headMat = m; else _bodyMat = m;
             if (!_hooked) { Font.textureRebuilt += OnFontRebuilt; _hooked = true; }
