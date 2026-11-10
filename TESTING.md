@@ -772,7 +772,7 @@ Needs the project linked to Unity Cloud and the Multiplayer Services package ins
 ### 3.71 Passive descriptions and live passive chips
 - [ ] FOB class picker: each class card lists its passives with the name in the class colour and the description underneath (for example Guard: "30% damage reduction while above 50% health."). Nothing overlaps the ability text or the PLAY button.
 - [ ] Run HUD class card: passives show as chips under the ability bar. Always-on passives (Deep Pockets, Shove, Salvager, Handy, Bandolier, Blast Padding) read plain white.
-- [ ] Conditional passives sit dim until they apply, then light up in the class colour with a value: Guard "-30% dmg" above half health (goes dim below), Steady Hands "-N% recoil" while holding fire, Bloodlust "+5 hp" for about 1.5 s after a melee kill, Combo "cleave ready" when the third hit is armed.
+- [ ] Conditional passives sit dim until they apply, then light up in the class colour with a value: Guard "-30% dmg" above half health (goes dim below), Steady Hands "-N% recoil" while holding fire, Bloodlust "+1 hp" for about 1.5 s after a melee kill, Combo "cleave ready" when the third hit is armed.
 
 ### 3.72 Third environment: Mercy Vale General Hospital (map kit)
 - [ ] FOB deployment board shows a third environment button, Mercy Vale General Hospital, with its blurb. Its default Operation is Quarantine.
@@ -954,3 +954,6 @@ Status 2026-11-03: 203/203 EditMode tests pass in the compile-check runner. Play
 ### 3.95 N key removed
 - [ ] In any build (dev or not), N does nothing: it doesn't start a run at the FOB, on a map, or after a failed run. Runs start from Command Center (or a map's Operation button in the dev map panel).
 - [ ] After a failed run the HUD hint reads "Return to the FOB to deploy again" (host) or "Waiting for the host" (client).
+
+### 3.96 Bloodlust heals 1 HP
+- [ ] Warrior: a melee kill heals 1 HP (was 5). The class picker reads "Melee kills restore 1 health." and the chip lights "+1 hp".
